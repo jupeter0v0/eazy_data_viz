@@ -368,9 +368,15 @@ def _card_html(spec, index):
                      'title="显示生成这张图的完整 Python 代码">代码</button>' % index)
         head += "</div>"
     kind = spec.get("type")
+    # HTML 类组件（KPI/进度/瓦片/词云）按内容自适应高度，避免展开代码面板时压住正文；
+    # table 需要固定高度才能内部滚动。
+    AUTO_HEIGHT_TYPES = ("kpi", "group_kpi", "progress", "tile", "wordcloud")
     if kind == "kpi":
-        body = ('<div class="eazy-kpi" data-eazy-chart="%d" style="height:%dpx"></div>'
+        body = ('<div class="eazy-kpi" data-eazy-chart="%d" style="min-height:%dpx"></div>'
                 % (index, int(spec.get("height", 150))))
+    elif kind in AUTO_HEIGHT_TYPES:
+        body = ('<div class="eazy-chart" data-eazy-chart="%d" style="min-height:%dpx"></div>'
+                % (index, int(spec.get("height", 320))))
     elif kind in HTML_TYPES:
         body = ('<div class="eazy-chart" data-eazy-chart="%d" style="height:%dpx"></div>'
                 % (index, int(spec.get("height", 320))))
