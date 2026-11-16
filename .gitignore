@@ -12,8 +12,8 @@ venv/
 examples/output/
 tmp/
 tmp_testjs.js
-gallery_preview*.png
-gallery_streamlit*.png
+/gallery_preview*.png
+/gallery_streamlit*.png
 
 # 编辑器 / 系统
 .vscode/
