@@ -454,6 +454,57 @@ def _card_html(spec, index):
     )
 
 
+#: 最近一次 v2 渲染失败的原因（调试用；成功时为 None）。
+_LAST_STREAMLIT_ERROR = None
+
+
+def streamlit_show(charts, cols=2, title=None, desc=None, theme=None, palette=None,
+                   key=None, on_select=None):
+    """在 Streamlit 页面里渲染一张或多张图，返回实际使用的模式（``"v2"`` / ``"v1"``）。
+
+    优先使用 ``st.components.v2``（无 iframe、高度按内容自适应、图表点击可回传
+    Python）；若当前 Streamlit 版本不支持 v2，自动回退到
+    ``st.components.v1.html``（iframe）——行为与旧版本一致。
+
+    只在已运行在 Streamlit 中时调用（``eazy_data_viz.render.is_streamlit()``）。
+    """
+    global _LAST_STREAMLIT_ERROR
+
+    try:
+        from . import streamlit_v2 as _v2
+
+        if _v2.is_available():
+            _v2.render_dashboard(
+                charts,
+                title=title,
+                desc=desc,
+                cols=cols,
+                theme=theme,
+                palette=palette,
+                key=key,
+                on_select=on_select,
+            )
+            _LAST_STREAMLIT_ERROR = None
+            return "v2"
+    except Exception as exc:  # pragma: no cover - 依赖 Streamlit 版本
+        _LAST_STREAMLIT_ERROR = exc
+
+    import streamlit.components.v1 as components
+
+    height = page_height(
+        charts,
+        cols=cols,
+        has_header=bool(title or desc),
+        has_filters=any(c.spec.get("link") for c in charts),
+    )
+    html = build_page(
+        charts, inline=True, title=title, cols=cols, theme=theme, desc=desc,
+        palette=palette,
+    )
+    components.html(html, height=height, scrolling=False)
+    return "v1"
+
+
 def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None,
                palette=None):
     """把一组 Chart 组装成一个完整 HTML 文档字符串。
@@ -582,6 +633,109 @@ try {{
 # --------------------------------------------------------------------------
 # Dashboard
 # --------------------------------------------------------------------------
+
+
+def _scope_css(css):
+    """把整页 CSS 改写成 Shadow DOM 可用的形式（:host 代替 html/body）。"""
+    out = css
+    out = out.replace(":root{", ":host{", 1)
+    out = out.replace("html[data-theme=dark],body[data-theme=dark]{",
+                      ":host([data-theme=dark]){")
+    out = out.replace("html[data-theme=dark] ", ":host([data-theme=dark]) ")
+    out = out.replace("html,body{margin:0;padding:0}",
+                      ":host{display:block;margin:0;padding:0}")
+    out = out.replace("\nbody{", "\n:host{", 1)
+    return out
+
+
+def build_fragment(charts, title=None, desc=None, cols=None, theme=None, palette=None):
+    """组装 components.v2 组件所需的三部分：HTML 片段、CSS、data。
+
+    返回值是 dict：
+
+    - ``html``：DOM 片段（不含 ``<html>`` / ``<head>`` / ``<body>`` / ``<script>``）
+    - ``css``：作用域化后的样式表（``:host`` 形式，配合 Shadow DOM 使用）
+    - ``page`` / ``data_store`` / ``maps`` / ``cities``：传给组件 ``data`` 参数的
+      JSON 可序列化对象，前端会写入 ``window.EAZY_*`` 后调用 ``EazyViz.init``
+    - ``cols``：网格列数
+    """
+    if isinstance(charts, (list, tuple)):
+        charts = list(charts)
+    else:  # pragma: no cover - 防御式
+        charts = [charts]
+    if not charts:
+        raise ValueError("至少需要一张图。")
+
+    theme = theme or (charts[0].spec.get("theme") or "light")
+    palette = _palette.check(palette) if palette else _palette.current()
+    n = len(charts)
+    cols = int(cols) if cols else (1 if n == 1 else min(2, n))
+    cols = max(1, min(cols, 6))
+
+    data_store = {}
+    for c in charts:
+        ref, data = c.data_ref, c.data
+        if not ref or ref in data_store:
+            continue
+        payload = {"cols": data["cols"], "rows": data["rows"], "kinds": data.get("kinds")}
+        if data.get("orders"):
+            payload["orders"] = data["orders"]
+        data_store[ref] = payload
+
+    specs = [c.spec for c in charts]
+    for _i, _s in enumerate(specs):
+        _s.setdefault("id", "eazy-%d" % _i)
+    has_filters = any(s.get("link") for s in specs)
+
+    header = ""
+    if title or desc:
+        header = ('<header class="eazy-appbar"><div class="eazy-appbar-main">'
+                  '<div class="eazy-header-title">%s</div>' % _esc(title or "eazy_data_viz 看板"))
+        if desc:
+            header += '<div class="eazy-header-desc">%s</div>' % _esc(desc)
+        opts = []
+        for _p in _palette.listing():
+            _sel = " selected" if _p["name"] == palette else ""
+            opts.append('<option value="%s"%s>配色：%s</option>'
+                        % (_p["name"], _sel, _esc(_p["label"])))
+        header += ('</div><div class="eazy-appbar-actions">'
+                   '<select class="eazy-select" data-eazy-palette title="切换配色库">%s</select>'
+                   '<button class="eazy-iconbtn" data-eazy-theme title="切换浅色/深色">◐</button>'
+                   '<button class="eazy-textbtn" data-eazy-reset title="清除所有联动筛选">重置联动</button>'
+                   '</div></header>' % "".join(opts))
+
+    card_parts, last_section = [], None
+    for _i, _s in enumerate(specs):
+        sec = _s.get("section")
+        if sec and sec != last_section:
+            card_parts.append('<div class="eazy-section">%s</div>' % _esc(sec))
+            last_section = sec
+        card_parts.append(_card_html(_s, _i))
+    cards = "\n".join(card_parts)
+
+    filters = ""
+    if has_filters:
+        filters = ('<div class="eazy-filters" id="eazy-filters" style="display:none">'
+                   '<span class="eazy-filters-label">联动筛选</span></div>')
+
+    markup = ('<div class="eazy-root" data-theme="%s" data-palette="%s">%s'
+              '<div class="eazy-grid" style="grid-template-columns:repeat(%d,minmax(0,1fr))">'
+              '%s</div></div>' % (theme, palette, header + filters, cols, cards))
+
+    page = {"theme": theme, "palette": palette, "charts": specs, "links": []}
+    maps = _map_payload(specs)
+    cities = _cities_payload() if maps else {}
+    return {
+        "html": markup,
+        "css": _scope_css(_CSS),
+        "page": page,
+        "data_store": data_store,
+        "maps": maps,
+        "cities": cities,
+        "cols": cols,
+        "has_filters": has_filters,
+    }
+
 class Dashboard:
     """多图看板：把多张图放进同一个 HTML 文档，联动/下钻才能跨图生效。"""
 
@@ -624,15 +778,14 @@ class Dashboard:
 
     def show(self, open_browser=None):
         if is_streamlit():
-            import streamlit.components.v1 as components
-
-            height = page_height(
+            streamlit_show(
                 self.charts,
                 cols=self.cols,
-                has_header=bool(self.title or self.desc),
-                has_filters=any(c.spec.get("link") for c in self.charts),
+                title=self.title,
+                desc=self.desc,
+                theme=self.theme,
+                palette=getattr(self, "palette", None),
             )
-            components.html(self.to_html(inline=True), height=height, scrolling=False)
             self._print_warnings()
             return self
 

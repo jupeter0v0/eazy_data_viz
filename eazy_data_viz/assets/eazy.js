@@ -1394,6 +1394,24 @@
   EazyViz.links = {};
   EazyViz.page = {};
   EazyViz.dataStore = {};
+  // components.v2 里页面挂在 Shadow DOM 中：scope 指向 ShadowRoot，host 指向宿主元素。
+  // 静态 HTML 导出时两者为 null，所有查询自动退化为 document。
+  EazyViz.scope = null;
+  EazyViz.host = null;
+  EazyViz.onSelect = null;
+
+  function scopeNode() { return EazyViz.scope || document; }
+
+  function findOne(sel) {
+    var n = scopeNode();
+    try { var el = n.querySelector(sel); if (el) return el; } catch (e) { /* ignore */ }
+    return document.querySelector(sel);
+  }
+
+  function findAll(sel) {
+    var n = scopeNode();
+    try { return n.querySelectorAll(sel); } catch (e) { return document.querySelectorAll(sel); }
+  }
 
   function chartById(id) {
     for (var i = 0; i < EazyViz.charts.length; i++) {
@@ -1422,7 +1440,7 @@
   }
 
   function renderToolbar(c) {
-    var el = document.querySelector('[data-eazy-toolbar="' + c.index + '"]');
+    var el = findOne('[data-eazy-toolbar="' + c.index + '"]');
     if (!el) return;
     var spec = c.spec, html = '';
     if (spec.drill && spec.drill.length) {
@@ -1494,6 +1512,19 @@
       renderChart(c);
     }
     syncFilterBar();
+    if (EazyViz.onSelect) {
+      try {
+        EazyViz.onSelect({
+          chart: spec.id,
+          title: spec.title || '',
+          type: spec.type,
+          dim: xdim,
+          value: value,
+          drill: (c.state.drill || []).slice(),
+          link: (spec.link && EazyViz.links[spec.link]) ? EazyViz.links[spec.link] : null
+        });
+      } catch (err) { /* 回调异常不影响渲染 */ }
+    }
   }
 
   function reRenderGroup(group) {
@@ -1522,7 +1553,7 @@
   }
 
   function syncFilterBar() {
-    var el = document.getElementById('eazy-filters');
+    var el = findOne('#eazy-filters');
     if (!el) return;
     var groups = Object.keys(EazyViz.links || {});
     var html = '<span class="eazy-filters-label">联动筛选</span>';
@@ -1565,10 +1596,10 @@
 
   // ----- 卡片代码区（查看 / 复制生成这张图的 Python 代码）-----
   function toggleCode(idx) {
-    var box = document.querySelector('[data-eazy-codebox="' + idx + '"]');
+    var box = findOne('[data-eazy-codebox="' + idx + '"]');
     if (!box) return;
     var open = box.classList.toggle('is-open');
-    var btn = document.querySelector('[data-eazy-code="' + idx + '"]');
+    var btn = findOne('[data-eazy-code="' + idx + '"]');
     if (btn) btn.textContent = open ? '收起代码' : '代码';
   }
 
@@ -1586,7 +1617,7 @@
   }
 
   function copyCode(idx, btn) {
-    var box = document.querySelector('[data-eazy-codebox="' + idx + '"]');
+    var box = findOne('[data-eazy-codebox="' + idx + '"]');
     if (!box) return;
     var code = box.querySelector('code');
     var text = code ? code.textContent : '';
@@ -1607,7 +1638,7 @@
   }
 
   function bindGlobalEvents() {
-    document.addEventListener('click', function (e) {
+    scopeNode().addEventListener('click', function (e) {
       var el = e.target;
       while (el && el !== document) {
         if (el.getAttribute) {
@@ -1639,7 +1670,7 @@
       }
     });
 
-    document.addEventListener('change', function (e) {
+    scopeNode().addEventListener('change', function (e) {
       var el = e.target;
       if (el && el.getAttribute && el.getAttribute('data-eazy-palette') !== null) {
         setPalette(el.value);
@@ -1660,6 +1691,10 @@
     var themeName = (name === 'dark') ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', themeName);
     if (document.body) document.body.setAttribute('data-theme', themeName);
+    if (EazyViz.host && EazyViz.host.setAttribute) {
+      EazyViz.host.setAttribute('data-theme', themeName);
+      EazyViz.host.setAttribute('data-palette', EazyViz.page.palette || 'google');
+    }
     EazyViz.page.theme = themeName;
     for (var i = 0; i < EazyViz.charts.length; i++) {
       var c = EazyViz.charts[i];
@@ -1676,7 +1711,7 @@
   function setPalette(name) {
     var pname = PALETTES[name] ? name : 'google';
     EazyViz.page.palette = pname;
-    var sel = document.querySelector('[data-eazy-palette]');
+    var sel = findOne('[data-eazy-palette]');
     if (sel) sel.value = pname;
     for (var i = 0; i < EazyViz.charts.length; i++) {
       var c = EazyViz.charts[i];
@@ -1702,16 +1737,22 @@
     syncFilterBar();
   }
 
-  EazyViz.init = function (page) {
+  EazyViz.init = function (page, rootEl) {
     EazyViz.page = page || {};
     EazyViz.charts = [];
     EazyViz.links = {};
     EazyViz.dataStore = global.EAZY_DATA || {};
+    EazyViz.scope = rootEl || null;
+    EazyViz.host = (rootEl && rootEl.host) ? rootEl.host : null;
     EazyViz.page.palette = PALETTES[EazyViz.page.palette] ? EazyViz.page.palette : 'google';
-    var palSel = document.querySelector('[data-eazy-palette]');
+    if (EazyViz.host && EazyViz.host.setAttribute) {
+      EazyViz.host.setAttribute('data-theme', EazyViz.page.theme || 'light');
+      EazyViz.host.setAttribute('data-palette', EazyViz.page.palette);
+    }
+    var palSel = findOne('[data-eazy-palette]');
     if (palSel) palSel.value = EazyViz.page.palette;
 
-    var els = document.querySelectorAll('[data-eazy-chart]');
+    var els = findAll('[data-eazy-chart]');
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
       var idx = Number(el.getAttribute('data-eazy-chart'));

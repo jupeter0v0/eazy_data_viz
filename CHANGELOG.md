@@ -2,6 +2,22 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## 1.1.0 — 2026-11-16
+
+### Streamlit：迁移到 `st.components.v2`
+
+`st.components.v1.html` 已官宣 2026-06-01 后移除，本版把 Streamlit 渲染层换成 v2，
+并保留旧版自动回退。
+
+- 新增 `edv.streamlit_dashboard(charts, ..., on_select=...)`：一行渲染看板，
+  无 iframe、高度按内容自适应、**点击图表可把事件回传给 Python**（`result.select`）。
+- `Chart.show()` / `Dashboard.show()` / `edv.set_palette()` 在 Streamlit 中自动优先 v2，
+  检测不到 v2 时自动回退 `components.v1.html`（行为与 1.0.x 一致）。
+- 运行时 `eazy.js` 支持作用域化：查询与事件监听都收敛到组件根节点（Shadow DOM），
+  多个看板可共存于同一页面而互不干扰；新增 `EazyViz.onSelect` 钩子。
+- 新增 `edv.streamlit_available()` 检测当前环境是否支持 v2。
+- Streamlit 画廊新增「v2 双向事件」页；文档 §9 重写，`docs/guides/07-streamlit.md` 增补 v2 用法。
+
 ## 1.0.0 — 2026-11-16
 
 首个对外版本，项目正式命名为 **eazy_data_viz**（此前内部名 `pviz`）。

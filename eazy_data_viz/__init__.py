@@ -65,13 +65,17 @@ from .charts_extra import (
 from .maps import geo_map, map_bubble, map_flow
 from . import palette
 from .render import Dashboard, dashboard
+from .render import streamlit_show as _streamlit_show
+from .streamlit_v2 import is_available as streamlit_available
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 __all__ = [
     "Chart",
     "Dashboard",
     "dashboard",
+    "streamlit_dashboard",
+    "streamlit_available",
     "show",
     # ---- 基础图表（14）----
     "bar",
@@ -165,6 +169,67 @@ def show(*charts, cols=2, title=None, desc=None, theme=None, palette=None):
                   palette=palette)
     d.show()
     return d
+
+
+# --------------------------------------------------------------------------
+# Streamlit（components v2：无 iframe、高度自适应、点击回传 Python）
+# --------------------------------------------------------------------------
+def streamlit_dashboard(charts, *, cols=2, title=None, desc=None, theme=None,
+                        palette=None, height=None, key=None, on_select=None):
+    """在 Streamlit 页面里用 ``st.components.v2`` 渲染一张看板。
+
+    相比 ``dashboard(...).show()``（内部也会优先走 v2），这个函数把
+    :class:`~eazy_data_viz.streamlit_v2` 的返回值直接交给你，
+    从而可以读取 **图表点击事件**（``result.select``）。
+
+    参数
+    ----
+    charts : Chart | list[Chart]
+        一张或多张图，放同一个看板里才能跨图联动。
+    cols : int
+        网格列数（默认 2）。
+    title, desc, theme, palette
+        与 :func:`dashboard` 相同。
+    height : int or None
+        组件高度（像素）；``None`` 表示按内容自适应（推荐）。
+    key : str or None
+        组件实例 key（用于 ``st.session_state[key]``）。
+    on_select : callable or None
+        图表点击回调（无参数）；回调触发后可用返回值读取最近一次点击。
+
+    返回
+    ----
+    ComponentResult
+        常用字段 ``result.select``：``{chart, title, type, dim, value, drill, link}``。
+
+    示例
+    ----
+    >>> import streamlit as st
+    >>> import eazy_data_viz as edv
+    >>> df = edv.sample_df()
+    >>> charts = [edv.kpi(df, value="销售额", label="全年销售额"),
+    ...           edv.bar(df, x="大区", y="销售额", link="g1")]
+    >>> result = edv.streamlit_dashboard(charts, title="经营驾驶舱")
+    >>> if result.select:
+    ...     st.write("你点了：" + str(result.select.get("value")))
+    """
+    if isinstance(charts, (list, tuple)):
+        items = list(charts)
+    else:
+        items = [charts]
+    from .streamlit_v2 import render_dashboard
+
+    return render_dashboard(
+        items,
+        title=title,
+        desc=desc,
+        cols=cols,
+        theme=theme,
+        palette=palette,
+        height=height,
+        key=key,
+        on_select=on_select,
+    )
 
 
 # --------------------------------------------------------------------------
@@ -355,7 +420,9 @@ KPI 卡片（驾驶舱指标头）
 -----------------------------------
     eazy_data_viz.bar(df, x="月份", y="销售额").save("chart.html")
     eazy_data_viz.dashboard(c1, c2, c3, cols=3, title="驾驶舱").save("cockpit.html")
-    # Streamlit：st.components.v1.html(dash.to_html(), height=..., scrolling=False)
+    # Streamlit（推荐 v2，无 iframe / 自动高度 / 点击回传）
+    #   result = eazy_data_viz.streamlit_dashboard(c1, c2, c3, title="驾驶舱")
+    #   旧版 Streamlit 自动回退：st.components.v1.html(dash.to_html(), height=...)
 
 完整示例见 gallery：eazy_data_viz.gallery()
 """ % __version__

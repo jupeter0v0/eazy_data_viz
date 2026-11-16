@@ -1,6 +1,6 @@
 {
  "name": "eazy_data_viz",
- "version": "1.0.0",
+ "version": "1.1.0",
  "summary": "pandas → 单文件 HTML 交互图表库（经营驾驶舱场景，Material Design 3，45 种图表，客户端下钻/联动，Streamlit 兼容）",
  "install": "pip install -e .   # 或构建 wheel: python -m pip wheel . --no-deps",
  "quickstart": [
@@ -5960,6 +5960,77 @@
    "summary": "列出所有配色库；返回名字列表。",
    "doc": "列出所有配色库；返回名字列表。",
    "example": "eazy_data_viz.palettes()"
+  },
+  "streamlit_dashboard": {
+   "name": "streamlit_dashboard",
+   "signature": "streamlit_dashboard(charts, *, cols=2, title=None, desc=None, theme=None, palette=None, height=None, key=None, on_select=None)",
+   "params": [
+    {
+     "name": "charts",
+     "kind": "positional_or_keyword",
+     "default": null,
+     "required": true
+    },
+    {
+     "name": "cols",
+     "kind": "keyword_only",
+     "default": 2,
+     "required": false
+    },
+    {
+     "name": "title",
+     "kind": "keyword_only",
+     "default": null,
+     "required": false
+    },
+    {
+     "name": "desc",
+     "kind": "keyword_only",
+     "default": null,
+     "required": false
+    },
+    {
+     "name": "theme",
+     "kind": "keyword_only",
+     "default": null,
+     "required": false
+    },
+    {
+     "name": "palette",
+     "kind": "keyword_only",
+     "default": null,
+     "required": false
+    },
+    {
+     "name": "height",
+     "kind": "keyword_only",
+     "default": null,
+     "required": false
+    },
+    {
+     "name": "key",
+     "kind": "keyword_only",
+     "default": null,
+     "required": false
+    },
+    {
+     "name": "on_select",
+     "kind": "keyword_only",
+     "default": null,
+     "required": false
+    }
+   ],
+   "summary": "在 Streamlit 页面里用 ``st.components.v2`` 渲染一张看板。",
+   "doc": "在 Streamlit 页面里用 ``st.components.v2`` 渲染一张看板。\n\n相比 ``dashboard(...).show()``（内部也会优先走 v2），这个函数把\n:class:`~eazy_data_viz.streamlit_v2` 的返回值直接交给你，\n从而可以读取 **图表点击事件**（``result.select``）。\n\n参数\n----\ncharts : Chart | list[Chart]\n    一张或多张图，放同一个看板里才能跨图联动。\ncols : int\n    网格列数（默认 2）。\ntitle, desc, theme, palette\n    与 :func:`dashboard` 相同。\nheight : int or None\n    组件高度（像素）；``None`` 表示按内容自适应（推荐）。\nkey : str or None\n    组件实例 key（用于 ``st.session_state[key]``）。\non_select : callable or None\n    图表点击回调（无参数）；回调触发后可用返回值读取最近一次点击。\n\n返回\n----\nComponentResult\n    常用字段 ``result.select``：``{chart, title, type, dim, value, drill, link}``。\n\n示例\n----\n>>> import streamlit as st\n>>> import eazy_data_viz as edv\n>>> df = edv.sample_df()\n>>> charts = [edv.kpi(df, value=\"销售额\", label=\"全年销售额\"),\n...           edv.bar(df, x=\"大区\", y=\"销售额\", link=\"g1\")]\n>>> result = edv.streamlit_dashboard(charts, title=\"经营驾驶舱\")\n>>> if result.select:\n...     st.write(\"你点了：\" + str(result.select.get(\"value\")))",
+   "example": "eazy_data_viz.streamlit_dashboard(charts=0)"
+  },
+  "streamlit_available": {
+   "name": "streamlit_available",
+   "signature": "streamlit_available()",
+   "params": [],
+   "summary": "当前环境是否支持 Streamlit components v2。",
+   "doc": "当前环境是否支持 Streamlit components v2。",
+   "example": "eazy_data_viz.streamlit_available()"
   }
  },
  "chart_types": [

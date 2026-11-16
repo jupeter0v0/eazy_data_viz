@@ -7,7 +7,33 @@ Streamlit 负责控件、布局和状态。这一篇讲清集成方式、高度�
 - **适用人群**：已经会写基础 Streamlit 脚本，想把图表库接进内部数据应用。
 - **前置条件**：读过 [02 · 五分钟上手](02-quickstart.md) 与 [06 · 交互](06-interaction.md)；
   环境里装了 Streamlit（`pip install ".[streamlit]"` 或 `pip install streamlit>=1.10`）。
-- **本篇验证环境**：Python 3.8.10 + pandas 2.0.3 + Streamlit 1.27.1。
+- **本篇验证环境**：Python 3.8.10 + pandas 2.0.3 + Streamlit 1.27.1（v1 路径）；
+  Python 3.14.10 + pandas 3.1.1 + Streamlit 1.67.0（v2 路径）。
+
+> **新版优先：`st.components.v2`（Streamlit ≥ 1.50）**
+>
+> `st.components.v1.html` 已被官方标记为 2026-06-01 后移除。eazy_data_viz 1.1.0 起，
+> `.show()` / `edv.dashboard(...).show()` 在 Streamlit 里会**自动优先走 v2**：没有 iframe、
+> 高度按内容自适应，点击图表还能回传 Python。想手动控制时用一行 API：
+>
+> ```python
+> import streamlit as st
+> import eazy_data_viz as edv
+>
+> df = edv.sample_df()
+> charts = [edv.kpi(df, value="销售额", label="销售额"),
+>           edv.bar(df, x="大区", y="销售额", link="g1"),
+>           edv.line(df, x="月份", y="销售额", link="g1")]
+>
+> result = edv.streamlit_dashboard(charts, cols=2, title="经营驾驶舱")
+> if result.select:                 # 点击图表 → Python 收到事件
+>     st.write(result.select)       # {chart, title, type, dim, value, drill, link}
+> ```
+>
+> 兼容性：`edv.streamlit_available()` 返回当前环境是否支持 v2；
+> 不支持时 `streamlit_dashboard` 会抛错，而 `.show()` 会自动回退到下面的 v1 写法。
+> 下文 `## 1`~`## 9` 讲的仍是 v1 的 iframe 方式——在旧版 Streamlit 上依然有效，
+> 也是理解「为什么必须自己算 height」的最好材料。
 
 ## 0. 最小可运行应用
 

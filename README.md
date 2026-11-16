@@ -31,7 +31,7 @@ edv.bar(df, x="大区", y="销售额", color="产品").show()
 | **下钻 / 联动** | 点击柱形逐级下钻（大区 → 省份 → 城市），同组图表点击即交叉筛选；**全部在浏览器内完成**，不触发服务器往返 |
 | **Material Design 3** | Google 配色与排版（Roboto、Google Blue `#1a73e8`、8/12px 圆角、卡片阴影、深浅两套主题） |
 | **调用极简** | 只有 `图表函数(df, x=..., y=...)`，自动识别数值 / 时间 / 分类列、自动排序、自动标题 |
-| **Streamlit 兼容** | `st.components.v1.html` 一行嵌入；交互不进 rerun，点击零延迟 |
+| **Streamlit 兼容** | 优先 `st.components.v2`（无 iframe、自动高度、点击回传 Python），旧版自动回退 `components.v1.html` |
 | **离线可用** | ECharts 与全部运行时内联进 HTML，单文件即可发给别人；不依赖 CDN |
 | **源码随图** | gallery 里每张卡片右上角「代码」可展开生成该图的完整 Python 代码，支持一键复制 |
 | **驾驶舱开箱即用** | KPI 指标组、达成率、筛选联动、明细表、主题切换、一键重置联动 |
@@ -107,7 +107,7 @@ edv.show(
 
 | 方法 | 场景 |
 | --- | --- |
-| `.show()` | 自动判别：Streamlit → `components.html`；Jupyter → `IPython.display`；脚本 → 临时文件 + 浏览器 |
+| `.show()` | 自动判别：Streamlit → `components.v2`（旧版回退 `components.html`）；Jupyter → `IPython.display`；脚本 → 临时文件 + 浏览器 |
 | `.to_html()` | 拿到 HTML 字符串，自己塞进模板 / iframe / OSS |
 | `.save(path)` | 落地静态 `.html`，离线分发（体积约 1.1 MB，含 ECharts） |
 | `edv.dashboard(...) / edv.show(...)` | 多图看板（跨图联动必须走这里） |
@@ -315,31 +315,48 @@ edv.palettes()                                                # 列出所有配�
 
 ## 9. Streamlit 用法
 
+**推荐：`st.components.v2`（Streamlit ≥ 1.50）**——没有 iframe、高度按内容自适应、点击还能回传 Python：
+
 ```python
 import streamlit as st
 import eazy_data_viz as edv
-from eazy_data_viz import render as pvrender
 
 df = edv.sample_df()
-
-page = edv.dashboard(
+charts = [
     edv.group_kpi(items=[...]),
     edv.bar(df, x="大区", y="销售额", link="g1"),
     edv.line(df, x="月份", y="销售额", link="g1"),
-    cols=2, title="经营驾驶舱",
-)
-st.components.v1.html(
+]
+
+result = edv.streamlit_dashboard(charts, cols=2, title="经营驾驶舱")
+
+if result.select:            # 点击图表后，Python 收到事件
+    st.write(result.select)  # {chart, title, type, dim, value, drill, link}
+```
+
+- `.show()` / `edv.dashboard(...).show()` 会自动优先走 v2，旧版 Streamlit 自动回退到 v1；
+  在普通布局里单独放一张图也可以直接 `edv.bar(df, x="大区", y="销售额").show()`。
+- v2 不需要自己算高度（`height=None` 即按内容撑开）；传 `height=800` 可以固定高度。
+- 双向事件：给 `streamlit_dashboard(..., on_select=回调)`，钩子触发后读取 `result.select`；
+  `gallery/app.py` 的「v2 双向事件」页有完整演示。
+
+**旧版回退（`st.components.v1.html`，需要显式 height）**：
+
+```python
+import streamlit.components.v1 as components
+from eazy_data_viz import render as edv_render
+
+page = edv.dashboard(*charts, cols=2, title="经营驾驶舱")
+components.html(
     page.to_html(),
-    height=pvrender.page_height(
-        [c for c in page.charts], cols=2, has_header=True, has_filters=True),
+    height=edv_render.page_height(page.charts, cols=2, has_header=True, has_filters=True),
     scrolling=False,
 )
 ```
 
-- 用 `st.components.v1.html`（不要用 `st.html`：低版本不支持 JS，且默认会过滤脚本）。
-- **必须显式给 height**，否则 iframe 默认 150px 会裁掉图表；`edv.render.page_height()` 会估算。
-- 交互在 iframe 内完成，**不会触发 rerun**，点击零延迟；代价是 iframe 内的点击不会自动回传 Python（需要回传时用 `st.session_state` + 自定义组件另行处理）。
-- 完整示例见 `eazy_data_viz/gallery/app.py`：`streamlit run eazy_data_viz/gallery/app.py`。
+- 不要用 `st.html`：它会过滤脚本，ECharts 不会运行。
+- 同一 dashboard 内的图表才能跨图联动；两次 `.show()` 是两块独立组件。
+- 完整示例见 `eazy_data_viz/gallery/app.py` 与 `examples/streamlit_app.py`。
 
 ---
 
@@ -372,7 +389,7 @@ Python 代码（由构建脚本自动录制，和实际出图代码完全一致�
 
 | 方案 | 图表数 | 下钻 | 跨图联动 | Streamlit | 离线 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- |
-| **eazy_data_viz** | **45** | ✅ 客户端 | ✅ 同一文档内 | ✅ `components.v1.html` | ✅ 全内联 | 传 df + 列名即可，无 JSON |
+| **eazy_data_viz** | **48** | ✅ 客户端 | ✅ 同一文档内 | ✅ `components.v2`（回退 v1） | ✅ 全内联 | 传 df + 列名即可，无 JSON |
 | streamlit-echarts | ECharts 全家桶 | 需回服务器 | ❌ 每个组件独立 iframe | ✅ | 依赖 ECharts 资源 | 灵活但要自己写 option JSON |
 | pyecharts | 多 | 需回服务器 | ❌ | 需适配 | 默认走 CDN | Python 侧拼 option |
 | plotly | 多 | 需 `on_select`（Streamlit≥1.35） | 部分 | ✅ | 需内联 plotly.js（≈3 MB） | 体积大 |
@@ -461,7 +478,7 @@ ECharts 5.5 压缩后约 1 MB，内联才能离线单文件。多图共享同一
 改 `eazy_data_viz/assets/eazy.js` 顶部 `PALETTE_LIGHT` / `PALETTE_DARK` 与 `THEME` 里的 CSS 变量即可；页面样式在 `render.py` 的 `_CSS`。
 
 **Q：想在 iframe 里点击后回调 Python？**
-当前设计是纯前端交互（无服务器往返）。需要回传时可用 Streamlit 自定义组件双向通信，或在 `eazy.js` 里 `window.parent.postMessage({type:'eazy-click', ...})`，Streamlit 侧用 `components.html` 的 `st_javascript` 方案接收。
+图表内的下钻/联动仍是纯前端（无服务器往返）。需要把点击事件交给 Python 时用 `edv.streamlit_dashboard(charts, on_select=...)`：它基于 `st.components.v2`，点击会通过 trigger 回传，读取 `result.select` 即可；旧版 Streamlit 会自动回退到 v1（此时没有 Python 回调）。
 
 ---
 
