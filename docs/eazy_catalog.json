@@ -393,7 +393,7 @@
       }
      ],
      "summary": "KPI 卡片组（HTML 渲染）：一排指标卡片。",
-     "doc": "KPI 卡片组（HTML 渲染）：一排指标卡片。\n\n三种用法：\n\n* ``group_kpi(df)`` —— 每个数值列一张卡片（按列自动取总量）；\n* ``group_kpi(df, names=\"大区\", values=\"销售额\")`` —— 每个类目一张卡片；\n* ``group_kpi(items=[{\"label\": \"总销售额\", \"value\": 123, \"delta\": 0.12}])``\n  —— 完全手工指定（``delta`` 是百分比小数，>0 显示上涨）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.group_kpi(df, names=\"大区\", values=\"销售额\", unit=\"万元\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "KPI 卡片组（HTML 渲染）：一排指标卡片。\n\n三种用法：\n\n* ``group_kpi(df)`` —— 每个数值列一张卡片（按列自动取总量）；\n* ``group_kpi(df, names=\"大区\", values=\"销售额\")`` —— 每个类目一张卡片；\n* ``group_kpi(items=[{\"label\": \"总销售额\", \"value\": 123, \"delta\": 0.12}])``\n  —— 完全手工指定（``delta`` 是百分比小数，>0 显示上涨）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.group_kpi(df, names=\"大区\", values=\"销售额\", unit=\"万元\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.group_kpi(df, names=\"大区\", values=\"销售额\", title=\"大区概况\")"
     },
     {
@@ -513,12 +513,12 @@
       }
      ],
      "summary": "环形进度：一个百分比/完成值画成圆环，中心显示数值（不接 DataFrame）。",
-     "doc": "环形进度：一个百分比/完成值画成圆环，中心显示数值（不接 DataFrame）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.ring_progress(72.5, label=\"完成率\")\n>>> eazy_data_viz.charts_extra.ring_progress(1280, max=2000, label=\"销售额\", fmt=\"thousands\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "环形进度：一个百分比/完成值画成圆环，中心显示数值（不接 DataFrame）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.ring_progress(72.5, label=\"完成率\")\n>>> eazy_data_viz.charts_extra.ring_progress(1280, max=2000, label=\"销售额\", fmt=\"thousands\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.ring_progress(78, label=\"年度目标达成率\")"
     },
     {
      "name": "bullet",
-     "signature": "bullet(data, x, actual, target=None, *, target_value=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=False, zoom=False, drill=None, link=None, max_rows=20000)",
+     "signature": "bullet(data, x, actual, target=None, *, target_value=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=False, zoom=False, drill=None, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -655,17 +655,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "子弹图：每类一个实际值，对比目标值（横向，目标用刻度线表示）。",
-     "doc": "子弹图：每类一个实际值，对比目标值（横向，目标用刻度线表示）。\n\n``target`` 可以是列名；传常数（如 ``target=100``）或 ``target_value=100``\n表示所有类目共用一个目标。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.bullet(df, x=\"部门\", actual=\"完成额\", target=\"目标额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "子弹图：每类一个实际值，对比目标值（横向，目标用刻度线表示）。\n\n``target`` 可以是列名；传常数（如 ``target=100``）或 ``target_value=100``\n表示所有类目共用一个目标。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.bullet(df, x=\"部门\", actual=\"完成额\", target=\"目标额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.bullet(df, x=\"大区\", actual=\"销售额\", target_value=500000)"
     },
     {
      "name": "target",
-     "signature": "target(data, x, actual, target=None, *, target_value=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)",
+     "signature": "target(data, x, actual, target=None, *, target_value=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -802,17 +802,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "目标对比图：实际值柱子 + 目标值折线（虚线）。",
-     "doc": "目标对比图：实际值柱子 + 目标值折线（虚线）。\n\n``target`` 传列名时逐项对齐目标；传常数或 ``target_value=`` 时全体共用一个目标。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.target(df, x=\"月份\", actual=\"销售额\", target=\"目标额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "目标对比图：实际值柱子 + 目标值折线（虚线）。\n\n``target`` 传列名时逐项对齐目标；传常数或 ``target_value=`` 时全体共用一个目标。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.target(df, x=\"月份\", actual=\"销售额\", target=\"目标额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.target(df, x=\"大区\", actual=\"销售额\", target_value=500000)"
     },
     {
      "name": "progress",
-     "signature": "progress(data, x=None, y=None, *, max=None, agg='sum', sort='desc', top_n=10, title=None, subtitle=None, fmt='compact', height=340, theme='light', link=None, max_rows=20000)",
+     "signature": "progress(data, x=None, y=None, *, max=None, agg='sum', sort='desc', top_n=10, title=None, subtitle=None, fmt='compact', height=340, theme='light', link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -895,12 +895,12 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "进度条列表（HTML 渲染）：每类一条「名称 + 数值 + 进度条」。",
-     "doc": "进度条列表（HTML 渲染）：每类一条「名称 + 数值 + 进度条」。\n\n``max`` 是进度条的满量程；不传时由前端取最大值。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.progress(df, x=\"渠道\", y=\"完成量\", max=1000)\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "进度条列表（HTML 渲染）：每类一条「名称 + 数值 + 进度条」。\n\n``max`` 是进度条的满量程；不传时由前端取最大值。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.progress(df, x=\"渠道\", y=\"完成量\", max=1000)\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.progress(df, x=\"大区\", y=\"销售额\")"
     }
    ]
@@ -910,7 +910,7 @@
    "charts": [
     {
      "name": "line",
-     "signature": "line(data, x, y, color=None, *, agg='sum', smooth=True, area=False, markers=None, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', drill=None, link=None, legend=True, labels=False, zoom='auto', max_rows=20000, step=False, percent=False, section=None)",
+     "signature": "line(data, x, y, color=None, *, agg='sum', smooth=True, area=False, markers=None, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', drill=None, link=None, legend=True, labels=False, zoom='auto', max_rows=200000, step=False, percent=False, section=None)",
      "params": [
       {
        "name": "data",
@@ -1059,7 +1059,7 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       },
       {
@@ -1087,7 +1087,7 @@
     },
     {
      "name": "area_pct",
-     "signature": "area_pct(data, x, y, color=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)",
+     "signature": "area_pct(data, x, y, color=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -1218,17 +1218,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "百分比堆叠面积图：每个 x 归一化到 100%，看各 color 的占比变化。",
-     "doc": "百分比堆叠面积图：每个 x 归一化到 100%，看各 color 的占比变化。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.area_pct(df, x=\"日期\", y=\"销售额\", color=\"产品\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "百分比堆叠面积图：每个 x 归一化到 100%，看各 color 的占比变化。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.area_pct(df, x=\"日期\", y=\"销售额\", color=\"产品\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.area_pct(df, x=\"月份\", y=\"销售额\", color=\"产品\")"
     },
     {
      "name": "combo",
-     "signature": "combo(data, x, bar=None, line=None, *, agg='sum', title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=400, theme='light', zoom='auto', max_rows=20000)",
+     "signature": "combo(data, x, bar=None, line=None, *, agg='sum', title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=400, theme='light', zoom='auto', max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -1311,7 +1311,7 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
@@ -1321,7 +1321,7 @@
     },
     {
      "name": "sparkline",
-     "signature": "sparkline(data, x, y, *, group, agg='sum', title=None, subtitle=None, fmt='compact', height=260, theme='light', max_rows=20000)",
+     "signature": "sparkline(data, x, y, *, group, agg='sum', title=None, subtitle=None, fmt='compact', height=260, theme='light', max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -1386,17 +1386,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "迷你走势（sparkline）：每个 group 一张无坐标轴小折线，最多 12 个。",
-     "doc": "迷你走势（sparkline）：每个 group 一张无坐标轴小折线，最多 12 个。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.sparkline(df, x=\"日期\", y=\"销售额\", group=\"产品\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "迷你走势（sparkline）：每个 group 一张无坐标轴小折线，最多 12 个。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.sparkline(df, x=\"日期\", y=\"销售额\", group=\"产品\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.sparkline(df, x=\"月份\", y=\"销售额\", group=\"渠道\")"
     },
     {
      "name": "theme_river",
-     "signature": "theme_river(data, x, color, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', link=None, max_rows=20000)",
+     "signature": "theme_river(data, x, color, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -1497,17 +1497,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "主题河流图：各类目随时间的体量变化，像河流一样堆叠流动。",
-     "doc": "主题河流图：各类目随时间的体量变化，像河流一样堆叠流动。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.theme_river(df, x=\"日期\", color=\"产品\", value=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "主题河流图：各类目随时间的体量变化，像河流一样堆叠流动。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.theme_river(df, x=\"日期\", color=\"产品\", value=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.theme_river(df, x=\"月份\", color=\"产品\", value=\"销售额\")"
     },
     {
      "name": "gantt",
-     "signature": "gantt(data, task, start, end, *, color=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, theme='light', legend=None, labels=True, zoom=False, link=None, max_rows=20000)",
+     "signature": "gantt(data, task, start, end, *, color=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, theme='light', legend=None, labels=True, zoom=False, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -1614,17 +1614,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "甘特图：横向时间条，展示每个任务的起止时间。",
-     "doc": "甘特图：横向时间条，展示每个任务的起止时间。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.gantt(df, task=\"任务\", start=\"开始日期\", end=\"结束日期\", color=\"负责人\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "甘特图：横向时间条，展示每个任务的起止时间。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.gantt(df, task=\"任务\", start=\"开始日期\", end=\"结束日期\", color=\"负责人\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.gantt(pd.DataFrame({\"任务\": [\"调研\", \"开发\"], \"开始\": [\"2024-01-01\", \"2024-02-01\"], \"结束\": [\"2024-02-01\", \"2024-05-01\"], \"部门\": [\"产品\", \"研发\"]}), task=\"任务\", start=\"开始\", end=\"结束\", color=\"部门\")"
     },
     {
      "name": "candlestick",
-     "signature": "candlestick(data, date, open, high, low, close, *, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=420, theme='light', legend=False, labels=False, zoom='auto', link=None, max_rows=20000)",
+     "signature": "candlestick(data, date, open, high, low, close, *, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=420, theme='light', legend=False, labels=False, zoom='auto', link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -1743,17 +1743,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "K 线图（红涨绿跌）：需要日期 + 开 / 高 / 低 / 收 四列。",
-     "doc": "K 线图（红涨绿跌）：需要日期 + 开 / 高 / 低 / 收 四列。\n\nPython 侧按日期升序整理记录（``records 已按日期升序``），其余交给前端。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.candlestick(df, date=\"日期\", open=\"开盘\", high=\"最高\",\n...                               low=\"最低\", close=\"收盘\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "K 线图（红涨绿跌）：需要日期 + 开 / 高 / 低 / 收 四列。\n\nPython 侧按日期升序整理记录（``records 已按日期升序``），其余交给前端。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.candlestick(df, date=\"日期\", open=\"开盘\", high=\"最高\",\n...                               low=\"最低\", close=\"收盘\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.candlestick(pd.DataFrame({\"日期\": [\"2024-01-01\", \"2024-01-02\"], \"开盘\": [10.0, 10.6], \"最高\": [10.9, 11.2], \"最低\": [9.8, 10.2], \"收盘\": [10.6, 10.7]}), date=\"日期\", open=\"开盘\", high=\"最高\", low=\"最低\", close=\"收盘\")"
     },
     {
      "name": "calendar",
-     "signature": "calendar(data, date, value=None, *, agg='sum', sort='x', top_n=None, title=None, subtitle=None, fmt='compact', height=300, theme='light', legend=False, labels=False, zoom=False, link=None, max_rows=20000)",
+     "signature": "calendar(data, date, value=None, *, agg='sum', sort='x', top_n=None, title=None, subtitle=None, fmt='compact', height=300, theme='light', legend=False, labels=False, zoom=False, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -1848,12 +1848,12 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "日历热力图：按天显示数值深浅（日期列会在 Python 侧转成 YYYY-MM-DD）。",
-     "doc": "日历热力图：按天显示数值深浅（日期列会在 Python 侧转成 YYYY-MM-DD）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.calendar(df, date=\"日期\", value=\"订单数\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "日历热力图：按天显示数值深浅（日期列会在 Python 侧转成 YYYY-MM-DD）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.calendar(df, date=\"日期\", value=\"订单数\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.calendar(df, date=\"日期\", value=\"销售额\")"
     }
    ]
@@ -1863,7 +1863,7 @@
    "charts": [
     {
      "name": "bar",
-     "signature": "bar(data, x, y=None, color=None, *, agg='sum', stack=False, horizontal=False, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', drill=None, link=None, legend=True, labels=False, zoom='auto', max_rows=20000, percent=False, section=None)",
+     "signature": "bar(data, x, y=None, color=None, *, agg='sum', stack=False, horizontal=False, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', drill=None, link=None, legend=True, labels=False, zoom='auto', max_rows=200000, percent=False, section=None)",
      "params": [
       {
        "name": "data",
@@ -2006,7 +2006,7 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       },
       {
@@ -2028,7 +2028,7 @@
     },
     {
      "name": "bar_pct",
-     "signature": "bar_pct(data, x, y, color=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)",
+     "signature": "bar_pct(data, x, y, color=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -2159,17 +2159,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "百分比堆叠柱图：每个 x 归一化到 100%，看各 color 的占比。",
-     "doc": "百分比堆叠柱图：每个 x 归一化到 100%，看各 color 的占比。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.bar_pct(df, x=\"月份\", y=\"销售额\", color=\"产品\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "百分比堆叠柱图：每个 x 归一化到 100%，看各 color 的占比。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.bar_pct(df, x=\"月份\", y=\"销售额\", color=\"产品\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.bar_pct(df, x=\"月份\", y=\"销售额\", color=\"渠道\")"
     },
     {
      "name": "waterfall",
-     "signature": "waterfall(data, x, y=None, *, agg='sum', total=None, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)",
+     "signature": "waterfall(data, x, y=None, *, agg='sum', total=None, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -2300,17 +2300,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "瀑布图：各分项正负增量逐段累加，直观看到「从哪来、累计到多少」。",
-     "doc": "瀑布图：各分项正负增量逐段累加，直观看到「从哪来、累计到多少」。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.waterfall(df, x=\"科目\", y=\"金额\", total=True)\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "瀑布图：各分项正负增量逐段累加，直观看到「从哪来、累计到多少」。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.waterfall(df, x=\"科目\", y=\"金额\", total=True)\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.waterfall(df, x=\"产品\", y=\"销售额\", total=True)"
     },
     {
      "name": "pareto",
-     "signature": "pareto(data, x, y=None, *, agg='sum', top_n=None, cum_fmt='percent', sort=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)",
+     "signature": "pareto(data, x, y=None, *, agg='sum', top_n=None, cum_fmt='percent', sort=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -2441,17 +2441,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "帕累托图：按数值降序的柱 + 累计占比折线（右轴 0~100%）。",
-     "doc": "帕累托图：按数值降序的柱 + 累计占比折线（右轴 0~100%）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.pareto(df, x=\"问题类型\", y=\"数量\", top_n=10)\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "帕累托图：按数值降序的柱 + 累计占比折线（右轴 0~100%）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.pareto(df, x=\"问题类型\", y=\"数量\", top_n=10)\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.pareto(df, x=\"月份\")"
     },
     {
      "name": "lollipop",
-     "signature": "lollipop(data, x, y=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)",
+     "signature": "lollipop(data, x, y=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -2576,17 +2576,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "棒棒糖图：细柱 + 顶端圆点，比柱状图更清爽的排行榜。",
-     "doc": "棒棒糖图：细柱 + 顶端圆点，比柱状图更清爽的排行榜。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.lollipop(df, x=\"门店\", y=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "棒棒糖图：细柱 + 顶端圆点，比柱状图更清爽的排行榜。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.lollipop(df, x=\"门店\", y=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.lollipop(df, x=\"月份\")"
     },
     {
      "name": "dumbbell",
-     "signature": "dumbbell(data, x, y1, y2, *, labels=None, series_names=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, zoom='auto', drill=None, link=None, max_rows=20000)",
+     "signature": "dumbbell(data, x, y1, y2, *, labels=None, series_names=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, zoom='auto', drill=None, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -2723,17 +2723,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "哑铃图：同一类目两个数值（如两期、两组）之间的差距对比。",
-     "doc": "哑铃图：同一类目两个数值（如两期、两组）之间的差距对比。\n\n``labels`` 传 ``[\"期初\", \"期末\"]`` 之类可覆盖两个系列名（传 bool 则控制数值标签）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.dumbbell(df, x=\"门店\", y1=\"去年\", y2=\"今年\",\n...                            labels=[\"去年\", \"今年\"])\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "哑铃图：同一类目两个数值（如两期、两组）之间的差距对比。\n\n``labels`` 传 ``[\"期初\", \"期末\"]`` 之类可覆盖两个系列名（传 bool 则控制数值标签）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.dumbbell(df, x=\"门店\", y1=\"去年\", y2=\"今年\",\n...                            labels=[\"去年\", \"今年\"])\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.dumbbell(df, x=\"大区\", y1=\"销售额\", y2=\"利润\")"
     },
     {
      "name": "slope",
-     "signature": "slope(data, x, y, color=None, *, group=None, period=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom=False, drill=None, link=None, max_rows=20000)",
+     "signature": "slope(data, x, y, color=None, *, group=None, period=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom=False, drill=None, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -2876,17 +2876,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "斜率图：同一类目在两个「期」之间的变化（两点连线，斜率即变化）。",
-     "doc": "斜率图：同一类目在两个「期」之间的变化（两点连线，斜率即变化）。\n\n``color`` 是期别列，正常情况下应恰好 2 个取值（如 \"去年\" / \"今年\"）；\n取值多于 2 个时只取前两个并在 ``warnings`` 里提示。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.slope(df, x=\"门店\", y=\"销售额\", color=\"年份\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "斜率图：同一类目在两个「期」之间的变化（两点连线，斜率即变化）。\n\n``color`` 是期别列，正常情况下应恰好 2 个取值（如 \"去年\" / \"今年\"）；\n取值多于 2 个时只取前两个并在 ``warnings`` 里提示。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.slope(df, x=\"门店\", y=\"销售额\", color=\"年份\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.slope(df, x=\"月份\", y=\"销售额\", color=\"产品\")"
     },
     {
      "name": "bump",
-     "signature": "bump(data, x, y, *, group, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=420, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)",
+     "signature": "bump(data, x, y, *, group, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=420, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -3017,17 +3017,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "排名变化图（bump chart）：每个 group 一条折线，y 轴是排名。",
-     "doc": "排名变化图（bump chart）：每个 group 一条折线，y 轴是排名。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.bump(df, x=\"月份\", y=\"销售额\", group=\"产品\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "排名变化图（bump chart）：每个 group 一条折线，y 轴是排名。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.bump(df, x=\"月份\", y=\"销售额\", group=\"产品\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.bump(df, x=\"月份\", y=\"销售额\", group=\"产品\")"
     },
     {
      "name": "pictorial",
-     "signature": "pictorial(data, x, y=None, *, symbol='circle', agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=True, zoom='auto', drill=None, link=None, max_rows=20000)",
+     "signature": "pictorial(data, x, y=None, *, symbol='circle', agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=True, zoom='auto', drill=None, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -3158,17 +3158,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "象形柱图：用重复的小图形（circle / rect / roundRect / diamond / triangle）堆出柱子。",
-     "doc": "象形柱图：用重复的小图形（circle / rect / roundRect / diamond / triangle）堆出柱子。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.pictorial(df, x=\"产品\", y=\"销量\", symbol=\"roundRect\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "象形柱图：用重复的小图形（circle / rect / roundRect / diamond / triangle）堆出柱子。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.pictorial(df, x=\"产品\", y=\"销量\", symbol=\"roundRect\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.pictorial(df, x=\"月份\")"
     },
     {
      "name": "pyramid",
-     "signature": "pyramid(data, names, values=None, *, agg='sum', sort='asc', top_n=None, title=None, subtitle=None, fmt='compact', height=380, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=20000)",
+     "signature": "pyramid(data, names, values=None, *, agg='sum', sort='asc', top_n=None, title=None, subtitle=None, fmt='compact', height=380, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -3263,12 +3263,12 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "金字塔图：漏斗图上下翻转（下宽上窄），常用于层级/转化结构。",
-     "doc": "金字塔图：漏斗图上下翻转（下宽上窄），常用于层级/转化结构。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.pyramid(df, names=\"层级\", values=\"人数\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "金字塔图：漏斗图上下翻转（下宽上窄），常用于层级/转化结构。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.pyramid(df, names=\"层级\", values=\"人数\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.pyramid(df, names=\"产品\")"
     }
    ]
@@ -3278,7 +3278,7 @@
    "charts": [
     {
      "name": "pie",
-     "signature": "pie(data, names, values=None, *, donut=False, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, fmt='compact', height=360, theme='light', labels=True, link=None, max_rows=20000)",
+     "signature": "pie(data, names, values=None, *, donut=False, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, fmt='compact', height=360, theme='light', labels=True, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -3367,7 +3367,7 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
@@ -3377,7 +3377,7 @@
     },
     {
      "name": "rose",
-     "signature": "rose(data, names, values=None, *, donut=False, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=True, zoom=False, drill=None, link=None, max_rows=20000)",
+     "signature": "rose(data, names, values=None, *, donut=False, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=True, zoom=False, drill=None, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -3508,17 +3508,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "南丁格尔玫瑰图：用半径表达数值的饼图。",
-     "doc": "南丁格尔玫瑰图：用半径表达数值的饼图。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.rose(df, names=\"产品\", values=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "南丁格尔玫瑰图：用半径表达数值的饼图。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.rose(df, names=\"产品\", values=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.rose(df, names=\"产品\")"
     },
     {
      "name": "funnel",
-     "signature": "funnel(data, names, values=None, *, agg='sum', fmt='compact', height=380, theme='light', title=None, subtitle=None, labels=True, link=None, max_rows=20000)",
+     "signature": "funnel(data, names, values=None, *, agg='sum', fmt='compact', height=380, theme='light', title=None, subtitle=None, labels=True, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -3589,7 +3589,7 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
@@ -3599,7 +3599,7 @@
     },
     {
      "name": "treemap",
-     "signature": "treemap(data, path, value, *, agg='sum', title=None, subtitle=None, fmt='compact', height=420, theme='light', max_rows=20000)",
+     "signature": "treemap(data, path, value, *, agg='sum', title=None, subtitle=None, fmt='compact', height=420, theme='light', max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -3658,7 +3658,7 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
@@ -3668,7 +3668,7 @@
     },
     {
      "name": "sunburst",
-     "signature": "sunburst(data, path, value=None, *, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=460, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=20000)",
+     "signature": "sunburst(data, path, value=None, *, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=460, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -3775,17 +3775,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "旭日图：多层级构成的同心圆环。",
-     "doc": "旭日图：多层级构成的同心圆环。\n\n``path`` 是层级列名列表，例如 ``[\"大区\", \"省份\", \"城市\"]``。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.sunburst(df, [\"大区\", \"品类\"], value=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "旭日图：多层级构成的同心圆环。\n\n``path`` 是层级列名列表，例如 ``[\"大区\", \"省份\", \"城市\"]``。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.sunburst(df, [\"大区\", \"品类\"], value=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.sunburst(df, path=[\"大区\", \"省份\"], value=\"销售额\")"
     },
     {
      "name": "tree",
-     "signature": "tree(data, path, value=None, *, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=460, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=20000)",
+     "signature": "tree(data, path, value=None, *, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=460, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -3892,17 +3892,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "树图：从左到右的层级结构（树状），节点大小可反映数值。",
-     "doc": "树图：从左到右的层级结构（树状），节点大小可反映数值。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.tree(df, [\"大区\", \"省份\"], value=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "树图：从左到右的层级结构（树状），节点大小可反映数值。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.tree(df, [\"大区\", \"省份\"], value=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.tree(df, path=[\"大区\", \"省份\"])"
     },
     {
      "name": "tile",
-     "signature": "tile(data, names=None, values=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=360, theme='light', link=None, max_rows=20000)",
+     "signature": "tile(data, names=None, values=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=360, theme='light', link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -3979,12 +3979,12 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "瓦片图（HTML 渲染）：每个类目一个方块，颜色深浅表示数值大小。",
-     "doc": "瓦片图（HTML 渲染）：每个类目一个方块，颜色深浅表示数值大小。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.tile(df, names=\"门店\", values=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "瓦片图（HTML 渲染）：每个类目一个方块，颜色深浅表示数值大小。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.tile(df, names=\"门店\", values=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.tile(df)"
     }
    ]
@@ -3994,7 +3994,7 @@
    "charts": [
     {
      "name": "scatter",
-     "signature": "scatter(data, x, y, color=None, size=None, *, agg='sum', title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', link=None, legend=True, max_rows=20000)",
+     "signature": "scatter(data, x, y, color=None, size=None, *, agg='sum', title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', link=None, legend=True, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -4101,7 +4101,7 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
@@ -4111,7 +4111,7 @@
     },
     {
      "name": "histogram",
-     "signature": "histogram(data, column=None, *, bins=20, title=None, subtitle=None, xtitle=None, ytitle='频数', fmt='compact', height=360, theme='light', labels=False, max_rows=20000)",
+     "signature": "histogram(data, column=None, *, bins=20, title=None, subtitle=None, xtitle=None, ytitle='频数', fmt='compact', height=360, theme='light', labels=False, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -4182,7 +4182,7 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
@@ -4192,7 +4192,7 @@
     },
     {
      "name": "box",
-     "signature": "box(data, x=None, y=None, *, title=None, subtitle=None, ytitle=None, fmt='compact', height=380, theme='light', max_rows=20000)",
+     "signature": "box(data, x=None, y=None, *, title=None, subtitle=None, ytitle=None, fmt='compact', height=380, theme='light', max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -4251,7 +4251,7 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
@@ -4261,7 +4261,7 @@
     },
     {
      "name": "heatmap",
-     "signature": "heatmap(data, x, y, value, *, agg='sum', sort=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=400, theme='light', labels=False, max_rows=20000, link=None)",
+     "signature": "heatmap(data, x, y, value, *, agg='sum', sort=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=400, theme='light', labels=False, max_rows=200000, link=None)",
      "params": [
       {
        "name": "data",
@@ -4350,7 +4350,7 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       },
       {
@@ -4418,12 +4418,12 @@
       }
      ],
      "summary": "相关系数矩阵（Pearson）：热力图 + 格子里两位小数的 r 值。",
-     "doc": "相关系数矩阵（Pearson）：热力图 + 格子里两位小数的 r 值。\n\n不接联动 / 过滤——相关系数已在 Python 侧算好放进 ``spec.values``。\n\n``columns`` 不传时自动取全部数值列（最多 ``max_cols`` 列）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.matrix(df)\n>>> eazy_data_viz.charts_extra.matrix(df, columns=[\"销售额\", \"利润\", \"订单数\"])\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "相关系数矩阵（Pearson）：热力图 + 格子里两位小数的 r 值。\n\n不接联动 / 过滤——相关系数已在 Python 侧算好放进 ``spec.values``。\n\n``columns`` 不传时自动取全部数值列（最多 ``max_cols`` 列）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.matrix(df)\n>>> eazy_data_viz.charts_extra.matrix(df, columns=[\"销售额\", \"利润\", \"订单数\"])\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.matrix(df, columns=[\"销售额\", \"订单数\", \"利润\", \"客户数\"])"
     },
     {
      "name": "radar",
-     "signature": "radar(data, x, y=None, color=None, *, max=None, agg='mean', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=True, labels=False, zoom=False, drill=None, link=None, max_rows=20000)",
+     "signature": "radar(data, x, y=None, color=None, *, max=None, agg='mean', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=True, labels=False, zoom=False, drill=None, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -4560,17 +4560,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "雷达图：每个 color 组一条闭合折线，指标是 x 的各个类目。",
-     "doc": "雷达图：每个 color 组一条闭合折线，指标是 x 的各个类目。\n\n``max`` 不传时由前端按各指标最大值上浮 10% 自动确定。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.radar(df, x=\"能力项\", y=\"得分\", color=\"对象\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "雷达图：每个 color 组一条闭合折线，指标是 x 的各个类目。\n\n``max`` 不传时由前端按各指标最大值上浮 10% 自动确定。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.radar(df, x=\"能力项\", y=\"得分\", color=\"对象\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.radar(df, x=\"产品\", y=\"销售额\", color=\"大区\")"
     },
     {
      "name": "parallel",
-     "signature": "parallel(data, dims, *, color=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=440, theme='light', legend=False, labels=False, zoom=False, link=None, max_rows=20000)",
+     "signature": "parallel(data, dims, *, color=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=440, theme='light', legend=False, labels=False, zoom=False, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -4671,17 +4671,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "平行坐标：每一行是一条折线，每个维度一根纵轴，用来看多维分布/聚类。",
-     "doc": "平行坐标：每一行是一条折线，每个维度一根纵轴，用来看多维分布/聚类。\n\n``dims`` 是数值列名列表（至少 1 个，通常 3~8 个）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.parallel(df, [\"价格\", \"销量\", \"利润\"], color=\"品类\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "平行坐标：每一行是一条折线，每个维度一根纵轴，用来看多维分布/聚类。\n\n``dims`` 是数值列名列表（至少 1 个，通常 3~8 个）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.parallel(df, [\"价格\", \"销量\", \"利润\"], color=\"品类\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.parallel(df, dims=[\"销售额\", \"订单数\", \"利润\"])"
     },
     {
      "name": "quadrant",
-     "signature": "quadrant(data, x, y, size=None, color=None, *, quad_labels=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=None, labels=False, zoom=False, link=None, max_rows=20000)",
+     "signature": "quadrant(data, x, y, size=None, color=None, *, quad_labels=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=None, labels=False, zoom=False, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -4800,17 +4800,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "四象限散点图：用 x / y 的中位数把平面切成四块，看对象落在哪个象限。",
-     "doc": "四象限散点图：用 x / y 的中位数把平面切成四块，看对象落在哪个象限。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.quadrant(df, x=\"增长率\", y=\"利润率\", size=\"营收\", color=\"品类\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "四象限散点图：用 x / y 的中位数把平面切成四块，看对象落在哪个象限。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.quadrant(df, x=\"增长率\", y=\"利润率\", size=\"营收\", color=\"品类\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.quadrant(df, x=\"订单数\", y=\"销售额\", color=\"大区\")"
     },
     {
      "name": "sankey",
-     "signature": "sankey(data, source, target, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=20000)",
+     "signature": "sankey(data, source, target, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -4911,17 +4911,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "桑基图：展示流量在「来源 → 去向」之间的流转及大小。",
-     "doc": "桑基图：展示流量在「来源 → 去向」之间的流转及大小。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.sankey(df, source=\"渠道\", target=\"产品\", value=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "桑基图：展示流量在「来源 → 去向」之间的流转及大小。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.sankey(df, source=\"渠道\", target=\"产品\", value=\"销售额\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.sankey(df, source=\"渠道\", target=\"产品\")"
     },
     {
      "name": "graph",
-     "signature": "graph(data, source, target, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=20000)",
+     "signature": "graph(data, source, target, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -5022,17 +5022,17 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "关系图：力导向网络图，节点大小/边宽反映数值。",
-     "doc": "关系图：力导向网络图，节点大小/边宽反映数值。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.graph(df, source=\"客户\", target=\"产品\", value=\"订单数\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "关系图：力导向网络图，节点大小/边宽反映数值。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.graph(df, source=\"客户\", target=\"产品\", value=\"订单数\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.graph(df, source=\"渠道\", target=\"产品\")"
     },
     {
      "name": "trend",
-     "signature": "trend(data, x, y, color=None, *, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=None, labels=False, zoom=False, link=None, max_rows=20000)",
+     "signature": "trend(data, x, y, color=None, *, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=None, labels=False, zoom=False, link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -5139,12 +5139,12 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "趋势散点图：散点 + 最小二乘回归线，图例/副标题带 R²。",
-     "doc": "趋势散点图：散点 + 最小二乘回归线，图例/副标题带 R²。\n\nx / y 必须是数值列；回归系数在 Python 侧用 numpy 算好写进 ``spec.fit``。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.trend(df, x=\"广告投入\", y=\"销售额\", color=\"地区\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "趋势散点图：散点 + 最小二乘回归线，图例/副标题带 R²。\n\nx / y 必须是数值列；回归系数在 Python 侧用 numpy 算好写进 ``spec.fit``。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.trend(df, x=\"广告投入\", y=\"销售额\", color=\"地区\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.trend(df, x=\"客户数\", y=\"利润\", color=\"产品\")"
     }
    ]
@@ -5218,12 +5218,12 @@
       }
      ],
      "summary": "明细表（HTML 渲染）：把 DataFrame 前若干行渲染成表格。",
-     "doc": "明细表（HTML 渲染）：把 DataFrame 前若干行渲染成表格。\n\n为控制页面体积，最多嵌入 200 行、展示 ``limit`` 行（上限 200）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.table(df, columns=[\"月份\", \"大区\", \"销售额\"], limit=50)\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "明细表（HTML 渲染）：把 DataFrame 前若干行渲染成表格。\n\n为控制页面体积，最多嵌入 200 行、展示 ``limit`` 行（上限 200）。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.table(df, columns=[\"月份\", \"大区\", \"销售额\"], limit=50)\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.table(df, columns=[\"月份\", \"大区\", \"销售额\"], limit=10)"
     },
     {
      "name": "wordcloud",
-     "signature": "wordcloud(data, names=None, values=None, *, agg='sum', sort=None, top_n=30, title=None, subtitle=None, fmt='compact', height=360, theme='light', link=None, max_rows=20000)",
+     "signature": "wordcloud(data, names=None, values=None, *, agg='sum', sort=None, top_n=30, title=None, subtitle=None, fmt='compact', height=360, theme='light', link=None, max_rows=200000)",
      "params": [
       {
        "name": "data",
@@ -5300,12 +5300,12 @@
       {
        "name": "max_rows",
        "kind": "keyword_only",
-       "default": 20000,
+       "default": 200000,
        "required": false
       }
      ],
      "summary": "词云（HTML/CSS 渲染）：每个类目一个词，字号随数值变化，最多 30 个。",
-     "doc": "词云（HTML/CSS 渲染）：每个类目一个词，字号随数值变化，最多 30 个。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.wordcloud(df, names=\"关键词\", values=\"提及次数\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 20000（超出自动均匀采样）。",
+     "doc": "词云（HTML/CSS 渲染）：每个类目一个词，字号随数值变化，最多 30 个。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.wordcloud(df, names=\"关键词\", values=\"提及次数\")\n\n通用参数（所有图表函数都支持）\n------------------------------\ntitle, subtitle : str\n    标题 / 副标题，默认自动生成。\nxtitle, ytitle : str\n    坐标轴名称，默认用列名；传 \"\" 隐藏。\nxlim, ylim : (min, max)\n    坐标轴范围，例如 ylim=(0, 100000)。\nfmt : str\n    数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\nheight : int\n    图高（像素），默认 380。\ntheme : str\n    \"light\"（默认）或 \"dark\"。\nagg : str\n    聚合方式：sum(默认) / mean / count / max / min / median。\nsort : str\n    类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\ntop_n : int\n    只保留前 N 个类目，其余合并为\"其他\"。\nlegend : bool\n    是否显示图例（有 color 时默认显示）。\nlabels : bool\n    是否在图形上直接标数值。\nzoom : \"auto\" | True | False\n    数据缩放条：auto 表示类目较多时自动出现。\ndrill : list[str]\n    下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\nlink : str\n    联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\nmax_rows : int\n    单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.wordcloud(df, names=\"城市\", values=\"销售额\", top_n=20)"
     }
    ]
@@ -5351,6 +5351,381 @@
      "summary": "面积图 = ``line(..., area=True)``。",
      "doc": "面积图 = ``line(..., area=True)``。",
      "example": "eazy_data_viz.area(df, x=\"月份\", y=\"销售额\")"
+    },
+    {
+     "name": "geo_map",
+     "signature": "geo_map(data, region, value=None, *, map='china', agg='sum', fmt='compact', labels=True, min_value=None, max_value=None, name_map=None, zoom=None, palette=None, height=460, theme='light', title=None, subtitle=None, drill=None, link=None, legend=True, section=None)",
+     "params": [
+      {
+       "name": "data",
+       "kind": "positional_or_keyword",
+       "default": null,
+       "required": true
+      },
+      {
+       "name": "region",
+       "kind": "positional_or_keyword",
+       "default": null,
+       "required": true
+      },
+      {
+       "name": "value",
+       "kind": "positional_or_keyword",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "map",
+       "kind": "keyword_only",
+       "default": "china",
+       "required": false
+      },
+      {
+       "name": "agg",
+       "kind": "keyword_only",
+       "default": "sum",
+       "required": false
+      },
+      {
+       "name": "fmt",
+       "kind": "keyword_only",
+       "default": "compact",
+       "required": false
+      },
+      {
+       "name": "labels",
+       "kind": "keyword_only",
+       "default": true,
+       "required": false
+      },
+      {
+       "name": "min_value",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "max_value",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "name_map",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "zoom",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "palette",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "height",
+       "kind": "keyword_only",
+       "default": 460,
+       "required": false
+      },
+      {
+       "name": "theme",
+       "kind": "keyword_only",
+       "default": "light",
+       "required": false
+      },
+      {
+       "name": "title",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "subtitle",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "drill",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "link",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "legend",
+       "kind": "keyword_only",
+       "default": true,
+       "required": false
+      },
+      {
+       "name": "section",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      }
+     ],
+     "summary": "区域填色地图：用颜色深浅表达一个指标在各省 / 各国上的高低。",
+     "doc": "区域填色地图：用颜色深浅表达一个指标在各省 / 各国上的高低。\n\n``region`` 列可以是短名（``\"广东\"``）也可以是全名（``\"广东省\"``），\n前端会自动归一化后与内置 GeoJSON 匹配；匹配不到的区域显示为「无数据色」。\n\n示例\n----\n>>> eazy_data_viz.maps.geo_map(df, region=\"省份\", value=\"销售额\")\n>>> eazy_data_viz.maps.geo_map(df, region=\"大区\", map=\"china\", min_value=0,\n...                            max_value=100000)\n\n参数\n----\n``data`` / ``region`` / ``value`` / ``map`` / ``agg`` / ``fmt`` /\n``labels`` / ``min_value`` / ``max_value`` / ``name_map`` / ``zoom`` /\n``palette`` / ``height`` / ``theme`` / ``title`` / ``subtitle`` /\n``drill`` / ``link`` / ``legend`` / ``section`` 的含义见 ``docs/api/geo_map.md``；\n其余函数（``map_bubble`` / ``map_flow``）的公共参数含义与此一致。",
+     "example": "eazy_data_viz.geo_map(df, region=\"省份\", value=\"销售额\")"
+    },
+    {
+     "name": "map_bubble",
+     "signature": "map_bubble(data, region, value=None, *, map='china', agg='sum', size=None, color=None, fmt='compact', min_size=4, max_size=28, name_map=None, zoom=None, palette=None, height=460, theme='light', title=None, subtitle=None, drill=None, link=None, legend=True, section=None)",
+     "params": [
+      {
+       "name": "data",
+       "kind": "positional_or_keyword",
+       "default": null,
+       "required": true
+      },
+      {
+       "name": "region",
+       "kind": "positional_or_keyword",
+       "default": null,
+       "required": true
+      },
+      {
+       "name": "value",
+       "kind": "positional_or_keyword",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "map",
+       "kind": "keyword_only",
+       "default": "china",
+       "required": false
+      },
+      {
+       "name": "agg",
+       "kind": "keyword_only",
+       "default": "sum",
+       "required": false
+      },
+      {
+       "name": "size",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "color",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "fmt",
+       "kind": "keyword_only",
+       "default": "compact",
+       "required": false
+      },
+      {
+       "name": "min_size",
+       "kind": "keyword_only",
+       "default": 4,
+       "required": false
+      },
+      {
+       "name": "max_size",
+       "kind": "keyword_only",
+       "default": 28,
+       "required": false
+      },
+      {
+       "name": "name_map",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "zoom",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "palette",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "height",
+       "kind": "keyword_only",
+       "default": 460,
+       "required": false
+      },
+      {
+       "name": "theme",
+       "kind": "keyword_only",
+       "default": "light",
+       "required": false
+      },
+      {
+       "name": "title",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "subtitle",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "drill",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "link",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "legend",
+       "kind": "keyword_only",
+       "default": true,
+       "required": false
+      },
+      {
+       "name": "section",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      }
+     ],
+     "summary": "气泡地图：在省份 / 国家中心点画气泡，气泡大小和颜色可以再编码两个指标。",
+     "doc": "气泡地图：在省份 / 国家中心点画气泡，气泡大小和颜色可以再编码两个指标。\n\n* ``value``：默认控制气泡大小（没有 ``size`` 时），同时用于 tooltip；\n* ``size``：第二指标，优先用它控制气泡半径；\n* ``color``：分组列（例如产品/渠道），一个区域有多组时并排画多个气泡。\n\n示例\n----\n>>> eazy_data_viz.maps.map_bubble(df, region=\"省份\", value=\"销售额\")\n>>> eazy_data_viz.maps.map_bubble(df, region=\"省份\", value=\"销售额\",\n...                               size=\"订单数\", color=\"产品\")",
+     "example": "eazy_data_viz.map_bubble(df, region=\"城市\", value=\"销售额\")"
+    },
+    {
+     "name": "map_flow",
+     "signature": "map_flow(data, source, target, value=None, *, map='china', agg='sum', fmt='compact', name_map=None, zoom=None, palette=None, height=460, theme='light', title=None, subtitle=None, link=None, legend=True, section=None)",
+     "params": [
+      {
+       "name": "data",
+       "kind": "positional_or_keyword",
+       "default": null,
+       "required": true
+      },
+      {
+       "name": "source",
+       "kind": "positional_or_keyword",
+       "default": null,
+       "required": true
+      },
+      {
+       "name": "target",
+       "kind": "positional_or_keyword",
+       "default": null,
+       "required": true
+      },
+      {
+       "name": "value",
+       "kind": "positional_or_keyword",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "map",
+       "kind": "keyword_only",
+       "default": "china",
+       "required": false
+      },
+      {
+       "name": "agg",
+       "kind": "keyword_only",
+       "default": "sum",
+       "required": false
+      },
+      {
+       "name": "fmt",
+       "kind": "keyword_only",
+       "default": "compact",
+       "required": false
+      },
+      {
+       "name": "name_map",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "zoom",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "palette",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "height",
+       "kind": "keyword_only",
+       "default": 460,
+       "required": false
+      },
+      {
+       "name": "theme",
+       "kind": "keyword_only",
+       "default": "light",
+       "required": false
+      },
+      {
+       "name": "title",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "subtitle",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "link",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "legend",
+       "kind": "keyword_only",
+       "default": true,
+       "required": false
+      },
+      {
+       "name": "section",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      }
+     ],
+     "summary": "飞线地图：把一条数据当作「source → target」的流量，在地图上画动态飞线。",
+     "doc": "飞线地图：把一条数据当作「source → target」的流量，在地图上画动态飞线。\n\n线宽和颜色都随数值变化（值越大线越粗、颜色越靠「高热」端）。\n聚合在前端完成：先按 source/target 分组，再按 ``agg`` 汇总 ``value``。\n\n示例\n----\n>>> eazy_data_viz.maps.map_flow(df, source=\"渠道\", target=\"产品\", value=\"销售额\")\n>>> eazy_data_viz.maps.map_flow(df, source=\"大区\", target=\"省份\", value=\"利润\")",
+     "example": "eazy_data_viz.map_flow(pd.DataFrame({\"出发城市\": [\"北京市\", \"上海市\", \"广州市\"], \"到达城市\": [\"广州市\", \"成都市\", \"上海市\"], \"件数\": [320, 280, 260]}), source=\"出发城市\", target=\"到达城市\", value=\"件数\")"
     }
    ]
   }
@@ -5602,6 +5977,7 @@
   "funnel",
   "gantt",
   "gauge",
+  "geo_map",
   "graph",
   "group_kpi",
   "heatmap",
@@ -5609,6 +5985,8 @@
   "kpi",
   "line",
   "lollipop",
+  "map_bubble",
+  "map_flow",
   "matrix",
   "parallel",
   "pareto",

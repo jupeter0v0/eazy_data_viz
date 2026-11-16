@@ -62,6 +62,7 @@ from .charts_extra import (
     waterfall,
     wordcloud,
 )
+from .maps import geo_map, map_bubble, map_flow
 from . import palette
 from .render import Dashboard, dashboard
 
@@ -124,6 +125,10 @@ __all__ = [
     "tile",
     "table",
     "wordcloud",
+    # ---- 地图（3）----
+    "geo_map",
+    "map_bubble",
+    "map_flow",
     "group_kpi",
     "ring_progress",
     # ---- 配色 / 工具 ----
@@ -220,6 +225,10 @@ def sample_df(rows=1500, seed=42):
     chan_scale = {"直销": 1.10, "渠道代理": 0.95, "线上商城": 0.88}
     months = ["%d月" % m for m in range(1, 13)]
 
+    # 省份 → 省会城市（示例数据里的「城市」列用真实城市名，方便地图/城市维度演示）
+    city_of = {"上海": "上海市", "江苏": "南京市", "浙江": "杭州市", "北京": "北京市",
+               "天津": "天津市", "河北": "石家庄市", "广东": "广州市", "福建": "厦门市",
+               "四川": "成都市", "陕西": "西安市"}
     flat = [(reg, prov, rf) for reg, (provs, rf) in regions.items() for prov in provs]
     n_reg = len(flat)  # 12 个"大区-省份"组合
     n_dates = max(1, int(round(rows / float(n_reg))))
@@ -243,7 +252,8 @@ def sample_df(rows=1500, seed=42):
             orders = max(1, int(round(sales / price)))
             profit = sales * pmargin * rng.normal(1.0, 0.04)
             customers = max(1, int(round(orders * rng.uniform(0.55, 0.85))))
-            records.append((day, "%d月" % day.month, reg, prov, prov + "市",
+            records.append((day, "%d月" % day.month, reg, prov,
+                            city_of.get(prov, prov + "市"),
                             pname, chan, round(sales, 2), orders,
                             round(profit, 2), customers))
 
@@ -284,6 +294,8 @@ eazy_data_viz · pandas 交互式图表库（经营驾驶舱版）  v%s
 【驾驶舱组件 5】progress(进度条) tile(瓦片) table(明细表) wordcloud(词云)
           group_kpi(指标组)
 【额外】ring_progress(环形进度)
+【地图 3】geo_map(区域填色) map_bubble(气泡地图) map_flow(飞线地图)
+          内置 china / world 地图；region 列可写「广东 / 广东省」，城市名支持「广州 / 广州市」
 
 常用签名（其它参数见各函数 docstring）
 --------------------------------------------------------------------------------
@@ -303,6 +315,9 @@ eazy_data_viz · pandas 交互式图表库（经营驾驶舱版）  v%s
     eazy_data_viz.pareto   (df, x="产品", y="销售额")
     eazy_data_viz.sankey   (df, source="渠道", target="产品", value="销售额")
     eazy_data_viz.candlestick(df, date="日期", open="开", high="高", low="低", close="收")
+    eazy_data_viz.geo_map  (df, region="省份", value="销售额")
+    eazy_data_viz.map_bubble(df, region="省份", value="销售额")
+    eazy_data_viz.map_flow (df, source="发货省", target="收货省", value="件数")
     eazy_data_viz.gantt    (df, task="任务", start="开始", end="结束", color="负责人")
     eazy_data_viz.ring_progress(72.5, label="完成率")
     eazy_data_viz.group_kpi(df, items=[{"label": "总销售额", "value": 1630000, "fmt": "compact"}])

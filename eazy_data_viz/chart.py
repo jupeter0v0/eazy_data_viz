@@ -208,6 +208,15 @@ def _auto_title(kind, roles, agg):
     return t
 
 
+# 各图表在「用户显式传 height=None」时使用的默认高度（与函数签名里的默认值保持一致）。
+_HEIGHT_DEFAULTS = {
+    "bar": 380, "line": 380, "area": 360, "pie": 360, "scatter": 400,
+    "histogram": 380, "heatmap": 380, "box": 380, "funnel": 380,
+    "treemap": 420, "gauge": 260, "combo": 400, "pareto": 400,
+    "bump": 420, "waterfall": 400, "sankey": 420, "graph": 420,
+}
+
+
 def _base_spec(
     kind,
     data,
@@ -316,7 +325,7 @@ def _base_spec(
         "title": title if title is not None else _auto_title(kind, roles, agg),
         "subtitle": subtitle,
         "theme": theme,
-        "height": int(height or 380),
+        "height": int(height if height is not None else _HEIGHT_DEFAULTS.get(kind, 380)),
         "dataRef": ref,
         "roles": dict(roles),
         "agg": agg,
@@ -372,7 +381,7 @@ _COMMON_DOC = """
     link : str
         联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。
     max_rows : int
-        单图最多嵌入行数，默认 20000（超出自动均匀采样）。
+        单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。
 """
 
 

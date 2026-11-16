@@ -29,7 +29,8 @@ setup(
     python_requires=">=3.8",
     packages=find_packages(include=["eazy_data_viz", "eazy_data_viz.*"]),
     package_data={
-        "eazy_data_viz": ["assets/*.js", "assets/*.json", "gallery/*.html", "gallery/*.py", "fonts/*"],
+        "eazy_data_viz": ["assets/*.js", "assets/*.json", "assets/maps/*.json",
+                          "gallery/*.html", "gallery/*.py", "fonts/*"],
     },
     include_package_data=True,
     install_requires=["pandas>=1.3"],

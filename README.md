@@ -1,6 +1,6 @@
 # eazy_data_viz · pandas 经营驾驶舱图表组件库
 
-> 给 pandas 用的 **HTML 交互式图表库**：45 种图表、Material Design 3 视觉、
+> 给 pandas 用的 **HTML 交互式图表库**：48 种图表、Material Design 3 视觉、
 > 客户端下钻与联动、Streamlit 兼容、离线可用。调用方式只有一个原则——
 > **传 DataFrame + 列名**，不写 JSON、不写配置。
 
@@ -27,7 +27,7 @@ edv.bar(df, x="大区", y="销售额", color="产品").show()
 
 | 能力 | 说明 |
 | --- | --- |
-| **45 种图表** | 从 KPI 卡、瀑布图、帕累托、子弹图，到桑基图、旭日图、K 线、甘特图、相关矩阵 |
+| **48 种图表** | 从 KPI 卡、瀑布图、帕累托、子弹图，到桑基图、旭日图、K 线、甘特图、相关矩阵 |
 | **下钻 / 联动** | 点击柱形逐级下钻（大区 → 省份 → 城市），同组图表点击即交叉筛选；**全部在浏览器内完成**，不触发服务器往返 |
 | **Material Design 3** | Google 配色与排版（Roboto、Google Blue `#1a73e8`、8/12px 圆角、卡片阴影、深浅两套主题） |
 | **调用极简** | 只有 `图表函数(df, x=..., y=...)`，自动识别数值 / 时间 / 分类列、自动排序、自动标题 |
@@ -40,9 +40,11 @@ edv.bar(df, x="大区", y="销售额", color="产品").show()
 
 ### 文档导航
 
+> 先读 [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md)：里面有每个图表的「参数生效范围」。
+
 | 文档 | 内容 |
 | --- | --- |
-| [README.md](README.md)（本文件） | 人读：安装、45 种图表、KPI、配色、交互、Streamlit、FAQ |
+| [README.md](README.md)（本文件） | 人读：安装、48 种图表、KPI、配色、交互、Streamlit、FAQ |
 | [docs/AI_GUIDE.md](docs/AI_GUIDE.md) | 给 AI 的说明书：规则、选图决策表、签名 + 可运行示例、错误对照 |
 | [docs/eazy_catalog.json](docs/eazy_catalog.json) | 机器可读目录（46 个图表条目的签名/参数/示例），由 `tools/gen_ai_doc.py` 生成 |
 | [docs/EXTRA_CHARTS.md](docs/EXTRA_CHARTS.md) | 扩展图表契约（Python spec ⇄ JS builder），加新图看这份 |
@@ -96,7 +98,7 @@ edv.show(
 )
 ```
 
-`edv.help()` 会打印 45 种图表的速查表；`edv.gallery()` 启动 Streamlit 版画廊。
+`edv.help()` 会打印 48 种图表的速查表；`edv.gallery()` 启动 Streamlit 版画廊。
 
 更多可运行示例见 [`examples/`](examples)：`cockpit.py`（完整驾驶舱）、`kpi_cards.py`、
 `palettes.py`、`drill_link.py`、`streamlit_app.py`。
@@ -112,7 +114,7 @@ edv.show(
 
 ---
 
-## 4. 图表函数（45 种）
+## 4. 图表函数（48 种）
 
 所有函数第一个参数都是 DataFrame，其余只需要列名和少量关键字参数。
 `data` 一律可省列名详述如下；`*` 之后是只允许关键字传的参数。
@@ -195,6 +197,23 @@ edv.table(df, columns=["月份", "大区", "销售额"], limit=12)
 edv.wordcloud(df, names="城市", values="销售额", top_n=12)
 ```
 
+### 4.7 地图
+
+内置中国地图与**世界地图**（本地 GeoJSON，离线可用，不依赖任何 CDN）；城市名支持
+「广州 / 广州市」两种写法，内置 725 条城市名称/坐标映射，气泡图与飞线图按真实城市坐标落点。
+
+```python
+edv.geo_map(df, region="省份", value="销售额")                      # 中国省级填色
+edv.geo_map(df, region="国家", value="销售额", map="world")         # 世界地图
+edv.geo_map(df, region="省份", value="销售额", name_map={"广东": "广东省"})
+edv.map_bubble(df, region="城市", value="销售额")                    # 城市气泡
+edv.map_flow(df, source="出发城市", target="到达城市", value="件数")  # 城市飞线
+```
+
+- `region` 列写「广东 / 广东省」都可以，前端会自动归一化；匹配不到的区域会跳过并给出提示。
+- 地图同样支持 `drill` 下钻、`link` 联动、`palette` 配色与深色主题。
+- 地图数据放在 `eazy_data_viz/assets/maps/`（`china.json` / `world.json` / `china_cities.json`）。
+
 ---
 
 ## 5. 公共参数
@@ -218,7 +237,7 @@ edv.wordcloud(df, names="城市", values="销售额", top_n=12)
 | `link` | 联动组名，同组图表共享筛选状态 |
 | `legend` | 是否显示图例 |
 | `section` | 看板分区标题（同名的图会归到一栏） |
-| `max_rows` | 超过后自动均匀采样（默认 20000 行） |
+| `max_rows` | 超过后自动均匀采样（默认 200000 行；传 `None` 表示不采样） |
 
 ---
 
@@ -332,7 +351,7 @@ edv.show(...).save("dashboard.html")
 
 得到一个自包含 `.html`（约 1.4 MB / 50 张图，ECharts 内联），双击即可打开、离线可用。
 这也正是仓库根目录 `gallery.html` 的生成方式：`python tools/build_gallery.py`。
-画廊里 **64 张卡片 / 45 种图表**，每张卡片右上角「代码」按钮会展开生成该图的完整
+画廊里 **68 张卡片 / 48 种图表**，每张卡片右上角「代码」按钮会展开生成该图的完整
 Python 代码（由构建脚本自动录制，和实际出图代码完全一致），可一键复制。
 
 ---
@@ -343,7 +362,8 @@ Python 代码（由构建脚本自动录制，和实际出图代码完全一致�
 - 数值列里的字符串会尝试转数字；无法识别的为 NaN，按图表各自规则忽略。
 - 时间列支持 `datetime64`、`YYYY-MM-DD`、`YYYY-MM-DD HH:MM:SS` 字符串。
 - 有序分类（`pd.Categorical(..., ordered=True)`）会保留你定义的顺序（如 1月..12月）。
-- 数据默认最多 20000 行（超出均匀采样），列最多 40 列；可用 `max_rows` 调整。
+- 数据默认最多 **200000 行**（超出才均匀采样），列最多 40 列；需要更多可用 `max_rows=300000` 调大，`max_rows=None` 完全不采样。
+- 行数越大，生成的 HTML 越大（约每万行 0.5MB）：200k 行 × 6 列约 10MB；建议只传绘图用到的列，或用 `top_n`/筛选先聚合。
 - 多图共享同一份 DataFrame 时，页面里只嵌入一次数据（看板体积更小）。
 
 ---
@@ -381,7 +401,7 @@ DataFrame ──(frame.py)──> 紧凑记录 {cols, rows, kinds, orders}
 
 ```
 eazy_data_viz/                    # 库本体
-  __init__.py            # 门面：45 个图表函数 + show/dashboard/help/gallery/sample_df
+  __init__.py            # 门面：48 个图表函数 + show/dashboard/help/gallery/sample_df
   frame.py               # DataFrame → 记录、列类型识别、采样、有序类目
   chart.py               # 基础 14 种图表 + 公共参数校验
   charts_extra.py        # 扩展 31 种图表

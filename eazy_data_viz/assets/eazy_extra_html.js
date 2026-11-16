@@ -186,7 +186,7 @@
         (it.unit ? '<span class="m-unit">' + U.esc(it.unit) + '</span>' : '') + '</div>' +
         (delta === null ? '' :
           '<div class="m-delta' + dcls + '">' + (delta >= 0 ? '▲' : '▼') + ' ' +
-          Math.abs(delta).toFixed(1) + '%</div>') +
+          Math.abs(delta * 100).toFixed(1) + '%</div>') +
         (it.hint ? '<div class="m-hint">' + U.esc(it.hint) + '</div>' : '') +
         '</div>';
     }

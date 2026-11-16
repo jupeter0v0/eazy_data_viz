@@ -12,6 +12,8 @@
 from __future__ import annotations
 
 import html as _html
+import io
+import json
 import os
 import shutil
 import sys
@@ -25,6 +27,7 @@ RUNTIME_JS = "eazy.js"
 # 扩展图表运行时（按顺序加载：主控 → A 组 → B 组 → HTML 类）
 EXTRA_JS = (
     "eazy_extra_main.js",
+    "eazy_map.js",
     "eazy_extra_a.js",
     "eazy_extra_b.js",
     "eazy_extra_html.js",
@@ -89,6 +92,57 @@ def _read_asset(name):
     return _asset_cache[name]
 
 
+MAPS_DIR = os.path.join(ASSETS_DIR, "maps")
+_MAP_CACHE = {}
+
+
+def _read_map(name):
+    """读取内置 GeoJSON 地图（china / world），带缓存。"""
+    name = str(name or "china").strip().lower()
+    if name in _MAP_CACHE:
+        return _MAP_CACHE[name]
+    path = os.path.join(MAPS_DIR, name + ".json")
+    if not os.path.isfile(path):
+        raise ValueError(
+            "未知地图 %r；当前只内置 china（中国）与 world（世界）。" % name)
+    with io.open(path, encoding="utf-8") as f:
+        geo = json.load(f)
+    _MAP_CACHE[name] = geo
+    return geo
+
+
+def _map_payload(specs):
+    """收集页面里用到哪些地图，返回 {name: geojson}。"""
+    used, out = [], {}
+    for s in specs or []:
+        name = s.get("map")
+        if name and name not in used:
+            used.append(name)
+    for name in used:
+        try:
+            out[str(name)] = _read_map(name)
+        except (ValueError, OSError):
+            continue
+    return out
+
+
+_CITIES_CACHE = {}
+
+
+def _cities_payload():
+    """读取内置城市坐标表（china_cities.json），供气泡/飞线地图按城市落点。"""
+    if "cities" in _CITIES_CACHE:
+        return _CITIES_CACHE["cities"]
+    path = os.path.join(MAPS_DIR, "china_cities.json")
+    try:
+        with io.open(path, encoding="utf-8") as f:
+            cities = json.load(f)
+    except (IOError, OSError, ValueError):
+        cities = {}
+    _CITIES_CACHE["cities"] = cities
+    return cities
+
+
 def _script_tags(inline, prefix="eazy_assets"):
     if inline:
         return "\n".join("<script>%s</script>" % _read_asset(n) for n in ALL_JS)
@@ -116,6 +170,8 @@ def _card_height(spec):
         return int(base or 320) + head + 10
     if kind in ("progress", "wordcloud", "tile"):
         return int(base or 320) + head + 10
+    if kind in ("geo_map", "map_bubble", "map_flow"):
+        return int(base or 460) + head + toolbar + 14
     return int(base or 380) + head + toolbar + 14
 
 
@@ -461,7 +517,11 @@ def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None
     cards = "\n".join(card_parts)
 
     page = {"theme": theme, "palette": palette, "charts": specs, "links": []}
-    payload = {"data": _frame.to_json(data_store), "page": _frame.to_json(page)}
+    maps = _map_payload(specs)
+    cities = _cities_payload() if maps else {}
+    payload = {"maps": _frame.to_json(maps) if maps else "{}",
+               "cities": _frame.to_json(cities) if cities else "{}",
+               "data": _frame.to_json(data_store), "page": _frame.to_json(page)}
 
     filters = ""
     if has_filters:
@@ -484,7 +544,7 @@ def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None
 {cards}
 </div>
 </div>
-<script>window.EAZY_DATA = {data};window.EAZY_PAGE = {page};</script>
+<script>window.EAZY_MAPS = {maps};window.EAZY_CITIES = {cities};window.EAZY_DATA = {data};window.EAZY_PAGE = {page};</script>
 {scripts}
 <script>{js_err}
 try {{
@@ -509,6 +569,8 @@ try {{
         filters=filters,
         cols=cols,
         cards=cards,
+        maps=payload["maps"],
+        cities=payload["cities"],
         data=payload["data"],
         page=payload["page"],
         scripts=_script_tags(inline),
@@ -617,6 +679,13 @@ def _copy_assets(target_dir):
         src = os.path.join(ASSETS_DIR, name)
         if os.path.isfile(src):
             shutil.copyfile(src, os.path.join(dest, name))
+    maps_dest = os.path.join(dest, "maps")
+    if os.path.isdir(MAPS_DIR):
+        os.makedirs(maps_dest, exist_ok=True)
+        for name in os.listdir(MAPS_DIR):
+            src = os.path.join(MAPS_DIR, name)
+            if os.path.isfile(src):
+                shutil.copyfile(src, os.path.join(maps_dest, name))
     return dest
 
 

@@ -319,6 +319,21 @@ def _apply_agg(values, agg):
     return float(getattr(s, agg)())
 
 
+def _num_param(value, name):
+    """把用户显式传入的数值参数转成 float；不可转换时给出明确报错（不要静默变 None）。"""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError("%s 需要是数字，收到 %r。" % (name, value))
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        raise ValueError("%s 需要是数字，收到 %r。" % (name, value))
+    if math.isnan(f) or math.isinf(f):
+        raise ValueError("%s 不能是 NaN / Inf。" % (name,))
+    return f
+
+
 def _num_or_none(value):
     """numpy / pandas 标量 → 可 JSON 的 float 或 None（NaN/Inf → None）。"""
     try:
@@ -470,7 +485,7 @@ def bullet(
         drill=drill,
         link=link,
         max_rows=max_rows,
-        targetValue=(_num_or_none(target_value) if target_value is not None else None),
+        targetValue=_num_param(target_value, "target_value"),
     )
     return Chart(spec, records, ref, info)
 
@@ -654,7 +669,10 @@ def pareto(
     _frame.require_column(df, x, "x（类目）")
     if y is not None:
         df = _coerce_numeric(df, [("y（数值）", y)])
-    _check_fmt(cum_fmt)
+    try:
+        _check_fmt(cum_fmt)
+    except ValueError:
+        raise ValueError("cum_fmt 只支持 \"percent\" / \"raw\" / \"compact\"，收到 %r。" % (cum_fmt,))
     spec, records, ref, info = _ext(
         "pareto",
         df,
@@ -951,6 +969,9 @@ def rose(
     df = _frame.ensure_frame(data)
     if names is None:
         raise ValueError('rose 需要 names（类目列），例如 rose(df, names="产品", values="销售额")。')
+    if drill:
+        # 扇区类目就是 names 列：下钻第一层必须从 names 开始，否则点击后按实例列过滤会变空图。
+        drill = [names] + [d for d in _as_list(drill) if d != names]
     _frame.require_column(df, names, "names（类目）")
     if values is not None:
         df = _coerce_numeric(df, [("values（数值）", values)])
@@ -1190,7 +1211,7 @@ def target(
         drill=drill,
         link=link,
         max_rows=max_rows,
-        targetValue=(_num_or_none(target_value) if target_value is not None else None),
+        targetValue=_num_param(target_value, "target_value"),
     )
     return Chart(spec, records, ref, info)
 
@@ -1973,7 +1994,7 @@ def gantt(
         bad = int((ed < sd).sum())
         if bad:
             warnings.append(
-                "gantt 有 %d 行结束日期早于开始日期，这些条会显示异常，建议先清洗数据。" % bad
+                "gantt 有 %d 行结束日期早于开始日期，已按「开始在前」自动交换这两列的值。" % bad
             )
     except (TypeError, ValueError):  # pragma: no cover - 防御式
         pass

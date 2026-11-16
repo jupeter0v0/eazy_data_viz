@@ -40,7 +40,7 @@ TEST_JS = r"""
   try {
 
   // ---------------- 纯逻辑 ----------------
-  ok('charts-count', EazyViz.charts.length === 15, EazyViz.charts.length);
+  ok('charts-count', EazyViz.charts.length === 18, EazyViz.charts.length);
   ok('dataStore', Object.keys(EazyViz.dataStore).length >= 1);
   ok('fmt-compact', core0.fmtValue(12345678, 'compact') === '1235万', core0.fmtValue(12345678, 'compact'));
   ok('fmt-percent', core0.fmtValue(12.5, 'percent') === '12.5%', core0.fmtValue(12.5, 'percent'));
@@ -54,6 +54,30 @@ TEST_JS = r"""
   var spec0 = c0.spec;
   var g = core0.groupBy(r0, [spec0.roles.x], spec0.roles.y, 'sum');
   ok('groupBy', g.length >= 2 && g[0].key && typeof g[0].value === 'number', JSON.stringify(g[0]));
+
+  // ---------------- 地图 ----------------
+  var cm = chart(15), cb = chart(16), cf = chart(17);
+  ok('maps-payload', !!(window.EAZY_MAPS && window.EAZY_MAPS.china),
+     Object.keys(window.EAZY_MAPS || {}).join(','));
+  ok('cities-payload', !!(window.EAZY_CITIES && window.EAZY_CITIES['广州市']),
+     !!window.EAZY_CITIES);
+  try {
+    var om = cm.ec.getOption();
+    ok('geo_map-series', om.series && om.series.length === 1 && om.series[0].type === 'map',
+       om.series && om.series[0] && om.series[0].type);
+    ok('geo_map-data', (om.series[0].data || []).length >= 2, (om.series[0].data || []).length);
+    ok('geo_map-visualmap', !!(om.visualMap && om.visualMap.length));
+  } catch (e) { ok('geo_map-render', false, String(e).slice(0, 120)); }
+  try {
+    var ob = cb.ec.getOption();
+    ok('map_bubble-geo', !!(ob.geo && ob.geo.length), (ob.geo || []).length);
+    ok('map_bubble-points', (ob.series[0].data || []).length >= 3, (ob.series[0].data || []).length);
+  } catch (e2) { ok('map_bubble-render', false, String(e2).slice(0, 120)); }
+  try {
+    var of = cf.ec.getOption();
+    ok('map_flow-lines', (of.series[0].data || []).length >= 2, (of.series[0].data || []).length);
+    ok('map_flow-geo', !!(of.geo && of.geo.length), (of.geo || []).length);
+  } catch (e3) { ok('map_flow-render', false, String(e3).slice(0, 120)); }
 
   // 联动过滤
   c0.state.filters = {};
@@ -225,6 +249,16 @@ def build_page():
                  delta_label="同比", target=2000000, spark="销售额", spark_x="月份",
                  hint="联动组演示", link="g1"),
         eazy_data_viz.bar(df, x="月份", y="销售额", color="产品", title="配色表格图").palette("tableau"),
+        eazy_data_viz.geo_map(df.groupby("省份", as_index=False)["销售额"].sum(),
+                              region="省份", value="销售额", title="中国地图"),
+        eazy_data_viz.map_bubble(df.groupby("城市", as_index=False)["销售额"].sum(),
+                                 region="城市", value="销售额", title="城市气泡"),
+        eazy_data_viz.map_flow(
+            __import__("pandas").DataFrame({
+                "出发城市": ["北京市", "上海市", "广州市", "成都市"],
+                "到达城市": ["广州市", "成都市", "上海市", "北京市"],
+                "件数": [320, 280, 260, 180]}),
+            source="出发城市", target="到达城市", value="件数", title="城市飞线"),
     ]
     for _c in charts[:3]:
         _c.spec["code"] = ('eazy_data_viz.%s(%s)' % (
