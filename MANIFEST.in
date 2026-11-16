@@ -1,0 +1,9 @@
+include README.md
+include LICENSE
+include pyproject.toml
+recursive-include eazy_data_viz/assets *.js *.json
+recursive-include eazy_data_viz/gallery *.html *.py
+recursive-include eazy_data_viz/fonts *
+recursive-include tests *.py
+recursive-include tools *.py
+recursive-include docs *.md *.json

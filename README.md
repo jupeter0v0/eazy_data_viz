@@ -1,0 +1,439 @@
+# eazy_data_viz · pandas 经营驾驶舱图表组件库
+
+> 给 pandas 用的 **HTML 交互式图表库**：45 种图表、Material Design 3 视觉、
+> 客户端下钻与联动、Streamlit 兼容、离线可用。调用方式只有一个原则——
+> **传 DataFrame + 列名**，不写 JSON、不写配置。
+
+```python
+import pandas as pd
+import eazy_data_viz as edv
+
+df = pd.read_excel("经营数据.xlsx")          # 你的 DataFrame
+edv.bar(df, x="大区", y="销售额", color="产品").show()
+```
+
+---
+
+## 1. 为什么用它
+
+| 能力 | 说明 |
+| --- | --- |
+| **45 种图表** | 从 KPI 卡、瀑布图、帕累托、子弹图，到桑基图、旭日图、K 线、甘特图、相关矩阵 |
+| **下钻 / 联动** | 点击柱形逐级下钻（大区 → 省份 → 城市），同组图表点击即交叉筛选；**全部在浏览器内完成**，不触发服务器往返 |
+| **Material Design 3** | Google 配色与排版（Roboto、Google Blue `#1a73e8`、8/12px 圆角、卡片阴影、深浅两套主题） |
+| **调用极简** | 只有 `图表函数(df, x=..., y=...)`，自动识别数值 / 时间 / 分类列、自动排序、自动标题 |
+| **Streamlit 兼容** | `st.components.v1.html` 一行嵌入；交互不进 rerun，点击零延迟 |
+| **离线可用** | ECharts 与全部运行时内联进 HTML，单文件即可发给别人；不依赖 CDN |
+| **源码随图** | gallery 里每张卡片右上角「代码」可展开生成该图的完整 Python 代码，支持一键复制 |
+| **驾驶舱开箱即用** | KPI 指标组、达成率、筛选联动、明细表、主题切换、一键重置联动 |
+
+---
+
+### 文档导航
+
+| 文档 | 内容 |
+| --- | --- |
+| [README.md](README.md)（本文件） | 人读：安装、45 种图表、KPI、配色、交互、Streamlit、FAQ |
+| [docs/AI_GUIDE.md](docs/AI_GUIDE.md) | 给 AI 的说明书：规则、选图决策表、签名 + 可运行示例、错误对照 |
+| [docs/eazy_catalog.json](docs/eazy_catalog.json) | 机器可读目录（46 个图表条目的签名/参数/示例），由 `tools/gen_ai_doc.py` 生成 |
+| [docs/EXTRA_CHARTS.md](docs/EXTRA_CHARTS.md) | 扩展图表契约（Python spec ⇄ JS builder），加新图看这份 |
+| [CHANGELOG.md](CHANGELOG.md) / [CONTRIBUTING.md](CONTRIBUTING.md) | 版本记录 / 参与开发 |
+| [examples/](examples) | 6 个可直接运行的示例（驾驶舱、KPI、配色、下钻联动、Streamlit） |
+
+## 2. 环境与安装
+
+**已验证**：
+
+| Python | pandas | Streamlit | 状态 |
+| --- | --- | --- | --- |
+| 3.8.10 | 2.0.3 | 1.27.1 | ✅ 全部测试通过 |
+| 3.12.14 | 2.x | 1.67.0 | ✅ |
+| **3.14.10** | **3.1.1** | **1.67.0** | ✅ 全部测试通过（`tests/test_eazy.py` PASS 28） |
+
+```bash
+pip install .                 # 只装核心（pandas）
+pip install ".[streamlit]"    # 需要 Streamlit 时
+pip install ".[notebook]"     # 需要 Jupyter 时
+```
+
+只用 pandas 一个硬依赖；`streamlit` / `ipython` 是可选 extra。
+不依赖 pyecharts / plotly / selenium。
+
+---
+
+## 3. 30 秒上手
+
+```python
+import eazy_data_viz as edv
+
+df = edv.sample_df()            # 示例数据（1500 行，也可直接换自己的 df）
+
+# 1) 单图：脚本里会打开浏览器；笔记本里内联；Streamlit 里自动嵌入组件
+edv.bar(df, x="大区", y="销售额", color="产品", stack=True).show()
+
+# 2) 存成独立 HTML（发给业务方，双击就能用）
+edv.line(df, x="月份", y="销售额", color="渠道", smooth=True).save("trend.html")
+
+# 3) 经营驾驶舱：多图放进同一个页面，才能互相联动
+edv.show(
+    edv.group_kpi(items=[
+        {"label": "总销售额", "value": df["销售额"].sum(), "fmt": "compact", "delta": 12.8},
+        {"label": "利润率", "value": 19.97, "fmt": "percent", "delta": -1.2},
+    ]),
+    edv.bar(df, x="大区", y="销售额", color="产品", link="g1"),
+    edv.line(df, x="月份", y="销售额", link="g1"),
+    edv.heatmap(df, x="月份", y="大区", value="销售额"),
+    cols=2, title="经营驾驶舱",
+)
+```
+
+`edv.help()` 会打印 45 种图表的速查表；`edv.gallery()` 启动 Streamlit 版画廊。
+
+更多可运行示例见 [`examples/`](examples)：`cockpit.py`（完整驾驶舱）、`kpi_cards.py`、
+`palettes.py`、`drill_link.py`、`streamlit_app.py`。
+
+**三种输出载体**（同一份 spec）：
+
+| 方法 | 场景 |
+| --- | --- |
+| `.show()` | 自动判别：Streamlit → `components.html`；Jupyter → `IPython.display`；脚本 → 临时文件 + 浏览器 |
+| `.to_html()` | 拿到 HTML 字符串，自己塞进模板 / iframe / OSS |
+| `.save(path)` | 落地静态 `.html`，离线分发（体积约 1.1 MB，含 ECharts） |
+| `edv.dashboard(...) / edv.show(...)` | 多图看板（跨图联动必须走这里） |
+
+---
+
+## 4. 图表函数（45 种）
+
+所有函数第一个参数都是 DataFrame，其余只需要列名和少量关键字参数。
+`data` 一律可省列名详述如下；`*` 之后是只允许关键字传的参数。
+
+### 4.1 指标类
+
+```python
+edv.kpi(df, value="销售额", agg="sum", label="全年销售额", delta=0.128, fmt="compact")
+edv.group_kpi(df, names="大区", values="销售额")            # 每个类目一张卡
+edv.group_kpi(items=[{"label": "总利润", "value": 32.6, "delta": 8.6}])
+edv.gauge(19.97, label="利润率", min=0, max=40, fmt="percent")
+edv.ring_progress(78, label="目标达成率", max=100)
+edv.progress(df, x="大区", y="销售额", max=600000)          # 进度条列表
+```
+
+### 4.2 趋势类
+
+```python
+edv.line(df, x="月份", y="销售额", color="渠道", smooth=True, step=False, area=False)
+edv.area(df, x="日期", y="订单数")
+edv.area_pct(df, x="月份", y="销售额", color="产品")        # 百分比堆叠面积
+edv.bar_pct(df, x="月份", y="销售额", color="渠道")         # 百分比堆叠柱
+edv.theme_river(df, x="月份", color="产品", value="销售额")  # 主题河流
+edv.sparkline(df, x="月份", y="销售额", group="渠道")       # 迷你走势（多行小图）
+edv.trend(df, x="销售额", y="利润", color="产品")           # 散点 + 回归线（R²）
+edv.combo(df, x="月份", bar="销售额", line="利润", zoom=True)
+edv.candlestick(df, date="日期", open="开盘", high="最高", low="最低", close="收盘")
+edv.calendar(df, date="日期", value="销售额")               # 日历热力图
+```
+
+### 4.3 对比与排名
+
+```python
+edv.bar(df, x="省份", y="销售额", color="产品", stack=True, horizontal=False,
+         top_n=10, sort=None, percent=False)
+edv.waterfall(df, x="产品", y="销售额", total=True)         # 瀑布图
+edv.pareto(df, x="省份", y="销售额", top_n=8)               # 帕累托 80/20
+edv.lollipop(df, x="产品", y="销售额")                      # 棒棒糖图
+edv.dumbbell(df, x="省份", y1="上半年", y2="下半年")        # 哑铃图
+edv.slope(df, x="省份", y="利润率", color="期间")           # 斜率图
+edv.bump(df, x="月份", y="销售额", group="产品")            # 排名变化
+edv.bullet(df, x="大区", actual="销售额", target_value=500000)   # 子弹图
+edv.target(df, x="大区", actual="销售额", target="目标")     # 实际 vs 目标
+edv.pictorial(df, x="大区", y="销售额", symbol="rect")       # 象形柱
+edv.pyramid(df, names="渠道", values="销售额")
+edv.funnel(df, names="产品", values="销售额")
+```
+
+### 4.4 结构与占比
+
+```python
+edv.pie(df, names="产品", values="销售额", donut=True)
+edv.rose(df, names="产品", values="销售额", donut=False)     # 南丁格尔玫瑰
+edv.treemap(df, path=["大区", "省份"], value="销售额")       # 矩形树图
+edv.sunburst(df, path=["大区", "省份"], value="销售额")      # 旭日图
+edv.tree(df, path=["大区", "省份"], value="销售额")          # 树图
+edv.tile(df, names="省份", values="销售额", top_n=8)         # 瓦片图
+```
+
+### 4.5 分布与关系
+
+```python
+edv.histogram(df, column="销售额", bins=24)
+edv.box(df, x="产品", y="销售额")
+edv.scatter(df, x="销售额", y="利润", color="产品", size="订单数")
+edv.quadrant(df, x="销售额", y="利润", size="订单数", color="大区")
+edv.heatmap(df, x="月份", y="大区", value="销售额")
+edv.matrix(df, columns=["销售额", "订单数", "利润", "客户数"])   # 相关矩阵
+edv.radar(df, x="产品", y="销售额", color="大区", agg="mean")
+edv.parallel(df, dims=["销售额", "订单数", "利润", "客户数"], color="大区")
+edv.sankey(df, source="渠道", target="产品", value="销售额")
+edv.graph(df, source="大区", target="城市", value="销售额")
+edv.gantt(df, task="任务", start="开始", end="结束", color="负责部门")
+```
+
+### 4.6 明细与文本
+
+```python
+edv.table(df, columns=["月份", "大区", "销售额"], limit=12)
+edv.wordcloud(df, names="城市", values="销售额", top_n=12)
+```
+
+---
+
+## 5. 公共参数
+
+几乎所有图表函数都支持（同名、同语义）：
+
+| 参数 | 说明 |
+| --- | --- |
+| `title` / `subtitle` | 卡片标题 / 副标题（不给就按列名自动生成） |
+| `xtitle` / `ytitle` | 坐标轴标题（默认取列名，过长自动缩写） |
+| `agg` | 聚合方式：`sum` `mean` `count` `max` `min` `median` |
+| `fmt` | 数值格式：`compact`（万/亿）`thousands` `raw` `percent` `currency` |
+| `xlim` / `ylim` | 坐标范围（只作用于数值轴） |
+| `sort` | `x` / `asc` / `desc` / `None`（自动：时间 → x，排名 → desc） |
+| `top_n` | 只保留前 N 项（其余聚合为「其他」） |
+| `height` | 图表区域高度（px），卡片高度自动适配 |
+| `theme` | `light` / `dark`（页面内也可点 ◐ 实时切换） |
+| `labels` | 是否显示数据标签（密集图默认关闭） |
+| `zoom` | 底部缩放条（`True` / `"auto"` 按数据量自动） |
+| `drill` | 下钻层级列表，如 `["大区", "省份", "城市"]` |
+| `link` | 联动组名，同组图表共享筛选状态 |
+| `legend` | 是否显示图例 |
+| `section` | 看板分区标题（同名的图会归到一栏） |
+| `max_rows` | 超过后自动均匀采样（默认 20000 行） |
+
+---
+
+## 6. KPI 卡片
+
+驾驶舱最上面那一排指标卡。`edv.kpi()` 既能接 DataFrame（聚合后参与联动过滤），
+也能直接给一个数字（静态展示）。
+
+```python
+# 1) 接 DataFrame：自动 sum/mean/...；带目标 → 右上角徽标 + 达成率进度条
+edv.kpi(df, value="销售额", label="全年销售额", delta=0.128, delta_label="同比",
+         target=2000000, hint="2024 全年 · 含税").show()
+
+# 2) 加一条迷你走势线（按 spark_x 聚合 spark 列）
+edv.kpi(df, value="销售额", label="销售额趋势",
+         spark="销售额", spark_x="月份", accent=1).show()
+
+# 3) 反向指标：成本/退货率这类「下降是好事」，inverse=True 时下降显示绿色
+edv.kpi(3.4, label="退货率", fmt="percent", delta=-0.086, inverse=True).show()
+
+# 4) 参与联动：link="g1" 的 KPI 会随同组图表点击自动重算
+edv.kpi(df, value="销售额", label="销售额（联动）", link="g1",
+         spark="销售额", spark_x="月份").show()
+```
+
+| 参数 | 说明 |
+|---|---|
+| `data` / `value` / `agg` | 传 df + 列名（参与联动）或直接传数字 |
+| `label` / `hint` | 主标签 / 下方灰色说明 |
+| `fmt` / `unit` / `prefix` | `compact`(163万) / `thousands` / `raw` / `percent` / `currency`，可加单位和前缀 |
+| `delta` / `delta_label` / `inverse` | 同比环比涨跌；`inverse=True` 反转红绿 |
+| `target` / `target_label` | 目标值 → 徽标「目标 200万」+ 达成率进度条（超额时数字显示真实百分比） |
+| `spark` / `spark_x` | 迷你走势线 |
+| `accent` | 用当前配色的第 N 个颜色做强调色 |
+| `link` | 联动组名，点同组图表时该 KPI 重算 |
+
+## 7. 配色库
+
+7 套经过挑选的配色，一套色板同时决定：图表分类色、热力色阶、仪表盘、KPI 强调色。
+
+| 名字 | 风格 | 适合 |
+|---|---|---|
+| `google`（默认） | Google Material 3 | 通用经营看板、对外汇报 |
+| `antd` | Ant Design | 中后台、企业系统 |
+| `tableau` | Tableau 10 | 数据分析报告、BI |
+| `carbon` | IBM Carbon | 技术/工业感大屏 |
+| `echarts` | ECharts 默认 | 和现有 ECharts 项目混排 |
+| `morandi` | 莫兰迪低饱和 | 高级感、打印、PPT |
+| `tailwind` | Tailwind 现代色 | 网页产品、仪表盘 |
+
+```python
+edv.bar(df, x="大区", y="销售额").palette("tableau").show()   # 单图换配色
+edv.bar(df, x="大区", y="销售额", palette="morandi")          # 也可以直接传参
+edv.dashboard(c1, c2, palette="carbon").save("dash.html")     # 整页换配色
+edv.set_palette("antd")                                       # 改全局默认
+edv.palettes()                                                # 列出所有配色
+```
+
+页面上还内置了顶栏「配色」下拉框和深浅色切换按钮，演示时可以直接切换给别人看。
+每套配色的具体色值在 `eazy_data_viz/palette.py`，想加自己的色板照着加一个字典即可。
+
+## 8. 交互能力（全部在浏览器内）
+
+- **下钻**：`drill=["大区","省份","城市"]`，点击柱形进入下一层，顶部面包屑可回退任意层。
+- **联动**：`link="g1"`，点击任一图的柱 / 点 / 扇区，同组图表一起过滤；顶部出现筛选 chip，再点一次取消；顶栏「重置联动」清空全部。
+- **图例筛选**：点击图例显示 / 隐藏系列（跨图同步）。
+- **缩放**：`zoom=True` 或数据量大时自动出现底部滑块，滚轮可缩放。
+- **主题切换**：顶栏 ◐ 在 light / dark 之间实时切换，图表与页面一起变。
+- **导出图片**：每张图右上角工具箱可直接下载 PNG。
+
+> 注意：跨图联动要求这些图表在**同一个 HTML 文档**里，即用 `edv.show(...)` / `edv.dashboard(...)` 一次渲染。
+> 每个 `.show()` 是独立 iframe，独立的图之间不会联动。
+
+---
+
+## 9. Streamlit 用法
+
+```python
+import streamlit as st
+import eazy_data_viz as edv
+from eazy_data_viz import render as pvrender
+
+df = edv.sample_df()
+
+page = edv.dashboard(
+    edv.group_kpi(items=[...]),
+    edv.bar(df, x="大区", y="销售额", link="g1"),
+    edv.line(df, x="月份", y="销售额", link="g1"),
+    cols=2, title="经营驾驶舱",
+)
+st.components.v1.html(
+    page.to_html(),
+    height=pvrender.page_height(
+        [c for c in page.charts], cols=2, has_header=True, has_filters=True),
+    scrolling=False,
+)
+```
+
+- 用 `st.components.v1.html`（不要用 `st.html`：低版本不支持 JS，且默认会过滤脚本）。
+- **必须显式给 height**，否则 iframe 默认 150px 会裁掉图表；`edv.render.page_height()` 会估算。
+- 交互在 iframe 内完成，**不会触发 rerun**，点击零延迟；代价是 iframe 内的点击不会自动回传 Python（需要回传时用 `st.session_state` + 自定义组件另行处理）。
+- 完整示例见 `eazy_data_viz/gallery/app.py`：`streamlit run eazy_data_viz/gallery/app.py`。
+
+---
+
+## 10. 静态 HTML / 交付给业务方
+
+```python
+edv.show(...).save("dashboard.html")
+```
+
+得到一个自包含 `.html`（约 1.4 MB / 50 张图，ECharts 内联），双击即可打开、离线可用。
+这也正是仓库根目录 `gallery.html` 的生成方式：`python tools/build_gallery.py`。
+画廊里 **64 张卡片 / 45 种图表**，每张卡片右上角「代码」按钮会展开生成该图的完整
+Python 代码（由构建脚本自动录制，和实际出图代码完全一致），可一键复制。
+
+---
+
+## 11. 数据要求
+
+- 输入任意 `pandas.DataFrame`；列会被自动识别为 **数值 / 时间 / 分类 / 布尔**。
+- 数值列里的字符串会尝试转数字；无法识别的为 NaN，按图表各自规则忽略。
+- 时间列支持 `datetime64`、`YYYY-MM-DD`、`YYYY-MM-DD HH:MM:SS` 字符串。
+- 有序分类（`pd.Categorical(..., ordered=True)`）会保留你定义的顺序（如 1月..12月）。
+- 数据默认最多 20000 行（超出均匀采样），列最多 40 列；可用 `max_rows` 调整。
+- 多图共享同一份 DataFrame 时，页面里只嵌入一次数据（看板体积更小）。
+
+---
+
+## 12. 和其它方案对比
+
+| 方案 | 图表数 | 下钻 | 跨图联动 | Streamlit | 离线 | 备注 |
+| --- | --- | --- | --- | --- | --- | --- |
+| **eazy_data_viz** | **45** | ✅ 客户端 | ✅ 同一文档内 | ✅ `components.v1.html` | ✅ 全内联 | 传 df + 列名即可，无 JSON |
+| streamlit-echarts | ECharts 全家桶 | 需回服务器 | ❌ 每个组件独立 iframe | ✅ | 依赖 ECharts 资源 | 灵活但要自己写 option JSON |
+| pyecharts | 多 | 需回服务器 | ❌ | 需适配 | 默认走 CDN | Python 侧拼 option |
+| plotly | 多 | 需 `on_select`（Streamlit≥1.35） | 部分 | ✅ | 需内联 plotly.js（≈3 MB） | 体积大 |
+| altair | 中 | ❌ | 单图内可 | ✅ | ✅ | 跨图联动不支持 |
+| bokeh | 中 | 需服务器 | 需服务器 | 需嵌入 | ❌ | Python 3.9+ |
+
+---
+
+## 13. 架构
+
+```
+DataFrame ──(frame.py)──> 紧凑记录 {cols, rows, kinds, orders}
+                              │
+图表函数 ───(chart.py / charts_extra.py)──> spec（JSON，内部生成，用户不接触）
+                              │
+                          (render.py) ──> 自包含 HTML（ECharts + 运行时内联）
+                              │
+浏览器：eazy.js 负责聚合 / 构建 option / 交互；eazy_extra_*.js 提供扩展图表
+```
+
+- Python 只做 **校验 + 角色识别 + 少量预计算**（如回归拟合、相关矩阵、KPI 汇总）。
+- 聚合在前端按「当前筛选状态」实时计算，所以联动过滤后所有图自动重算。
+- 新增图表只需在 JS 注册 `EazyViz.extraBuilders[type]`（或 `htmlBuilders[type]`），契约见 `docs/EXTRA_CHARTS.md`。
+
+### 目录结构
+
+```
+eazy_data_viz/                    # 库本体
+  __init__.py            # 门面：45 个图表函数 + show/dashboard/help/gallery/sample_df
+  frame.py               # DataFrame → 记录、列类型识别、采样、有序类目
+  chart.py               # 基础 14 种图表 + 公共参数校验
+  charts_extra.py        # 扩展 31 种图表
+  render.py              # 页面组装、Material Design 3 CSS、卡片代码区、Streamlit 适配
+  palette.py             # 7 套配色库
+  gallery/app.py         # Streamlit 版画廊
+  gallery/gallery.html   # 静态版画廊（构建产物，随包分发）
+  assets/
+    echarts.min.js       # ECharts 5.5（内联，离线）
+    eazy.js              # 运行时：主题、聚合、下钻、联动、渲染
+    eazy_extra_main.js   # 瀑布 / 子弹 / 棒棒糖
+    eazy_extra_a.js      # 14 种对比 / 分布类
+    eazy_extra_b.js      # 11 种层次 / 关系类
+    eazy_extra_html.js   # HTML 类：KPI 组、进度条、瓦片、表格、词云
+tools/
+  build_gallery.py       # 生成 gallery.html（64 卡片 / 45 类型 / 8 分区，自动录制代码）
+  gen_ai_doc.py          # 生成 docs/AI_GUIDE.md + docs/eazy_catalog.json
+tests/
+  test_eazy.py           # Python 测试（28 项）
+  js_test.py             # 前端测试（59 项，headless Chrome 内断言）
+examples/                # 可直接运行的示例（驾驶舱 / KPI / 配色 / 下钻联动 / Streamlit）
+docs/
+  AI_GUIDE.md            # 给 AI 的说明书（人读）
+  eazy_catalog.json      # 机器可读目录（由 gen_ai_doc.py 生成）
+  EXTRA_CHARTS.md        # 扩展图表契约
+  images/                # 截图（gallery_preview / gallery_streamlit / ...）
+gallery.html             # 静态画廊（构建产物，双击即用）
+README.md / CHANGELOG.md / CONTRIBUTING.md / LICENSE
+setup.py / pyproject.toml / MANIFEST.in
+```
+
+---
+
+## 14. 测试
+
+```bash
+python tests/test_eazy.py     # Python：14 种基础图 + 参数校验 + drill/link + 看板
+python tests/js_test.py       # 前端：聚合 / option / 下钻 / 联动 / 配色 / 卡片代码区（headless Chrome）
+```
+
+当前状态：`PASS 28` / `ALL OK`，前端 `JS PASS 59, FAIL 0`。
+
+---
+
+## 15. FAQ
+
+**Q：中文乱码或控制台报 `UnicodeEncodeError`？**
+Windows 终端设 `PYTHONIOENCODING=utf-8`；HTML 本身统一 UTF-8，浏览器里不会乱码。
+
+**Q：HTML 文件为什么 1 MB 多？**
+ECharts 5.5 压缩后约 1 MB，内联才能离线单文件。多图共享同一份 ECharts 与数据，所以 1 张和 50 张差距不大（1.07 MB → 1.4 MB）。
+
+**Q：图表不显示 / 一片空白？**
+① Streamlit 里没给 `height`（默认 150px 被裁）；② 数据被过滤空了（看顶栏筛选 chip）；③ 浏览器控制台 `#eazy-js-error` 会显示具体错误。
+
+**Q：能换成自己的品牌色吗？**
+改 `eazy_data_viz/assets/eazy.js` 顶部 `PALETTE_LIGHT` / `PALETTE_DARK` 与 `THEME` 里的 CSS 变量即可；页面样式在 `render.py` 的 `_CSS`。
+
+**Q：想在 iframe 里点击后回调 Python？**
+当前设计是纯前端交互（无服务器往返）。需要回传时可用 Streamlit 自定义组件双向通信，或在 `eazy.js` 里 `window.parent.postMessage({type:'eazy-click', ...})`，Streamlit 侧用 `components.html` 的 `st_javascript` 方案接收。
+
+---
+
+MIT License · 数据只嵌入一次 · 离线可用 · 不引入 pandas 之外的运行时依赖
