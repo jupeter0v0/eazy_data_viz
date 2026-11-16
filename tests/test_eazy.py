@@ -363,6 +363,29 @@ def t_doc_examples():
     assert not bad, "示例执行失败:\n" + "\n".join(bad)
 
 
+def t_streamlit_v2():
+    """components v2 渲染层：片段作用域化、可选依赖不报错、包入口导出。"""
+    from eazy_data_viz import render as _render
+
+    frag = _render.build_fragment([eazy_data_viz.bar(DF, x="大区", y="销售额"),
+                                   eazy_data_viz.kpi(DF, value="销售额")])
+    for key in ("html", "css", "page", "data_store", "maps", "cities", "cols"):
+        assert key in frag, "build_fragment 缺少 " + key
+    assert frag["html"].strip(), "片段 html 为空"
+    assert "<script" not in frag["html"] and "<html" not in frag["html"]
+    assert ":host" in frag["css"], "CSS 没有作用域化为 :host"
+    assert "html[data-theme" not in frag["css"], "CSS 仍带全局选择器"
+    assert frag["page"]["charts"], "片段缺少图表 spec"
+
+    import eazy_data_viz.streamlit_v2 as v2
+
+    # 无 Streamlit 时 is_available() 必须返回 False，而不是抛 ImportError
+    assert v2.is_available() in (True, False)
+    assert hasattr(eazy_data_viz, "streamlit_dashboard")
+    assert "streamlit_dashboard" in eazy_data_viz.__all__
+    assert "streamlit_available" in eazy_data_viz.__all__
+
+
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):
     check(name, fn)
 

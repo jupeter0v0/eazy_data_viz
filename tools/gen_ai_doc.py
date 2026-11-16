@@ -36,7 +36,7 @@ GROUPS = [
 ]
 
 HELPERS = ["show", "dashboard", "Chart", "Dashboard", "sample_df", "help", "gallery",
-           "set_palette", "palettes"]
+           "set_palette", "palettes", "streamlit_dashboard", "streamlit_available"]
 
 # 参数名的示例值（用 eazy_data_viz.sample_df() 的列）
 EXAMPLE_LITERAL = {

@@ -130,17 +130,15 @@ class Chart:
     def show(self, open_browser=None):
         """在 Streamlit / Jupyter / 普通脚本里都能正确显示。
 
-        * Streamlit：自动使用 ``st.components.v1.html`` 内嵌；
+        * Streamlit：优先 ``st.components.v2``（无 iframe、高度自适应），
+          旧版本自动回退到 ``st.components.v1.html``；
         * Jupyter Notebook / Lab：自动使用 ``IPython.display.HTML``；
         * 普通 Python 脚本：写一个临时 HTML 文件并打印路径（tty 环境自动打开浏览器）。
         """
-        from .render import page_height, is_streamlit, in_notebook
+        from .render import is_streamlit, in_notebook, streamlit_show
 
         if is_streamlit():
-            import streamlit.components.v1 as components
-
-            html = self.to_html(inline=True)
-            components.html(html, height=page_height([self], cols=1), scrolling=False)
+            streamlit_show([self], cols=1)
             return self
 
         if in_notebook():

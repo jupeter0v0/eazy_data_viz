@@ -82,14 +82,13 @@ def derived(df):
 PALETTE = "google"
 
 
-def show(charts, code=None, cols=2, title=None, desc=None, theme="light", palette=None):
-    """渲染一组图表（同一份 HTML 文档 → 支持跨图联动）并附上调用代码。"""
-    items = charts if isinstance(charts, (list, tuple)) else [charts]
+def _render_v1(items, cols, title, desc, theme, palette):
+    """旧版 Streamlit 的 iframe 渲染路径（components.v1）。"""
     if len(items) == 1 and cols == 1:
         page, has_header = items[0], False
     else:
         page = eazy_data_viz.dashboard(items, cols=cols, title=title, desc=desc, theme=theme,
-                              palette=palette or PALETTE)
+                                       palette=palette or PALETTE)
         has_header = bool(title)
     st.components.v1.html(
         page.to_html(),
@@ -99,9 +98,61 @@ def show(charts, code=None, cols=2, title=None, desc=None, theme="light", palett
         ),
         scrolling=False,
     )
+
+
+def show(charts, code=None, cols=2, title=None, desc=None, theme="light", palette=None,
+         events=False):
+    """渲染一组图表（同一份 HTML 文档 → 支持跨图联动）并附上调用代码。
+
+    优先使用 ``st.components.v2``：没有 iframe、高度按内容自适应，
+    并且（``events=True`` 时）点击图表会把事件回传给 Python。
+    旧版 Streamlit 自动回退到 ``components.v1.html``。
+    """
+    items = charts if isinstance(charts, (list, tuple)) else [charts]
+    multi = not (len(items) == 1 and cols == 1)
+    use_v2 = eazy_data_viz.streamlit_available()
+    if use_v2:
+        try:
+            result = eazy_data_viz.streamlit_dashboard(
+                items,
+                cols=cols,
+                title=title if multi else None,
+                desc=desc if multi else None,
+                theme=theme,
+                palette=palette or PALETTE,
+                on_select=(_on_select if events else None),
+            )
+            if events:
+                sel = getattr(result, "select", None)
+                if sel:
+                    st.session_state["_last_select"] = sel
+                last = st.session_state.get("_last_select")
+                if last:
+                    st.info(
+                        "**v2 事件回传**：你点中了「%s」"
+                        "（%s = %s）%s"
+                        % (
+                            last.get("title") or last.get("chart") or "-",
+                            last.get("dim") or "-",
+                            last.get("value"),
+                            " · 下钻层级：%s" % " > ".join(last["drill"])
+                            if last.get("drill")
+                            else "",
+                        )
+                    )
+        except Exception as exc:  # pragma: no cover - 环境差异
+            st.warning("components v2 渲染失败，已回退 iframe：%s" % exc)
+            _render_v1(items, cols, title, desc, theme, palette)
+    else:
+        _render_v1(items, cols, title, desc, theme, palette)
     if code:
         with st.expander("查看 Python 代码", expanded=False):
             st.code(code.strip(), language="python")
+
+
+def _on_select():
+    """v2 组件回调：不需要参数，重跑后从返回值读取 ``select`` 触发值。"""
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -132,6 +183,7 @@ with st.sidebar:
             "地图可视化",
             "明细与文本",
             "交互：下钻 + 联动",
+            "v2 双向事件",
         ],
     )
     with st.expander("48 种图表一览"):
@@ -557,6 +609,27 @@ elif page == "交互：下钻 + 联动":
         cols=1, theme=theme,
         code='eazy_data_viz.combo(df, x="日期", bar="销售额", line="订单数", zoom=True)',
     )
+
+elif page == "v2 双向事件":
+    st.subheader("components v2：点击图表 → 事件回传 Python")
+    st.caption(
+        "本页用 `st.components.v2` 渲染：**没有 iframe**、高度按内容自适应，"
+        "而且点击柱状图会把 `select` 事件回传给 Python（旧版 Streamlit 自动回退 v1 iframe）。"
+    )
+    _sel_df = df.groupby("大区", as_index=False)["销售额"].sum()
+    show(
+        eazy_data_viz.bar(_sel_df, x="大区", y="销售额", link="v2demo",
+                          title="点击任意柱子 → Python 收到事件"),
+        cols=1, theme=theme, events=True,
+        code='result = eazy_data_viz.streamlit_dashboard(\n'
+             '    [eazy_data_viz.bar(df, x="大区", y="销售额")],\n'
+             '    on_select=lambda: None,\n'
+             ')\n'
+             'if result.select:\n'
+             '    st.write(result.select)   # {title, type, dim, value, drill, link}',
+    )
+    st.markdown("**最近一次点击（存在 `st.session_state['_last_select']`）**")
+    st.json(st.session_state.get("_last_select") or {})
 
 st.divider()
 st.caption(

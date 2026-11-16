@@ -5,8 +5,9 @@
     streamlit run examples/streamlit_app.py
 
 要点：
-* 用 st.components.v1.html 嵌入，必须显式给 height（默认 150px 会被裁）
-* 一个 components.html 就是一个独立 iframe：跨图联动要放进同一个 dashboard
+* 优先用 st.components.v2（edv.streamlit_dashboard）：无 iframe、高度自适应、点击可回传 Python
+* 旧版 Streamlit 自动回退到 components.v1.html（那时需要显式给 height）
+* 跨图联动要放进同一个 dashboard / streamlit_dashboard
 * 交互（下钻 / 联动 / 主题）都在浏览器里完成，不会触发 Streamlit rerun
 """
 from __future__ import annotations
@@ -46,13 +47,20 @@ charts = [
     edv.heatmap(df, x="月份", y="大区", value="销售额", theme=theme),
 ]
 
-page = edv.dashboard(*charts, cols=2, title="经营驾驶舱（Streamlit 内嵌）",
-                     theme=theme, palette=palette)
-html = page.to_html(inline=True)
-
-# 高度 = 页面估算高度；scrolling=False 由 iframe 自己滚动
-height = edv_render.page_height(charts, cols=2, has_header=True, has_filters=False)
-st.components.v1.html(html, height=height + 20, scrolling=False)
+if edv.streamlit_available():
+    # 推荐：components v2 —— 无 iframe、高度自适应、点击事件可回传 Python
+    result = edv.streamlit_dashboard(
+        charts, cols=2, title="经营驾驶舱（Streamlit 内嵌）",
+        theme=theme, palette=palette,
+    )
+    if result.select:
+        st.info("你点中了：%s = %s" % (result.select.get("dim"), result.select.get("value")))
+else:
+    # 旧版回退：components v1 的 iframe 需要显式 height
+    page = edv.dashboard(*charts, cols=2, title="经营驾驶舱（Streamlit 内嵌）",
+                         theme=theme, palette=palette)
+    height = edv_render.page_height(charts, cols=2, has_header=True, has_filters=False)
+    st.components.v1.html(page.to_html(inline=True), height=height + 20, scrolling=False)
 
 with st.expander("查看这段代码"):
     st.code(
