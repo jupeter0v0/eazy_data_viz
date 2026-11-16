@@ -225,6 +225,37 @@ EazyViz.htmlBuilders['progress'] = function (spec, data, state, theme) { return 
 
 ---
 
+## 3.28 地图类（`maps.py` / `eazy_map.js`）
+
+地图与其它扩展图表有两点不同：**GeoJSON 由 Python 侧注入页面**，且注册的是
+`EazyViz.extraBuilders['geo_map' | 'map_bubble' | 'map_flow']`。
+
+页面注入（`render.py`）：
+
+```js
+window.EAZY_MAPS  = { "china": GeoJSON, "world": GeoJSON };   // 仅页面用到的地图
+window.EAZY_CITIES = { "广州市": {"p": "广东省", "c": [113.28, 23.13]}, ... };  // 725 条城市名/坐标
+```
+
+- `EAZY_MAPS` 里的地图在首次渲染时用 `echarts.registerMap(name, geo)` 注册（结果缓存在 `REGISTERED`）。
+- `region` 列的取值会先归一化：去掉「省/市/自治区/特别行政区」等后缀再与
+  `properties.name` 比对；城市名（`广州市` / `广州`）回退到 `EAZY_CITIES`，
+  气泡/飞线用其中的 `c` 真实坐标落点，`geo_map` 则把城市值按 `p`（省份）聚合后上色。
+- spec 额外字段：`map`（`"china"` / `"world"`）、`nameMap`（用户自定义映射）、
+  `mapZoom` / `mapCenter`（初始视角）、`minValue` / `maxValue`（色阶下限/上限）、
+  `roles.region`、`roles.value`、`roles.source` / `roles.target`（飞线）。
+
+```js
+B['geo_map'] = function (spec, data, state, theme) { ... };   // series: [{type:'map'}]
+B['map_bubble'] = function (spec, data, state, theme) { ... }; // geo 组件 + scatter
+B['map_flow'] = function (spec, data, state, theme) { ... };   // geo 组件 + lines
+```
+
+已知限制：地图只在 `map=china/world` 时可用；自定义 GeoJSON 需自行 `echarts.registerMap`
+并注入 `window.EAZY_MAPS`（当前未开放 Python API）。
+
+---
+
 ## 4. 文件与注册约定
 
 - 文件 A：`eazy_data_viz/assets/eazy_extra_a.js`（本节 3.1–3.17 + HTML 类 progress/tile/table/wordcloud/group_kpi 由主控写）

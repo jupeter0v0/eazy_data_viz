@@ -250,6 +250,99 @@ def t_dashboard_palette():
     assert "配色" in html
 
 
+def t_max_rows_default():
+    """默认 max_rows 必须是 20 万（用户数据 45622 行不能被采样）。"""
+    import pandas as _pd
+    from eazy_data_viz import frame as _frame
+    assert _frame.MAX_ROWS == 200000, _frame.MAX_ROWS
+    df = _pd.DataFrame({"x": ["a"] * 45622, "y": list(range(45622))})
+    ch = eazy_data_viz.bar(df, x="x", y="y")
+    assert len(ch.data["rows"]) == 45622, len(ch.data["rows"])
+    assert not ch.warnings["warnings"], ch.warnings
+    # 超过上限才采样
+    df2 = _pd.DataFrame({"x": ["a"] * 250000, "y": list(range(250000))})
+    ch2 = eazy_data_viz.bar(df2, x="x", y="y")
+    assert len(ch2.data["rows"]) == 200000, len(ch2.data["rows"])
+    assert ch2.warnings["warnings"] and "采样" in ch2.warnings["warnings"][0], ch2.warnings
+    # max_rows=None 不采样
+    ch3 = eazy_data_viz.bar(df2, x="x", y="y", max_rows=None)
+    assert len(ch3.data["rows"]) == 250000, len(ch3.data["rows"])
+    assert not ch3.warnings["warnings"], ch3.warnings
+    # 显式 max_rows 生效
+    ch4 = eazy_data_viz.bar(df, x="x", y="y", max_rows=1000)
+    assert len(ch4.data["rows"]) == 1000, len(ch4.data["rows"])
+    # 非法 max_rows 给出明确报错（而不是底层 TypeError）
+    for bad, exc in ((100.5, TypeError), ("abc", TypeError), (0, ValueError), (-1, ValueError), (True, TypeError)):
+        try:
+            eazy_data_viz.bar(df, x="x", y="y", max_rows=bad)
+        except exc as err:
+            assert "max_rows" in str(err), (bad, str(err))
+        else:
+            raise AssertionError("max_rows=%r 应该报错" % (bad,))
+
+
+def t_extra_param_checks():
+    """扩展图表的关键字参数校验：target_value 非数字要报错，pareto 的 cum_fmt 报错文案要正确。"""
+    df = DF.groupby("大区", as_index=False).agg(销售额=("销售额", "sum"), 利润=("利润", "sum"))
+    for fn, kw in ((eazy_data_viz.bullet, {"target_value": "abc"}),
+                   (eazy_data_viz.target, {"target_value": "abc"})):
+        try:
+            fn(df, x="大区", actual="销售额", **kw)
+        except ValueError as err:
+            assert "target_value" in str(err), (fn.__name__, str(err))
+        else:
+            raise AssertionError("%s(target_value='abc') 应该报 ValueError" % fn.__name__)
+    try:
+        eazy_data_viz.pareto(df, x="大区", y="销售额", cum_fmt="cn")
+    except ValueError as err:
+        assert "cum_fmt" in str(err), str(err)
+    else:
+        raise AssertionError("pareto(cum_fmt='cn') 应该报 ValueError")
+    # radar 允许不传 y（按记录数画）
+    ch = eazy_data_viz.radar(DF, x="渠道")
+    assert ch.spec["type"] == "radar"
+
+
+def t_maps():
+    """地图：函数导出 / spec 字段 / 页面注入 EAZY_MAPS + EAZY_CITIES / 未知地图报错。"""
+    import eazy_data_viz
+    from eazy_data_viz import maps as ec_maps
+
+    for fn in ("geo_map", "map_bubble", "map_flow"):
+        assert fn in eazy_data_viz.__all__, "缺少导出 %s" % fn
+        assert callable(getattr(eazy_data_viz, fn))
+
+    reg = DF.groupby("省份", as_index=False)["销售额"].sum()
+    ch = eazy_data_viz.geo_map(reg, region="省份", value="销售额")
+    assert ch.spec["type"] == "geo_map" and ch.spec["map"] == "china"
+    assert ch.spec["roles"]["region"] == "省份"
+
+    world = __import__("pandas").DataFrame({"国家": ["中国", "美国"], "销售额": [10, 5]})
+    chw = eazy_data_viz.geo_map(world, region="国家", value="销售额", map="world")
+    assert chw.spec["map"] == "world"
+
+    try:
+        eazy_data_viz.geo_map(reg, region="省份", map="mars")
+    except ValueError as exc:
+        assert ("未知地图" in str(exc)) or ("只支持" in str(exc)), str(exc)
+    else:
+        raise AssertionError("未知地图应当报错")
+
+    cities = DF.groupby("城市", as_index=False)["销售额"].sum()
+    chb = eazy_data_viz.map_bubble(cities, region="城市", value="销售额")
+    assert chb.spec["type"] == "map_bubble"
+    html = eazy_data_viz.dashboard(ch, chb, cols=1).to_html()
+    assert "window.EAZY_MAPS = {" in html and '"china"' in html
+    assert "window.EAZY_CITIES = {" in html and "广州市" in html
+    assert "eazy_map.js" in html or "地图类图表运行时" in html
+
+    # 所有地图都支持公共参数
+    ch2 = eazy_data_viz.map_bubble(cities, region="城市", value="销售额", fmt="compact",
+                                   height=420, palette="tableau", link="g1")
+    assert ch2.spec["height"] == 420 and ch2.spec["palette"] == "tableau"
+    assert ch2.spec["link"] == "g1"
+
+
 def t_doc_examples():
     """docs/eazy_catalog.json 里每个示例都必须能跑通（给 AI 的文档不能带坏例子）。"""
     import json

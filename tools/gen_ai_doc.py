@@ -55,6 +55,9 @@ EXAMPLE_LITERAL = {
     "agg": "'sum'", "fmt": "'compact'", "theme": "'light'",
     "delta": "0.128", "delta_label": '"同比"', "target_label": '"年度目标"',
     "unit": '"%"', "prefix": '"≈"', "hint": '"2024 全年 · 含税"',
+    # 地图
+    "region": '"省份"', "map": "'china'", "name_map": '{"广东": "广东省"}',
+    "min_value": "0", "max_value": "100000", "zoom": "1.2",
 }
 COLUMN_PARAMS = set(EXAMPLE_LITERAL) - {"label", "title", "path", "dims", "columns",
                                         "percent", "max", "min", "agg", "fmt", "theme",
@@ -97,6 +100,11 @@ EXAMPLES = {
     "dumbbell": 'dumbbell(df, x="大区", y1="销售额", y2="利润")',
     "quadrant": 'quadrant(df, x="订单数", y="销售额", color="大区")',
     "trend": 'trend(df, x="客户数", y="利润", color="产品")',
+    "geo_map": 'geo_map(df, region="省份", value="销售额")',
+    "map_bubble": 'map_bubble(df, region="城市", value="销售额")',
+    "map_flow": 'map_flow(pd.DataFrame({"出发城市": ["北京市", "上海市", "广州市"], '
+                '"到达城市": ["广州市", "成都市", "上海市"], "件数": [320, 280, 260]}), '
+                'source="出发城市", target="到达城市", value="件数")',
     "gantt": 'gantt(pd.DataFrame({"任务": ["调研", "开发"], "开始": ["2024-01-01", "2024-02-01"], '
              '"结束": ["2024-02-01", "2024-05-01"], "部门": ["产品", "研发"]}), '
              'task="任务", start="开始", end="结束", color="部门")',

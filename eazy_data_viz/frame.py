@@ -11,12 +11,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import numbers
 
 import numpy as np
 import pandas as pd
 
 # 单图最多嵌入多少行 / 列（防止 1M 行直接把 HTML 撑爆）
-MAX_ROWS = 20000
+# 单图默认最多嵌入的数据行数。经营看板常见明细表在 5 万~20 万行量级，
+# 默认给到 20 万行（200000），超过才均匀采样；传 max_rows=None 可完全关闭采样。
+MAX_ROWS = 200000
 MAX_COLS = 40
 
 # 列的语义分类
@@ -134,6 +137,13 @@ def convert_series(series, force_numeric=False):
 # --------------------------------------------------------------------------
 def prepare(df, roles, max_rows=MAX_ROWS, max_cols=MAX_COLS,
             numeric_roles=None, dimension_roles=None):
+    if max_rows is not None:
+        if isinstance(max_rows, bool) or not isinstance(max_rows, numbers.Integral):
+            raise TypeError(
+                "max_rows 需要是正整数（如 50000），或 None 表示不采样；收到 %r。" % (max_rows,))
+        if max_rows < 1:
+            raise ValueError("max_rows 需要 >= 1，或传 None 表示不采样；收到 %r。" % (max_rows,))
+        max_rows = int(max_rows)
     """把 DataFrame 压成 ``{"cols": [...], "rows": [[...]], ...}``。
 
     参数
@@ -201,10 +211,20 @@ def prepare(df, roles, max_rows=MAX_ROWS, max_cols=MAX_COLS,
         out[c] = convert_series(df[c], force_numeric=(c in numeric_roles))
 
     n_total = len(df)
-    if n_total > max_rows:
-        # 均匀采样比截断更能代表整体分布，同时保持行顺序
+    # max_rows=None 表示不采样（全部行嵌入）；否则超过上限时均匀采样。
+    # 均匀采样比截断更能代表整体分布，同时保持行顺序。
+    if max_rows is not None and n_total > max_rows:
         idx = np.linspace(0, n_total - 1, max_rows).astype(np.int64)
         out = out.iloc[idx]
+
+    # 数值列四舍五入到 4 位小数：图表精度足够，同时显著减小嵌入 JSON 体积
+    # （浮点原始 repr 常有 15+ 位有效数字，200k 行时能省下几 MB）。
+    for c in use_cols:
+        if c in numeric_roles or column_kind(df[c]) == KIND_NUM:
+            try:
+                out[c] = out[c].map(lambda v: round(v, 4) if isinstance(v, float) else v)
+            except (TypeError, ValueError):
+                pass
 
     out = out.astype(object).where(pd.notna(out), None)
     rows = out.values.tolist()
@@ -240,7 +260,7 @@ def prepare(df, roles, max_rows=MAX_ROWS, max_cols=MAX_COLS,
     }
     ref = data_ref(data)
     return data, ref, {
-        "truncated": n_total > max_rows,
+        "truncated": bool(max_rows is not None and n_total > max_rows),
         "n_total": n_total,
         "dropped_cols": dropped,
     }

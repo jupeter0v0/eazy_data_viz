@@ -506,15 +506,17 @@
     var rows = U.filteredRows(spec, data, state);
     var xdim = U.currentXDim(spec, state);
     var ycol = roles.y, cdim = roles.color;
-    if (!xdim || !ycol || !rows.length) return U.emptyOption(theme);
+    var countMode = !ycol;
+    if (!xdim || !rows.length) return U.emptyOption(theme);
 
-    var how = spec.agg || 'mean';
-    var groups = U.groupBy(rows, cdim && U.hasCol(data, cdim) ? [xdim, cdim] : [xdim], ycol, how);
+    var mcol = countMode ? xdim : ycol;
+    var how = countMode ? 'count' : (spec.agg || 'mean');
+    var groups = U.groupBy(rows, cdim && U.hasCol(data, cdim) ? [xdim, cdim] : [xdim], mcol, how);
     var catOrder = [], cSeen = {}, serOrder = [], sSeen = {}, map = {}, totals = {}, i, g;
     for (i = 0; i < groups.length; i++) {
       g = groups[i];
       var cat = g.keys[0];
-      var ser = cdim && U.hasCol(data, cdim) ? g.keys[1] : (ycol || '数值');
+      var ser = cdim && U.hasCol(data, cdim) ? g.keys[1] : (countMode ? '记录数' : ycol);
       if (!cSeen[cat]) { cSeen[cat] = 1; catOrder.push(cat); totals[cat] = 0; }
       if (!sSeen[ser]) { sSeen[ser] = 1; serOrder.push(ser); }
       var v = g.value === null ? null : g.value;

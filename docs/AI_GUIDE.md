@@ -58,7 +58,7 @@ eazy_data_viz.dashboard(c1, c2, palette="morandi").save("x.html")      # 整页�
 eazy_data_viz.set_palette("carbon")                                     # 改全局默认
 ```
 
-## 4. 图表函数（按场景分组，共 46 个）
+## 4. 图表函数（按场景分组，共 49 个）
 
 ### 核心指标
 
@@ -68,9 +68,9 @@ eazy_data_viz.set_palette("carbon")                                     # 改全
 | `group_kpi` | `group_kpi(data=None, names=None, values=None, *, items=None, agg='sum', sort='desc', top_n=6, unit=None, delta=None, fmt='compact', title=None, subtitle=None, height=140, theme='light')` | KPI 卡片组（HTML 渲染）：一排指标卡片。 |
 | `gauge` | `gauge(value, *, label=None, min=0, max=100, fmt='raw', unit=None, height=260, theme='light', title=None, subtitle=None)` | 仪表盘（单个数值）。 |
 | `ring_progress` | `ring_progress(percent, *, label=None, max=100, fmt=None, height=None, theme='light', title=None)` | 环形进度：一个百分比/完成值画成圆环，中心显示数值（不接 DataFrame）。 |
-| `bullet` | `bullet(data, x, actual, target=None, *, target_value=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=False, zoom=False, drill=None, link=None, max_rows=20000)` | 子弹图：每类一个实际值，对比目标值（横向，目标用刻度线表示）。 |
-| `target` | `target(data, x, actual, target=None, *, target_value=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)` | 目标对比图：实际值柱子 + 目标值折线（虚线）。 |
-| `progress` | `progress(data, x=None, y=None, *, max=None, agg='sum', sort='desc', top_n=10, title=None, subtitle=None, fmt='compact', height=340, theme='light', link=None, max_rows=20000)` | 进度条列表（HTML 渲染）：每类一条「名称 + 数值 + 进度条」。 |
+| `bullet` | `bullet(data, x, actual, target=None, *, target_value=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=False, zoom=False, drill=None, link=None, max_rows=200000)` | 子弹图：每类一个实际值，对比目标值（横向，目标用刻度线表示）。 |
+| `target` | `target(data, x, actual, target=None, *, target_value=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)` | 目标对比图：实际值柱子 + 目标值折线（虚线）。 |
+| `progress` | `progress(data, x=None, y=None, *, max=None, agg='sum', sort='desc', top_n=10, title=None, subtitle=None, fmt='compact', height=340, theme='light', link=None, max_rows=200000)` | 进度条列表（HTML 渲染）：每类一条「名称 + 数值 + 进度条」。 |
 
 **`kpi`** — KPI 数字卡片（驾驶舱指标头，可跟随联动筛选自动重算）。
 
@@ -118,14 +118,14 @@ eazy_data_viz.progress(df, x="大区", y="销售额")
 
 | 函数 | 签名 | 说明 |
 |---|---|---|
-| `line` | `line(data, x, y, color=None, *, agg='sum', smooth=True, area=False, markers=None, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', drill=None, link=None, legend=True, labels=False, zoom='auto', max_rows=20000, step=False, percent=False, section=None)` | 折线图 / 面积图 / 阶梯图。 |
-| `area_pct` | `area_pct(data, x, y, color=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)` | 百分比堆叠面积图：每个 x 归一化到 100%，看各 color 的占比变化。 |
-| `combo` | `combo(data, x, bar=None, line=None, *, agg='sum', title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=400, theme='light', zoom='auto', max_rows=20000)` | 柱线混合图（一根柱子 + 一条折线，双坐标轴）。 |
-| `sparkline` | `sparkline(data, x, y, *, group, agg='sum', title=None, subtitle=None, fmt='compact', height=260, theme='light', max_rows=20000)` | 迷你走势（sparkline）：每个 group 一张无坐标轴小折线，最多 12 个。 |
-| `theme_river` | `theme_river(data, x, color, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', link=None, max_rows=20000)` | 主题河流图：各类目随时间的体量变化，像河流一样堆叠流动。 |
-| `gantt` | `gantt(data, task, start, end, *, color=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, theme='light', legend=None, labels=True, zoom=False, link=None, max_rows=20000)` | 甘特图：横向时间条，展示每个任务的起止时间。 |
-| `candlestick` | `candlestick(data, date, open, high, low, close, *, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=420, theme='light', legend=False, labels=False, zoom='auto', link=None, max_rows=20000)` | K 线图（红涨绿跌）：需要日期 + 开 / 高 / 低 / 收 四列。 |
-| `calendar` | `calendar(data, date, value=None, *, agg='sum', sort='x', top_n=None, title=None, subtitle=None, fmt='compact', height=300, theme='light', legend=False, labels=False, zoom=False, link=None, max_rows=20000)` | 日历热力图：按天显示数值深浅（日期列会在 Python 侧转成 YYYY-MM-DD）。 |
+| `line` | `line(data, x, y, color=None, *, agg='sum', smooth=True, area=False, markers=None, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', drill=None, link=None, legend=True, labels=False, zoom='auto', max_rows=200000, step=False, percent=False, section=None)` | 折线图 / 面积图 / 阶梯图。 |
+| `area_pct` | `area_pct(data, x, y, color=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)` | 百分比堆叠面积图：每个 x 归一化到 100%，看各 color 的占比变化。 |
+| `combo` | `combo(data, x, bar=None, line=None, *, agg='sum', title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=400, theme='light', zoom='auto', max_rows=200000)` | 柱线混合图（一根柱子 + 一条折线，双坐标轴）。 |
+| `sparkline` | `sparkline(data, x, y, *, group, agg='sum', title=None, subtitle=None, fmt='compact', height=260, theme='light', max_rows=200000)` | 迷你走势（sparkline）：每个 group 一张无坐标轴小折线，最多 12 个。 |
+| `theme_river` | `theme_river(data, x, color, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', link=None, max_rows=200000)` | 主题河流图：各类目随时间的体量变化，像河流一样堆叠流动。 |
+| `gantt` | `gantt(data, task, start, end, *, color=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, theme='light', legend=None, labels=True, zoom=False, link=None, max_rows=200000)` | 甘特图：横向时间条，展示每个任务的起止时间。 |
+| `candlestick` | `candlestick(data, date, open, high, low, close, *, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=420, theme='light', legend=False, labels=False, zoom='auto', link=None, max_rows=200000)` | K 线图（红涨绿跌）：需要日期 + 开 / 高 / 低 / 收 四列。 |
+| `calendar` | `calendar(data, date, value=None, *, agg='sum', sort='x', top_n=None, title=None, subtitle=None, fmt='compact', height=300, theme='light', legend=False, labels=False, zoom=False, link=None, max_rows=200000)` | 日历热力图：按天显示数值深浅（日期列会在 Python 侧转成 YYYY-MM-DD）。 |
 
 **`line`** — 折线图 / 面积图 / 阶梯图。
 
@@ -179,16 +179,16 @@ eazy_data_viz.calendar(df, date="日期", value="销售额")
 
 | 函数 | 签名 | 说明 |
 |---|---|---|
-| `bar` | `bar(data, x, y=None, color=None, *, agg='sum', stack=False, horizontal=False, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', drill=None, link=None, legend=True, labels=False, zoom='auto', max_rows=20000, percent=False, section=None)` | 柱状图 / 条形图（支持分组、堆叠、百分比、下钻、联动）。 |
-| `bar_pct` | `bar_pct(data, x, y, color=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)` | 百分比堆叠柱图：每个 x 归一化到 100%，看各 color 的占比。 |
-| `waterfall` | `waterfall(data, x, y=None, *, agg='sum', total=None, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)` | 瀑布图：各分项正负增量逐段累加，直观看到「从哪来、累计到多少」。 |
-| `pareto` | `pareto(data, x, y=None, *, agg='sum', top_n=None, cum_fmt='percent', sort=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)` | 帕累托图：按数值降序的柱 + 累计占比折线（右轴 0~100%）。 |
-| `lollipop` | `lollipop(data, x, y=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)` | 棒棒糖图：细柱 + 顶端圆点，比柱状图更清爽的排行榜。 |
-| `dumbbell` | `dumbbell(data, x, y1, y2, *, labels=None, series_names=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, zoom='auto', drill=None, link=None, max_rows=20000)` | 哑铃图：同一类目两个数值（如两期、两组）之间的差距对比。 |
-| `slope` | `slope(data, x, y, color=None, *, group=None, period=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom=False, drill=None, link=None, max_rows=20000)` | 斜率图：同一类目在两个「期」之间的变化（两点连线，斜率即变化）。 |
-| `bump` | `bump(data, x, y, *, group, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=420, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=20000)` | 排名变化图（bump chart）：每个 group 一条折线，y 轴是排名。 |
-| `pictorial` | `pictorial(data, x, y=None, *, symbol='circle', agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=True, zoom='auto', drill=None, link=None, max_rows=20000)` | 象形柱图：用重复的小图形（circle / rect / roundRect / diamond / triangle）堆出柱子。 |
-| `pyramid` | `pyramid(data, names, values=None, *, agg='sum', sort='asc', top_n=None, title=None, subtitle=None, fmt='compact', height=380, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=20000)` | 金字塔图：漏斗图上下翻转（下宽上窄），常用于层级/转化结构。 |
+| `bar` | `bar(data, x, y=None, color=None, *, agg='sum', stack=False, horizontal=False, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', drill=None, link=None, legend=True, labels=False, zoom='auto', max_rows=200000, percent=False, section=None)` | 柱状图 / 条形图（支持分组、堆叠、百分比、下钻、联动）。 |
+| `bar_pct` | `bar_pct(data, x, y, color=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)` | 百分比堆叠柱图：每个 x 归一化到 100%，看各 color 的占比。 |
+| `waterfall` | `waterfall(data, x, y=None, *, agg='sum', total=None, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)` | 瀑布图：各分项正负增量逐段累加，直观看到「从哪来、累计到多少」。 |
+| `pareto` | `pareto(data, x, y=None, *, agg='sum', top_n=None, cum_fmt='percent', sort=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)` | 帕累托图：按数值降序的柱 + 累计占比折线（右轴 0~100%）。 |
+| `lollipop` | `lollipop(data, x, y=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)` | 棒棒糖图：细柱 + 顶端圆点，比柱状图更清爽的排行榜。 |
+| `dumbbell` | `dumbbell(data, x, y1, y2, *, labels=None, series_names=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, zoom='auto', drill=None, link=None, max_rows=200000)` | 哑铃图：同一类目两个数值（如两期、两组）之间的差距对比。 |
+| `slope` | `slope(data, x, y, color=None, *, group=None, period=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom=False, drill=None, link=None, max_rows=200000)` | 斜率图：同一类目在两个「期」之间的变化（两点连线，斜率即变化）。 |
+| `bump` | `bump(data, x, y, *, group, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=420, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)` | 排名变化图（bump chart）：每个 group 一条折线，y 轴是排名。 |
+| `pictorial` | `pictorial(data, x, y=None, *, symbol='circle', agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=False, labels=True, zoom='auto', drill=None, link=None, max_rows=200000)` | 象形柱图：用重复的小图形（circle / rect / roundRect / diamond / triangle）堆出柱子。 |
+| `pyramid` | `pyramid(data, names, values=None, *, agg='sum', sort='asc', top_n=None, title=None, subtitle=None, fmt='compact', height=380, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)` | 金字塔图：漏斗图上下翻转（下宽上窄），常用于层级/转化结构。 |
 
 **`bar`** — 柱状图 / 条形图（支持分组、堆叠、百分比、下钻、联动）。
 
@@ -254,13 +254,13 @@ eazy_data_viz.pyramid(df, names="产品")
 
 | 函数 | 签名 | 说明 |
 |---|---|---|
-| `pie` | `pie(data, names, values=None, *, donut=False, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, fmt='compact', height=360, theme='light', labels=True, link=None, max_rows=20000)` | 饼图 / 环图。 |
-| `rose` | `rose(data, names, values=None, *, donut=False, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=True, zoom=False, drill=None, link=None, max_rows=20000)` | 南丁格尔玫瑰图：用半径表达数值的饼图。 |
-| `funnel` | `funnel(data, names, values=None, *, agg='sum', fmt='compact', height=380, theme='light', title=None, subtitle=None, labels=True, link=None, max_rows=20000)` | 漏斗图（转化/流程）。 |
-| `treemap` | `treemap(data, path, value, *, agg='sum', title=None, subtitle=None, fmt='compact', height=420, theme='light', max_rows=20000)` | 矩形树图（多层级构成）。 |
-| `sunburst` | `sunburst(data, path, value=None, *, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=460, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=20000)` | 旭日图：多层级构成的同心圆环。 |
-| `tree` | `tree(data, path, value=None, *, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=460, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=20000)` | 树图：从左到右的层级结构（树状），节点大小可反映数值。 |
-| `tile` | `tile(data, names=None, values=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=360, theme='light', link=None, max_rows=20000)` | 瓦片图（HTML 渲染）：每个类目一个方块，颜色深浅表示数值大小。 |
+| `pie` | `pie(data, names, values=None, *, donut=False, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, fmt='compact', height=360, theme='light', labels=True, link=None, max_rows=200000)` | 饼图 / 环图。 |
+| `rose` | `rose(data, names, values=None, *, donut=False, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=True, zoom=False, drill=None, link=None, max_rows=200000)` | 南丁格尔玫瑰图：用半径表达数值的饼图。 |
+| `funnel` | `funnel(data, names, values=None, *, agg='sum', fmt='compact', height=380, theme='light', title=None, subtitle=None, labels=True, link=None, max_rows=200000)` | 漏斗图（转化/流程）。 |
+| `treemap` | `treemap(data, path, value, *, agg='sum', title=None, subtitle=None, fmt='compact', height=420, theme='light', max_rows=200000)` | 矩形树图（多层级构成）。 |
+| `sunburst` | `sunburst(data, path, value=None, *, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=460, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)` | 旭日图：多层级构成的同心圆环。 |
+| `tree` | `tree(data, path, value=None, *, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=460, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)` | 树图：从左到右的层级结构（树状），节点大小可反映数值。 |
+| `tile` | `tile(data, names=None, values=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=360, theme='light', link=None, max_rows=200000)` | 瓦片图（HTML 渲染）：每个类目一个方块，颜色深浅表示数值大小。 |
 
 **`pie`** — 饼图 / 环图。
 
@@ -308,17 +308,17 @@ eazy_data_viz.tile(df)
 
 | 函数 | 签名 | 说明 |
 |---|---|---|
-| `scatter` | `scatter(data, x, y, color=None, size=None, *, agg='sum', title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', link=None, legend=True, max_rows=20000)` | 散点图（x / y 都必须是数值列，可选气泡大小）。 |
-| `histogram` | `histogram(data, column=None, *, bins=20, title=None, subtitle=None, xtitle=None, ytitle='频数', fmt='compact', height=360, theme='light', labels=False, max_rows=20000)` | 直方图（数值分布）。 |
-| `box` | `box(data, x=None, y=None, *, title=None, subtitle=None, ytitle=None, fmt='compact', height=380, theme='light', max_rows=20000)` | 箱线图（按类目展示数值分布）。 |
-| `heatmap` | `heatmap(data, x, y, value, *, agg='sum', sort=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=400, theme='light', labels=False, max_rows=20000, link=None)` | 热力图（x × y 的数值矩阵）。 |
+| `scatter` | `scatter(data, x, y, color=None, size=None, *, agg='sum', title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', link=None, legend=True, max_rows=200000)` | 散点图（x / y 都必须是数值列，可选气泡大小）。 |
+| `histogram` | `histogram(data, column=None, *, bins=20, title=None, subtitle=None, xtitle=None, ytitle='频数', fmt='compact', height=360, theme='light', labels=False, max_rows=200000)` | 直方图（数值分布）。 |
+| `box` | `box(data, x=None, y=None, *, title=None, subtitle=None, ytitle=None, fmt='compact', height=380, theme='light', max_rows=200000)` | 箱线图（按类目展示数值分布）。 |
+| `heatmap` | `heatmap(data, x, y, value, *, agg='sum', sort=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=400, theme='light', labels=False, max_rows=200000, link=None)` | 热力图（x × y 的数值矩阵）。 |
 | `matrix` | `matrix(data, columns=None, *, max_cols=12, title=None, subtitle=None, fmt='compact', height=460, theme='light')` | 相关系数矩阵（Pearson）：热力图 + 格子里两位小数的 r 值。 |
-| `radar` | `radar(data, x, y=None, color=None, *, max=None, agg='mean', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=True, labels=False, zoom=False, drill=None, link=None, max_rows=20000)` | 雷达图：每个 color 组一条闭合折线，指标是 x 的各个类目。 |
-| `parallel` | `parallel(data, dims, *, color=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=440, theme='light', legend=False, labels=False, zoom=False, link=None, max_rows=20000)` | 平行坐标：每一行是一条折线，每个维度一根纵轴，用来看多维分布/聚类。 |
-| `quadrant` | `quadrant(data, x, y, size=None, color=None, *, quad_labels=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=None, labels=False, zoom=False, link=None, max_rows=20000)` | 四象限散点图：用 x / y 的中位数把平面切成四块，看对象落在哪个象限。 |
-| `sankey` | `sankey(data, source, target, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=20000)` | 桑基图：展示流量在「来源 → 去向」之间的流转及大小。 |
-| `graph` | `graph(data, source, target, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=20000)` | 关系图：力导向网络图，节点大小/边宽反映数值。 |
-| `trend` | `trend(data, x, y, color=None, *, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=None, labels=False, zoom=False, link=None, max_rows=20000)` | 趋势散点图：散点 + 最小二乘回归线，图例/副标题带 R²。 |
+| `radar` | `radar(data, x, y=None, color=None, *, max=None, agg='mean', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=True, labels=False, zoom=False, drill=None, link=None, max_rows=200000)` | 雷达图：每个 color 组一条闭合折线，指标是 x 的各个类目。 |
+| `parallel` | `parallel(data, dims, *, color=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=440, theme='light', legend=False, labels=False, zoom=False, link=None, max_rows=200000)` | 平行坐标：每一行是一条折线，每个维度一根纵轴，用来看多维分布/聚类。 |
+| `quadrant` | `quadrant(data, x, y, size=None, color=None, *, quad_labels=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=None, labels=False, zoom=False, link=None, max_rows=200000)` | 四象限散点图：用 x / y 的中位数把平面切成四块，看对象落在哪个象限。 |
+| `sankey` | `sankey(data, source, target, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)` | 桑基图：展示流量在「来源 → 去向」之间的流转及大小。 |
+| `graph` | `graph(data, source, target, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)` | 关系图：力导向网络图，节点大小/边宽反映数值。 |
+| `trend` | `trend(data, x, y, color=None, *, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, theme='light', legend=None, labels=False, zoom=False, link=None, max_rows=200000)` | 趋势散点图：散点 + 最小二乘回归线，图例/副标题带 R²。 |
 
 **`scatter`** — 散点图（x / y 都必须是数值列，可选气泡大小）。
 
@@ -391,7 +391,7 @@ eazy_data_viz.trend(df, x="客户数", y="利润", color="产品")
 | 函数 | 签名 | 说明 |
 |---|---|---|
 | `table` | `table(data, columns=None, *, limit=100, title=None, subtitle=None, fmt='compact', height=400, theme='light', link=None, max_rows=200)` | 明细表（HTML 渲染）：把 DataFrame 前若干行渲染成表格。 |
-| `wordcloud` | `wordcloud(data, names=None, values=None, *, agg='sum', sort=None, top_n=30, title=None, subtitle=None, fmt='compact', height=360, theme='light', link=None, max_rows=20000)` | 词云（HTML/CSS 渲染）：每个类目一个词，字号随数值变化，最多 30 个。 |
+| `wordcloud` | `wordcloud(data, names=None, values=None, *, agg='sum', sort=None, top_n=30, title=None, subtitle=None, fmt='compact', height=360, theme='light', link=None, max_rows=200000)` | 词云（HTML/CSS 渲染）：每个类目一个词，字号随数值变化，最多 30 个。 |
 
 **`table`** — 明细表（HTML 渲染）：把 DataFrame 前若干行渲染成表格。
 
@@ -410,11 +410,32 @@ eazy_data_viz.wordcloud(df, names="城市", values="销售额", top_n=20)
 | 函数 | 签名 | 说明 |
 |---|---|---|
 | `area` | `area(data, x, y, color=None, **kwargs)` | 面积图 = ``line(..., area=True)``。 |
+| `geo_map` | `geo_map(data, region, value=None, *, map='china', agg='sum', fmt='compact', labels=True, min_value=None, max_value=None, name_map=None, zoom=None, palette=None, height=460, theme='light', title=None, subtitle=None, drill=None, link=None, legend=True, section=None)` | 区域填色地图：用颜色深浅表达一个指标在各省 / 各国上的高低。 |
+| `map_bubble` | `map_bubble(data, region, value=None, *, map='china', agg='sum', size=None, color=None, fmt='compact', min_size=4, max_size=28, name_map=None, zoom=None, palette=None, height=460, theme='light', title=None, subtitle=None, drill=None, link=None, legend=True, section=None)` | 气泡地图：在省份 / 国家中心点画气泡，气泡大小和颜色可以再编码两个指标。 |
+| `map_flow` | `map_flow(data, source, target, value=None, *, map='china', agg='sum', fmt='compact', name_map=None, zoom=None, palette=None, height=460, theme='light', title=None, subtitle=None, link=None, legend=True, section=None)` | 飞线地图：把一条数据当作「source → target」的流量，在地图上画动态飞线。 |
 
 **`area`** — 面积图 = ``line(..., area=True)``。
 
 ```python
 eazy_data_viz.area(df, x="月份", y="销售额")
+```
+
+**`geo_map`** — 区域填色地图：用颜色深浅表达一个指标在各省 / 各国上的高低。
+
+```python
+eazy_data_viz.geo_map(df, region="省份", value="销售额")
+```
+
+**`map_bubble`** — 气泡地图：在省份 / 国家中心点画气泡，气泡大小和颜色可以再编码两个指标。
+
+```python
+eazy_data_viz.map_bubble(df, region="城市", value="销售额")
+```
+
+**`map_flow`** — 飞线地图：把一条数据当作「source → target」的流量，在地图上画动态飞线。
+
+```python
+eazy_data_viz.map_flow(pd.DataFrame({"出发城市": ["北京市", "上海市", "广州市"], "到达城市": ["广州市", "成都市", "上海市"], "件数": [320, 280, 260]}), source="出发城市", target="到达城市", value="件数")
 ```
 
 

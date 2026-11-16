@@ -197,6 +197,21 @@ def main():
     # 四象限：省份均值（连续变量，点位才拉得开）
     prov_mean = df.groupby(["大区", "省份"], as_index=False)[["销售额", "利润", "订单数"]].mean()
 
+    # 地图：省份填色 / 城市气泡 / 城市飞线 / 世界地图
+    map_prov = df.groupby("省份", as_index=False).agg(销售额=("销售额", "sum"))
+    map_city = df.groupby("城市", as_index=False).agg(销售额=("销售额", "sum"))
+    _cities = list(map_city["城市"])
+    _pairs = [(_cities[0], _cities[3], 320), (_cities[1], _cities[4], 280),
+              (_cities[3], _cities[2], 260), (_cities[5], _cities[0], 210),
+              (_cities[6], _cities[1], 180), (_cities[7], _cities[2], 150),
+              (_cities[8], _cities[0], 120), (_cities[9], _cities[1], 100)]
+    map_flow_df = pd.DataFrame([{"出发城市": a, "到达城市": b, "件数": v}
+                                for a, b, v in _pairs])
+    map_world = pd.DataFrame({
+        "国家": ["中国", "美国", "德国", "日本", "巴西", "印度", "俄罗斯", "澳大利亚"],
+        "销售额": [1630000, 980000, 520000, 460000, 210000, 190000, 150000, 90000],
+    })
+
     # ------------------------------------------------------------------
     # ① 核心指标
     # ------------------------------------------------------------------
@@ -379,6 +394,20 @@ def main():
         sections.append(_sec(chart, s))
 
     # ------------------------------------------------------------------
+    # ⑨ 地图可视化
+    # ------------------------------------------------------------------
+    s = "⑨ 地图可视化 · 区域填色 / 气泡 / 飞线（内置 china / world）"
+    sections.append(_sec(eazy_data_viz.geo_map(map_prov, region="省份", value="销售额",
+                                            title="中国省级地图（区域填色）", height=460), s))
+    sections.append(_sec(eazy_data_viz.geo_map(map_world, region="国家", value="销售额",
+                                            map="world", title="世界地图（国家填色）", height=460), s))
+    sections.append(_sec(eazy_data_viz.map_bubble(map_city, region="城市", value="销售额",
+                                                title="城市气泡图（按城市坐标落点）", height=460), s))
+    sections.append(_sec(eazy_data_viz.map_flow(map_flow_df, source="出发城市",
+                                             target="到达城市", value="件数",
+                                             title="城市飞线图（发货 → 收货）", height=460), s))
+
+    # ------------------------------------------------------------------
     # 组装 & 保存
     # ------------------------------------------------------------------
     kinds = []
@@ -392,7 +421,7 @@ def main():
     dashboard = eazy_data_viz.dashboard(
         *sections, cols=2,
         title="eazy_data_viz · 经营驾驶舱组件总览",
-        desc="pandas → 单文件 HTML · Material Design 3 · 45 种图表 · 点击卡片右上角「代码」"
+        desc="pandas → 单文件 HTML · Material Design 3 · 48 种图表 · 点击卡片右上角「代码」"
              "可查看生成该图的完整 Python 代码 · 点击图形可下钻 / 联动",
     )
     html = dashboard.to_html(inline=True)

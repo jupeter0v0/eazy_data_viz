@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""eazy_data_viz gallery · Streamlit 版（Material Design 3 风格，45 种图表）
+"""eazy_data_viz gallery · Streamlit 版（Material Design 3 风格，48 种图表）
 
 启动方式（二选一）::
 
@@ -129,11 +129,12 @@ with st.sidebar:
             "对比与排名",
             "结构与占比",
             "分布与关系",
+            "地图可视化",
             "明细与文本",
             "交互：下钻 + 联动",
         ],
     )
-    with st.expander("45 种图表一览"):
+    with st.expander("48 种图表一览"):
         st.caption(
             "KPI：kpi / group_kpi / gauge / ring_progress / progress\n\n"
             "趋势：line / area / area_pct / theme_river / sparkline / trend / "
@@ -143,7 +144,8 @@ with st.sidebar:
             "结构：pie / rose / treemap / sunburst / tree / tile\n\n"
             "分布：histogram / box / scatter / quadrant / heatmap / matrix / radar / "
             "parallel / sankey / graph\n\n"
-            "明细：table / wordcloud"
+            "明细：table / wordcloud\n\n"
+            "地图：geo_map / map_bubble / map_flow（内置 china / world）"
         )
     st.divider()
     st.caption("所有图表都接受同一个 DataFrame，只需写列名；不用写 JSON。")
@@ -452,6 +454,47 @@ elif page == "分布与关系":
         code='eazy_data_viz.sankey(flow_df, source="来源", target="去向", value="销售额")\n'
              'eazy_data_viz.graph(node_df, source="源", target="目标", value="销售额")',
     )
+
+# ---------------------------------------------------------------------------
+elif page == "地图可视化":
+    st.subheader("区域填色地图：中国省级 / 世界国家")
+    map_prov = df.groupby("省份", as_index=False)["销售额"].sum()
+    map_world = __import__("pandas").DataFrame({
+        "国家": ["中国", "美国", "德国", "日本", "巴西", "印度", "俄罗斯", "澳大利亚"],
+        "销售额": [1630000, 980000, 520000, 460000, 210000, 190000, 150000, 90000],
+    })
+    show(
+        [
+            eazy_data_viz.geo_map(map_prov, region="省份", value="销售额",
+                                  title="中国省级地图（区域填色）"),
+            eazy_data_viz.geo_map(map_world, region="国家", value="销售额", map="world",
+                                  title="世界地图（国家填色）"),
+        ],
+        cols=2, theme=theme,
+        code='eazy_data_viz.geo_map(df, region="省份", value="销售额")           # 中国\n'
+             'eazy_data_viz.geo_map(df, region="国家", value="销售额", map="world")  # 世界',
+    )
+
+    st.subheader("城市气泡 / 城市飞线（按真实城市坐标落点）")
+    map_city = df.groupby("城市", as_index=False)["销售额"].sum()
+    _cities = list(map_city["城市"])
+    flow = __import__("pandas").DataFrame([
+        {"出发城市": _cities[i % len(_cities)], "到达城市": _cities[(i * 3 + 1) % len(_cities)],
+         "件数": 320 - i * 30} for i in range(min(8, len(_cities)))])
+    show(
+        [
+            eazy_data_viz.map_bubble(map_city, region="城市", value="销售额",
+                                     title="城市气泡图"),
+            eazy_data_viz.map_flow(flow, source="出发城市", target="到达城市", value="件数",
+                                   title="城市飞线图"),
+        ],
+        cols=2, theme=theme,
+        code='eazy_data_viz.map_bubble(df, region="城市", value="销售额")\n'
+             'eazy_data_viz.map_flow(flow_df, source="出发城市", target="到达城市", value="件数")',
+    )
+
+    st.info("内置中国 / 世界地图（本地 GeoJSON，离线可用）；region 支持「广东 / 广东省」"
+            "「广州 / 广州市」两种写法；地图同样支持 drill 下钻与 link 联动。")
 
 # ---------------------------------------------------------------------------
 elif page == "明细与文本":
