@@ -12,6 +12,15 @@ df = pd.read_excel("经营数据.xlsx")          # 你的 DataFrame
 edv.bar(df, x="大区", y="销售额", color="产品").show()
 ```
 
+## 预览
+
+| 画廊（每张图可展开生成它的完整 Python 代码） | Streamlit 画布 |
+| --- | --- |
+| ![画廊](docs/images/gallery_code.png) | ![Streamlit](docs/images/gallery_streamlit.png) |
+
+完整的 64 张卡片效果见 [docs/images/gallery_preview.png](docs/images/gallery_preview.png)，
+也可以直接打开仓库根目录的 `gallery.html` 离线浏览。
+
 ---
 
 ## 1. 为什么用它
