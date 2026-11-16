@@ -221,12 +221,12 @@ def main():
     total_orders = int(df["订单数"].sum())
     margin = total_profit / total_sales * 100
     sections.append(_sec(X.group_kpi(items=[
-        {"label": "总销售额", "value": total_sales, "fmt": "compact", "delta": 12.8},
-        {"label": "总利润", "value": total_profit, "fmt": "compact", "delta": 8.6},
-        {"label": "订单数", "value": total_orders, "fmt": "thousands", "delta": 6.4},
-        {"label": "利润率", "value": margin, "fmt": "percent", "delta": -1.2},
-        {"label": "客户数", "value": int(df["客户数"].sum()), "fmt": "thousands", "delta": 3.1},
-        {"label": "单均金额", "value": total_sales / total_orders, "fmt": "currency", "delta": 2.2},
+        {"label": "总销售额", "value": total_sales, "fmt": "compact", "delta": 0.128},
+        {"label": "总利润", "value": total_profit, "fmt": "compact", "delta": 0.086},
+        {"label": "订单数", "value": total_orders, "fmt": "thousands", "delta": 0.064},
+        {"label": "利润率", "value": margin, "fmt": "percent", "delta": -0.012},
+        {"label": "客户数", "value": int(df["客户数"].sum()), "fmt": "thousands", "delta": 0.031},
+        {"label": "单均金额", "value": total_sales / total_orders, "fmt": "currency", "delta": 0.022},
     ], title="经营核心指标", subtitle="2024 年全年 · 环比趋势", height=150), s))
     sections.append(_sec(eazy_data_viz.kpi(df, value="销售额", agg="sum", label="全年销售额",
                                   delta=0.128, delta_label="同比", target=total_sales * 1.25,

@@ -44,7 +44,7 @@ eazy_data_viz.group_kpi(
 | `sort` | `str` | `"desc"` | 否 | 卡片顺序：desc / asc / 其它（保序） |
 | `top_n` | `int` | `6` | 否 | 最多几张卡 |
 | `unit` | `str \| None` | `None` | 否 | 数值后缀单位（如「万元」） |
-| `delta` | `float \| list \| None` | `None` | 否 | 环比数值，标量给第 1 张，列表逐张 |
+| `delta` | `float \| list \| None` | `None` | 否 | 同比/环比变化的小数比例（0.128 = 12.8%），标量给第 1 张、列表逐张 |
 | `fmt` | `str` | `"compact"` | 否 | 数值格式 |
 | `title` | `str \| None` | `None` | 否 | 主标题 |
 | `subtitle` | `str \| None` | `None` | 否 | 副标题 |
@@ -89,7 +89,7 @@ eazy_data_viz.group_kpi(
 - **说明**：完全绕过 DataFrame，直接给卡片数据；单个 dict 会被包成 `[dict]`。每项支持的键：
   - `label`（str）：卡片标题，缺省为 `""`（显示空白）。
   - `value`（number，**必填**）：卡片大号数值，必须能转成数值。
-  - `delta`（number | None）：环比数值，前端按「百分数点位」显示为 `▲ 8.2%` / `▼ 3.4%`（见 `delta` 参数）。
+  - `delta`（number | None）：同比/环比变化的小数比例，前端显示为 `▲ 8.2%` / `▼ 3.4%`（见 `delta` 参数）。
   - `unit`（str | None）：该卡的数值后缀单位，**会覆盖全局 `unit`**（items 模式下全局 `unit` 不生效）。
   - `fmt`（str | None）：该卡数值格式，缺省继承全局 `fmt`。
   - `hint`（str | None）：卡片第三行灰色小字，写口径或备注。
@@ -139,17 +139,17 @@ eazy_data_viz.group_kpi(
 - **取值建议**：数值本身已是「万」为单位时写 `"万元"`；不要和 `fmt="currency"` 的 `¥` 重复表达。
 - **示例**：`unit="万元"`
 
-### `delta` — 环比数值（默认 `None`）
+### `delta` — 同比/环比变化（默认 `None`）
 
 - **类型**：`float | list[float] | None`
 - **默认值**：`None`
-- **说明**：写入每张卡片的 `items[i]["delta"]`，前端渲染成 `▲/▼ + abs(delta).toFixed(1) + '%'`：
-  - **delta 是「百分点数值」，不是小数比例**：`delta=8.2` 显示 `▲ 8.2%`，`delta=0.12` 显示 `▲ 0.1%`。这与源码 docstring 里「delta 是百分比小数」的说法不一致，**以实际渲染为准**。
+- **说明**：写入每张卡片的 `items[i]["delta"]`，前端渲染成 `▲/▼ + abs(delta * 100).toFixed(1) + '%'`：
+  - **delta 是「小数比例」，与 `kpi()` 一致**：`delta=0.082` 显示 `▲ 8.2%`，`delta=-0.034` 显示 `▼ 3.4%`；传 `8.2` 会显示成 `▲ 820.0%`。
   - 标量：只写第 1 张卡（`items[0]`），其余卡片没有箭头。
   - list / tuple：按顺序逐张写入，长度不足的部分保持 `None`，超长部分被忽略。
   - 非数值会被 `_num_or_none` 转成 `None`（不报错）；`None` 表示不显示环比。
-- **取值建议**：接口给的是小数比例（0.082）时先 `* 100` 再传；零增长传 `0.0` 会显示 `▲ 0.0%`。
-- **示例**：`delta=[8.2, -3.4, 1.1, 0.0]`
+- **取值建议**：百分点数据先除以 100（`8.2 → 0.082`）；零增长传 `0.0` 会显示 `▲ 0.0%`。
+- **示例**：`delta=[0.082, -0.034, 0.011, 0.0]`
 
 ### `fmt` — 数值格式（默认 `"compact"`）
 
@@ -328,7 +328,7 @@ chart = edv.group_kpi(
     items=[
         {"label": "总销售额", "value": 1631033.57, "unit": "元", "hint": "全渠道合计"},
         {"label": "平均客单价", "value": 1087.36, "fmt": "thousands", "hint": "销售额/订单数"},
-        {"label": "同比增长", "value": 12.4, "fmt": "percent", "delta": 12.4},
+        {"label": "同比增长", "value": 12.4, "fmt": "percent", "delta": 0.124},
         {"label": "覆盖客户", "value": 1922, "unit": "人"},
     ],
     title="关键指标",
@@ -353,19 +353,19 @@ import eazy_data_viz as edv
 
 df = edv.sample_df()
 
-scalar = edv.group_kpi(df, names="大区", values="销售额", delta=12.5)
+scalar = edv.group_kpi(df, names="大区", values="销售额", delta=0.125)
 print([(it["label"], it["delta"]) for it in scalar.spec["items"]])
 
-listed = edv.group_kpi(df, names="大区", values="销售额", delta=[8.2, -3.4, 1.1, 0.0])
+listed = edv.group_kpi(df, names="大区", values="销售额", delta=[0.082, -0.034, 0.011, 0.0])
 print([(it["label"], it["delta"]) for it in listed.spec["items"]])
 
-assert scalar.spec["items"][0]["delta"] == 12.5
+assert scalar.spec["items"][0]["delta"] == 0.125
 assert [it["delta"] for it in scalar.spec["items"][1:]] == [None, None, None]
-assert listed.spec["items"][1]["delta"] == -3.4
+assert listed.spec["items"][1]["delta"] == -0.034
 ```
 
 **输出**：
-- `[('华东', 12.5), ('华北', None), ('华南', None), ('西部', None)]`：标量只作用于第 1 张卡。
+- `[('华东', 0.125), ('华北', None), ('华南', None), ('西部', None)]`：标量只作用于第 1 张卡；前端显示 `▲ 12.5%`。
 - `[('华东', 8.2), ('华北', -3.4), ('华南', 1.1), ('西部', 0.0)]`：列表逐张写入。
 - 页面上分别显示 `▲ 8.2%`、`▼ 3.4%`、`▲ 1.1%`、`▲ 0.0%`（负值自动换箭头与颜色）。
 

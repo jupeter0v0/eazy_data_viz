@@ -260,15 +260,15 @@ elif page == "经营驾驶舱":
     show(
         [
             eazy_data_viz.group_kpi(items=[
-                {"label": "总销售额", "value": total, "fmt": "compact", "delta": 12.8},
-                {"label": "总利润", "value": profit, "fmt": "compact", "delta": 8.6},
-                {"label": "订单数", "value": orders, "fmt": "thousands", "delta": 6.4},
-                {"label": "利润率", "value": margin, "fmt": "percent", "delta": -1.2},
-                {"label": "客户数", "value": int(df["客户数"].sum()), "fmt": "thousands", "delta": 3.1},
-                {"label": "单均金额", "value": total / orders, "fmt": "currency", "delta": 2.2},
+                {"label": "总销售额", "value": total, "fmt": "compact", "delta": 0.128},
+                {"label": "总利润", "value": profit, "fmt": "compact", "delta": 0.086},
+                {"label": "订单数", "value": orders, "fmt": "thousands", "delta": 0.064},
+                {"label": "利润率", "value": margin, "fmt": "percent", "delta": -0.012},
+                {"label": "客户数", "value": int(df["客户数"].sum()), "fmt": "thousands", "delta": 0.031},
+                {"label": "单均金额", "value": total / orders, "fmt": "currency", "delta": 0.022},
             ], title="经营核心指标", subtitle="全年 · 环比趋势", height=150),
             eazy_data_viz.kpi(df, value="销售额", agg="sum", label="全年销售额",
-                     delta=0.128, subtitle="同比 +12.8%", height=150),
+                     delta=0.128, height=150),
         ],
         cols=2, theme=theme,
         code='eazy_data_viz.group_kpi(items=[...])   # 或 group_kpi(df) 自动按数值列取总量\n'
