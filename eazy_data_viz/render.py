@@ -537,8 +537,11 @@ def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None
         data_store[ref] = payload
 
     specs = [c.spec for c in charts]
+    # 按位置固定 id：Chart 构造时用的是全局自增 id（c1、c2…），每次 rerun 都会变，
+    # components.v2 会因此判定 data 变化、整块重挂组件，导致联动/下钻状态被清空。
+    # 这里统一按位置覆盖成稳定 id，rerun 前后 data 完全一致，组件就不再重挂。
     for _i, _s in enumerate(specs):
-        _s.setdefault("id", "eazy-%d" % _i)
+        _s["id"] = "eazy-%d" % _i
     has_filters = any(s.get("link") for s in specs)
 
     header = ""
@@ -683,8 +686,11 @@ def build_fragment(charts, title=None, desc=None, cols=None, theme=None, palette
         data_store[ref] = payload
 
     specs = [c.spec for c in charts]
+    # 按位置固定 id：Chart 构造时用的是全局自增 id（c1、c2…），每次 rerun 都会变，
+    # components.v2 会因此判定 data 变化、整块重挂组件，导致联动/下钻状态被清空。
+    # 这里统一按位置覆盖成稳定 id，rerun 前后 data 完全一致，组件就不再重挂。
     for _i, _s in enumerate(specs):
-        _s.setdefault("id", "eazy-%d" % _i)
+        _s["id"] = "eazy-%d" % _i
     has_filters = any(s.get("link") for s in specs)
 
     header = ""
