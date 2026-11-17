@@ -155,7 +155,7 @@ dark_card = edv.bar(df, x="大区", y="销售额", theme="dark", title="单独�
 
 - 配色 `<select data-eazy-palette>`（7 个内置选项）；
 - ◐ 主题按钮；
-- 有 `link` 时还会出现“重置联动”按钮和筛选 chips。
+- 有 `link` 或有 `drill` 时会出现顶栏按钮：`重置联动`、`重置下钻`；`link` 还会有筛选 chips。
 
 选择下拉项调用前端 `setPalette(name)`：
 

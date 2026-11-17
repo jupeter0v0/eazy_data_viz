@@ -234,6 +234,8 @@ body{
 .eazy-header-desc{font-size:12.5px;color:var(--pv-on-surface-var);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .eazy-appbar-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.eazy-appbar.is-plain{position:static;min-height:0;padding:2px 24px 0;
+  background:transparent;border-bottom:0;box-shadow:none}
 .eazy-iconbtn{width:40px;height:40px;border:0;border-radius:50%;background:transparent;
   color:var(--pv-on-surface-var);cursor:pointer;font-size:18px;line-height:40px;text-align:center;
   padding:0;transition:background .15s}
@@ -426,6 +428,40 @@ def _esc(text):
     return _html.escape("" if text is None else str(text))
 
 
+def _appbar_html(title, desc, palette, specs):
+    """看板顶栏：标题 + 配色/主题/重置按钮。
+
+    没有标题也照样出按钮——只要看板里有联动或下钻，用户就需要一键回退的入口，
+    否则下钻带出来的筛选没有地方可清（「回不去了」）。
+    """
+    has_filters = any(s.get("link") for s in specs)
+    has_drill = any(s.get("drill") for s in specs)
+    if not (title or desc or has_filters or has_drill):
+        return ""
+    # 没有标题时用「紧凑工具条」样式：只有配色/主题/重置按钮，别留一条空标题栏
+    plain = not (title or desc)
+    parts = ['<header class="eazy-appbar%s">' % (" is-plain" if plain else "")]
+    if title or desc:
+        parts.append('<div class="eazy-appbar-main"><div class="eazy-header-title">%s</div>'
+                     % _esc(title or "eazy_data_viz 看板"))
+        if desc:
+            parts.append('<div class="eazy-header-desc">%s</div>' % _esc(desc))
+        parts.append('</div>')
+    opts = []
+    for _p in _palette.listing():
+        _sel = " selected" if _p["name"] == palette else ""
+        opts.append('<option value="%s"%s>配色：%s</option>'
+                    % (_p["name"], _sel, _esc(_p["label"])))
+    parts.append('<div class="eazy-appbar-actions">'
+                 '<select class="eazy-select" data-eazy-palette title="切换配色库">%s</select>'
+                 '<button class="eazy-iconbtn" data-eazy-theme title="切换浅色/深色">◐</button>'
+                 '<button class="eazy-textbtn" data-eazy-reset title="清除所有联动筛选">重置联动</button>'
+                 '<button class="eazy-textbtn" data-eazy-reset-drill '
+                 'title="清除所有图表的逐级下钻（连同下钻带出的联动），回到第一层">重置下钻</button>'
+                 '</div></header>' % "".join(opts))
+    return "".join(parts)
+
+
 def _card_html(spec, index):
     title = spec.get("title")
     subtitle = spec.get("subtitle")
@@ -563,22 +599,7 @@ def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None
         _s["id"] = "eazy-%d" % _i
     has_filters = any(s.get("link") for s in specs)
 
-    header = ""
-    if title or desc:
-        header = ('<header class="eazy-appbar"><div class="eazy-appbar-main">'
-                  '<div class="eazy-header-title">%s</div>' % _esc(title or "eazy_data_viz 看板"))
-        if desc:
-            header += '<div class="eazy-header-desc">%s</div>' % _esc(desc)
-        opts = []
-        for _p in _palette.listing():
-            _sel = " selected" if _p["name"] == palette else ""
-            opts.append('<option value="%s"%s>配色：%s</option>'
-                        % (_p["name"], _sel, _esc(_p["label"])))
-        header += ('</div><div class="eazy-appbar-actions">'
-                   '<select class="eazy-select" data-eazy-palette title="切换配色库">%s</select>'
-                   '<button class="eazy-iconbtn" data-eazy-theme title="切换浅色/深色">◐</button>'
-                   '<button class="eazy-textbtn" data-eazy-reset title="清除所有联动筛选">重置联动</button>'
-                   '</div></header>' % "".join(opts))
+    header = _appbar_html(title, desc, palette, specs)
 
     card_parts, last_section = [], None
     for _i, _s in enumerate(specs):
@@ -712,22 +733,7 @@ def build_fragment(charts, title=None, desc=None, cols=None, theme=None, palette
         _s["id"] = "eazy-%d" % _i
     has_filters = any(s.get("link") for s in specs)
 
-    header = ""
-    if title or desc:
-        header = ('<header class="eazy-appbar"><div class="eazy-appbar-main">'
-                  '<div class="eazy-header-title">%s</div>' % _esc(title or "eazy_data_viz 看板"))
-        if desc:
-            header += '<div class="eazy-header-desc">%s</div>' % _esc(desc)
-        opts = []
-        for _p in _palette.listing():
-            _sel = " selected" if _p["name"] == palette else ""
-            opts.append('<option value="%s"%s>配色：%s</option>'
-                        % (_p["name"], _sel, _esc(_p["label"])))
-        header += ('</div><div class="eazy-appbar-actions">'
-                   '<select class="eazy-select" data-eazy-palette title="切换配色库">%s</select>'
-                   '<button class="eazy-iconbtn" data-eazy-theme title="切换浅色/深色">◐</button>'
-                   '<button class="eazy-textbtn" data-eazy-reset title="清除所有联动筛选">重置联动</button>'
-                   '</div></header>' % "".join(opts))
+    header = _appbar_html(title, desc, palette, specs)
 
     card_parts, last_section = [], None
     for _i, _s in enumerate(specs):

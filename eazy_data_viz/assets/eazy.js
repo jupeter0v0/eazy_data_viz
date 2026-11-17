@@ -1792,16 +1792,74 @@
     el.style.display = '';
   }
 
+  // 一个页面上可以挂多个看板，「重置下钻」只应该动当前这个看板：
+  // 从点击元素往上找 .eazy-root，得到它所属的看板根节点。
+  function rootOf(el) {
+    while (el && el !== document) {
+      if (el.classList && el.classList.contains('eazy-root')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+
+  function inRoot(c, root) {
+    if (!root) return true;
+    return !!(c && c.el && root.contains && root.contains(c.el));
+  }
+
+  // 下钻那次点击同时会把这张图写成联动筛选的来源，
+  // 所以只清 drill 的话，图还会被自己那条「大区 = 华东」过滤着，
+  // 看起来像「回不去」。这里连同这些图自己发出的联动一起清掉。
+  function dropOwnLinks(c) {
+    if (!c || !EazyViz.links) return;
+    var keys = Object.keys(EazyViz.links), groups = [];
+    for (var i = 0; i < keys.length; i++) {
+      var lk = EazyViz.links[keys[i]];
+      if (lk && lk.sourceId === c.spec.id) { delete EazyViz.links[keys[i]]; groups.push(keys[i]); }
+    }
+    for (var j = 0; j < groups.length; j++) reRenderGroup(groups[j]);
+  }
+
+  // 重置下钻：把当前看板里所有图的 drill 清空（并清掉它们自己发出的联动），
+  // 回到第一层。返回被重置的图数，没有下钻时不重绘。
+  function resetDrill(el) {
+    var root = rootOf(el) || null;
+    var hit = [], i;
+    for (i = 0; i < EazyViz.charts.length; i++) {
+      var c = EazyViz.charts[i];
+      if (!c || !c.state || !c.state.drill || !c.state.drill.length) continue;
+      if (root && !inRoot(c, root)) continue;
+      hit.push(c);
+    }
+    if (!hit.length) return 0;
+    for (i = 0; i < hit.length; i++) {
+      hit[i].state.drill = [];
+      dropOwnLinks(hit[i]);
+    }
+    for (i = 0; i < EazyViz.charts.length; i++) {
+      var ch = EazyViz.charts[i];
+      if (root && !inRoot(ch, root)) continue;
+      syncFilters(ch);
+      renderChart(ch);
+    }
+    syncFilterBar();
+    return hit.length;
+  }
+
   function handleCrumb(c, depth) {
     if (!c) return;
     c.state.drill = c.state.drill.slice(0, depth);
+    if (!c.state.drill.length) dropOwnLinks(c);
     renderChart(c);
+    syncFilterBar();
   }
 
   function handleBack(c) {
     if (!c || !c.state.drill.length) return;
     c.state.drill.pop();
+    if (!c.state.drill.length) dropOwnLinks(c);
     renderChart(c);
+    syncFilterBar();
   }
 
   function resizeAll() {
@@ -1878,6 +1936,10 @@
           }
           if (el.hasAttribute('data-eazy-reset')) {
             clearAllLinks();
+            return;
+          }
+          if (el.hasAttribute('data-eazy-reset-drill')) {
+            resetDrill(el);
             return;
           }
           if (el.hasAttribute('data-back')) {
@@ -1957,6 +2019,9 @@
     }
     syncFilterBar();
   }
+
+  // 供外部（streamlit 回调 / 自定义工具栏）主动重置下钻
+  EazyViz.resetDrill = resetDrill;
 
   EazyViz.init = function (page, rootEl) {
     EazyViz.page = page || {};

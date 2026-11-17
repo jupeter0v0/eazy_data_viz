@@ -35,12 +35,12 @@ TEST_JS = r"""
   function chart(i) { return EazyViz.charts[i]; }
 
   var c0 = chart(0), c1 = chart(1), c2 = chart(2);
-  var ck = chart(13), cp = chart(14);
+  var ck = chart(13), cp = chart(14), cd = chart(18);
   var core0 = core();
   try {
 
   // ---------------- 纯逻辑 ----------------
-  ok('charts-count', EazyViz.charts.length === 18, EazyViz.charts.length);
+  ok('charts-count', EazyViz.charts.length === 19, EazyViz.charts.length);
   ok('dataStore', Object.keys(EazyViz.dataStore).length >= 1);
   ok('fmt-compact', core0.fmtValue(12345678, 'compact') === '1235万', core0.fmtValue(12345678, 'compact'));
   ok('fmt-percent', core0.fmtValue(12.5, 'percent') === '12.5%', core0.fmtValue(12.5, 'percent'));
@@ -197,6 +197,24 @@ TEST_JS = r"""
     ok('drill-reset', c0.state.drill.length === 0, c0.state.drill.length);
   });
 
+  // ---------------- 交互：重置下钻（含它自己发出的联动） ----------------
+  steps.push(function () {
+    var gd = core0.groupBy(core0.rowsOf(cd.data), [cd.spec.roles.x], cd.spec.roles.y, cd.spec.agg || 'sum');
+    clickCat(cd, gd[0].key, gd[0].value);
+  });
+  steps.push(function () {
+    ok('drill-link-both', cd.state.drill.length === 1 && !!(EazyViz.links || {})['g1'],
+       cd.state.drill.length + '/' + JSON.stringify((EazyViz.links || {})['g1'] || null));
+    var btn = document.querySelector('[data-eazy-reset-drill]');
+    ok('drill-reset-btn', !!btn);
+    if (btn) btn.click();
+  });
+  steps.push(function () {
+    ok('drill-reset-all', cd.state.drill.length === 0, cd.state.drill.length);
+    ok('drill-reset-own-link', !(EazyViz.links || {})['g1'], JSON.stringify(EazyViz.links || {}));
+    ok('drill-reset-api', typeof EazyViz.resetDrill === 'function');
+  });
+
   // ---------------- 交互：联动 ----------------
   var linkSpec = c1.spec;
   steps.push(function () {
@@ -325,6 +343,8 @@ def build_page():
                 "到达城市": ["广州市", "成都市", "上海市", "北京市"],
                 "件数": [320, 280, 260, 180]}),
             source="出发城市", target="到达城市", value="件数", title="城市飞线"),
+        eazy_data_viz.bar(df, x="渠道", y="销售额", drill=["渠道", "产品"], link="g1",
+                           title="下钻 + 联动"),
     ]
     # 中文单位：链式 unit() 只写进 spec，不影响页面里的图表数量
     _u1 = eazy_data_viz.bar(df, x="大区", y="销售额").unit("万")

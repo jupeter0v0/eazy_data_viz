@@ -56,12 +56,14 @@ print("已生成", path, os.path.getsize(path), "bytes")
 | 点饼图某块 | 同组图按当前饼图类目（产品）过滤；饼图自身保持全量并高亮该块 |
 | 再点同一块饼 | 取消联动（同图、同维度、同值再点 = 取消） |
 | 点“重置联动” | 所有联动 chip 清空，各图回到全量；**下钻层级不会回退** |
+| 点“重置下钻” | 所有图的下钻层级清空、回到第一层；下钻那次点击顺带产生的联动也一起清掉 |
 | 点 ◐ | 深色/浅色切换，筛选与下钻状态保留 |
 | 右上角“保存图片”图标 | 下载当前图为 PNG（2 倍像素） |
 
-> **重要**：`重置联动`、配色下拉、◐ 主题按钮都长在**顶栏**里，
-> 而顶栏只有在 `dashboard(title=..., desc=...)` 或 `show(..., title=...)`
-> 给了标题/描述时才渲染。没有标题的页面仍然能联动、有 chips，但**没有重置按钮**。
+> **重要**：`重置联动`、`重置下钻`、配色下拉、◐ 主题按钮都长在**顶栏**里。
+> 1.3.0 起，只要页面里**有联动（`link`）或有下钻（`drill`）**，即使不传标题也会渲染顶栏
+> （没有标题时是紧凑工具条：只有按钮、没有标题行）。既没有联动也没有下钻的页面不需要回退入口，
+> 顶栏就不渲染了。
 
 ```python
 # 验证“有没有顶栏按钮”：两个页面对比
@@ -70,16 +72,18 @@ h1 = edv.dashboard(edv.bar(df, x="大区", y="销售额", link="G"),
 h2 = edv.dashboard(edv.bar(df, x="大区", y="销售额", link="G"),
                    edv.pie(df, names="产品", values="销售额", link="G"),
                    title="有顶栏").to_html()
-print("无标题含重置按钮:", "data-eazy-reset title=" in h1)   # False
+print("无标题含重置按钮:", "data-eazy-reset title=" in h1)   # True（有 link 就会渲染）
 print("有标题含重置按钮:", "data-eazy-reset title=" in h2)   # True
 print("两者都有 chips 容器:", 'id="eazy-filters"' in h1, 'id="eazy-filters"' in h2)
 ```
 
 ```text
-无标题含重置按钮: False
+无标题含重置按钮: True
 有标题含重置按钮: True
 两者都有 chips 容器: True True
 ```
+
+> 既没有 `link` 也没有 `drill`、又没给标题的看板，顶栏不会渲染（没有需要回退的状态）。
 
 ## 1. 下钻（drill）：点击图形逐级换维度
 
@@ -215,6 +219,7 @@ table 嵌入的列: {'columns': ['日期', '销售额']}
 
 - 每个 chip 的 `×` 只清掉该组；
 - 顶栏的 `重置联动`（`data-eazy-reset`）清空所有组；
+- 顶栏的 `重置下钻`（`data-eazy-reset-drill`）把所有图的下钻层级清空，并顺手清掉这些图自己发出的联动；
 - 清联动**不会**回退任何图的下钻层级；
 - 反过来，面包屑/返回也只动下钻，不会清联动——两套状态完全独立。
 
@@ -339,6 +344,7 @@ saveAsImage: { title: "保存图片", pixelRatio: 2, name: "eazy-chart" }
 | 配色下拉（`data-eazy-palette`） | 在 7 套内置配色间切换，纯前端重绘 |
 | ◐（`data-eazy-theme`） | 浅色/深色切换，`data-theme` 挂到 `<html>`/`<body>` |
 | 重置联动（`data-eazy-reset`） | 清空所有联动组 |
+| 重置下钻（`data-eazy-reset-drill`） | 所有图 `state.drill = []`，并清掉 `sourceId` 是这些图的联动组 |
 
 切换主题会重算颜色并重绘所有图，但**保留** filters 和 drill 状态。
 初始主题/配色在 Python 侧决定：`dashboard(..., theme="dark", palette="carbon")`；

@@ -166,6 +166,31 @@ def t_dashboard_orders():
     assert "orders" in html, "有序类目顺序未写入页面"
 
 
+def t_dashboard_reset_buttons():
+    """顶栏回退入口：有 link 或 drill 就渲染，「重置下钻」按钮总在其中。"""
+    HDR = '<header class="eazy-appbar'
+    bar = eazy_data_viz.bar(DF, x="大区" if "大区" in DF.columns else "月份", y="销售额")
+    only_bar = eazy_data_viz.dashboard(bar).to_html()
+    assert HDR not in only_bar, "既无联动也无下钻时不该渲染顶栏"
+    linked = eazy_data_viz.dashboard(
+        eazy_data_viz.bar(DF, x="大区" if "大区" in DF.columns else "月份", y="销售额", link="g9"),
+    ).to_html()
+    assert HDR in linked, "有 link 就该渲染顶栏（否则没有回退入口）"
+    assert 'data-eazy-reset-drill' in linked, "缺少重置下钻按钮"
+    assert 'data-eazy-reset-drill title=' in linked or 'data-eazy-reset-drill ' in linked
+    assert HDR + ' is-plain"' in linked, "没有标题时应使用紧凑工具条样式"
+    drill_only = eazy_data_viz.dashboard(
+        eazy_data_viz.bar(DF, x="大区" if "大区" in DF.columns else "月份", y="销售额",
+                          drill=["大区", "月份"] if "大区" in DF.columns else ["月份"]),
+    ).to_html()
+    assert 'data-eazy-reset-drill' in drill_only, "只有 drill 的看板也要有重置下钻按钮"
+    titled = eazy_data_viz.dashboard(
+        eazy_data_viz.bar(DF, x="大区" if "大区" in DF.columns else "月份", y="销售额", link="g9"),
+        title="有标题",
+    ).to_html()
+    assert HDR in titled and HDR + ' is-plain"' not in titled
+
+
 def t_empty_df():
     import pandas as pd
     empty = pd.DataFrame({"a": [], "b": []})
