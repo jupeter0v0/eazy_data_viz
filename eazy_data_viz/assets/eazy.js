@@ -556,20 +556,30 @@
     // 类目很多时（例如按日期画线），自动抽稀标签，否则会挤成一堆斜字
     var n = cats.length;
     var dense = n > 12;
-    var interval = dense ? Math.max(1, Math.ceil(n / 10) - 1) : 0;
     var dm = dateCatMode(cats);
+    // 跨年的月度轴（例如 17 个月）如果写成一行「2025年3月」，
+    // 密集时斜着写也会互相重叠；拆成两行（年 / 月）宽度减半，看得清。
+    var yearOnOwnLine = dense && !!dm && !dm.sameYear;
+    // 标记一下：两行标签比单行高一行，后面要把 x 轴名与 grid 底部一起下让
+    var twoLine = yearOnOwnLine;
+    // 两行标签比单行占地，抽稀要狠一点（大约 6 个）
+    var interval = dense ? Math.max(1, Math.ceil(n / (yearOnOwnLine ? 6 : 10)) - 1) : 0;
     var hasUnit = !!unitInfo(spec);
     // 坐标轴显示文本：日期按中文习惯缩短 / 数值按显式单位换算 / 其它沿用截断
     function labelText(v) {
       var p = dm ? parseCatDate(v) : null;
-      if (p) return dateCatText(p, dm.sameYear);
+      if (p) {
+        if (yearOnOwnLine && p.prec === 'month') return p.y + '年\n' + p.m + '月';
+        if (yearOnOwnLine && p.prec === 'day') return p.y + '年\n' + p.m + '月' + p.d + '日';
+        return dateCatText(p, dm.sameYear);
+      }
       if (hasUnit && /^-?\d+(\.\d+)?$/.test(String(v))) return fmtValue(v, spec.fmt, spec);
       return truncate(v, 14);
     }
     var shown = [];
     for (var si = 0; si < n; si++) shown.push(labelText(cats[si]));
     var rotate = dense ? (axisLabelRotate(shown) > 0 ? 30 : 0) : axisLabelRotate(shown);
-    return {
+    var axis = {
       type: 'category',
       data: cats,
       boundaryGap: true,
@@ -578,12 +588,15 @@
       axisLabel: {
         color: theme.subtext, hideOverlap: true,
         interval: interval,
-        rotate: rotate,
+        rotate: yearOnOwnLine ? 0 : rotate,
+        lineHeight: yearOnOwnLine ? 14 : 12,
         // 注意：只缩短坐标轴文本，类目原始值不变，tooltip 表头仍是完整日期
         formatter: function (v) { return labelText(v); }
       },
       splitLine: { show: false }
     };
+    if (twoLine) axis.__twoLine = true;
+    return axis;
   }
 
   function makeValueAxis(spec, theme, lim) {
@@ -1517,6 +1530,23 @@
     return { rows: Math.max(1, Math.ceil(chars / 440)) };
   }
 
+  // 日期轴拆成两行（「2025年\n3月」）时，x 轴名与 grid 底部要再多让一行，
+  // 否则「月份」会直接压在最后一行标签上（实测在 17 个月的看板里重叠）。
+  function fixTwoLineAxis(opt) {
+    if (!opt || !opt.xAxis) return opt;
+    var xs = opt.xAxis.length ? opt.xAxis : [opt.xAxis];
+    var two = false, i;
+    for (i = 0; i < xs.length; i++) {
+      if (xs[i] && xs[i].__twoLine) { two = true; delete xs[i].__twoLine; }
+    }
+    if (!two) return opt;
+    for (i = 0; i < xs.length; i++) {
+      if (xs[i] && xs[i].name) xs[i].nameGap = 44;
+    }
+    if (opt.grid && opt.grid.bottom < 58) opt.grid.bottom = 58;
+    return opt;
+  }
+
   function layoutLegend(opt) {
     if (!opt || !opt.legend || opt.legend.show === false) return opt;
     var info = legendRowInfo(opt);
@@ -1555,7 +1585,7 @@
     opt.animationDuration = 380;
     opt.animationDurationUpdate = 260;
     opt.animationEasing = 'cubicOut';
-    return layoutLegend(opt);
+    return fixTwoLineAxis(layoutLegend(opt));
   }
 
   // ======================================================================
