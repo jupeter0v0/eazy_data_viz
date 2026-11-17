@@ -8,7 +8,9 @@
 * 优先用 st.components.v2（edv.streamlit_dashboard）：无 iframe、高度自适应、点击可回传 Python
 * 旧版 Streamlit 自动回退到 components.v1.html（那时需要显式给 height）
 * 跨图联动要放进同一个 dashboard / streamlit_dashboard
-* 交互（下钻 / 联动 / 主题）都在浏览器里完成，不会触发 Streamlit rerun
+* v2 路径：点击图表会把事件回传给 Python，会触发一次脚本 rerun；
+  但图表 id 已按位置稳定化，联动/下钻/筛选状态不会丢。
+* v1 路径（旧版 Streamlit）：下钻 / 联动 / 主题全在 iframe 内完成，不触发 rerun
 """
 from __future__ import annotations
 
@@ -27,7 +29,7 @@ from eazy_data_viz import render as edv_render  # noqa: E402
 
 st.set_page_config(page_title="eazy_data_viz × Streamlit", layout="wide")
 st.title("eazy_data_viz × Streamlit")
-st.caption("所有交互都在 iframe 内完成，点击图表不会触发页面 rerun。")
+st.caption("v2 路径：点图会触发一次 rerun（事件回传 Python），联动状态由稳定图表 id 保留；v1 路径完全在 iframe 内完成，不触发 rerun。")
 
 rows = st.sidebar.slider("数据行数", 300, 3000, 1500, step=100)
 palette = st.sidebar.selectbox("配色", edv.palette.names(), index=0)

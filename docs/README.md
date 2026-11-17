@@ -31,6 +31,7 @@ edv.bar(df, x="大区", y="销售额", color="渠道", stack=True).save("example
 | 图不对 / 报错了 | [12 · 常见问题与错误对照](guides/12-troubleshooting.md) |
 | 文件太大 / 首屏太慢 | [13 · 性能与体积](guides/13-performance.md) |
 | 加一种新图表类型 | [14 · 扩展图表](guides/14-extend-charts.md) |
+| 让数字和日期符合中文习惯 | [15 · 中文本地化约定](guides/15-cn-conventions.md) |
 | 做省份 / 城市地图 | [地图图表完全指南](guides/map.md) |
 | 查某个函数的全部参数 | [API 索引](api/README.md) |
 | 让 AI 帮我写代码 | [AI_GUIDE.md](AI_GUIDE.md) |
@@ -55,6 +56,7 @@ edv.bar(df, x="大区", y="销售额", color="渠道", stack=True).save("example
 | 12 | [常见问题与错误对照](guides/12-troubleshooting.md) |
 | 13 | [性能与体积](guides/13-performance.md) |
 | 14 | [扩展图表](guides/14-extend-charts.md) |
+| 15 | [中文本地化约定](guides/15-cn-conventions.md) |
 | 专题 | [地图图表完全指南](guides/map.md) |
 
 完整目录与推荐阅读路径见 [guides/README.md](guides/README.md)。

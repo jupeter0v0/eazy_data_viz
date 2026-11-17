@@ -116,6 +116,45 @@ class Chart:
         self.spec["palette"] = _palette.check(name)
         return self
 
+    def unit(self, unit):
+        """给整张图统一一个数值单位（对齐帆软 / 观远等中文 BI 的观感）。
+
+        支持中文单位：``"千"`` / ``"万"`` / ``"百万"`` / ``"亿"``，
+        也可以直接传倍数：``1e3`` / ``1e4`` / ``1e6`` / ``1e8``。
+        设置后坐标轴、tooltip、标签、KPI 卡、明细表里的数值都按
+        「数值 / 倍数」展示，最多 2 位小数并去掉末尾的 0，例如::
+
+            bar(df, x="大区", y="销售额").unit("万")      # 12345678 → 1235万
+            bar(df, x="大区", y="销售额").unit(1e6)       # 2500000 → 2.5百万
+
+        与 ``fmt="percent"/"currency"/"raw"/"thousands"`` 同时存在时以 fmt 为准
+        （unit 不参与换算）。返回自身，方便链式调用。
+        """
+        scales = {"千": 1e3, "万": 1e4, "百万": 1e6, "亿": 1e8}
+        if unit is None or (isinstance(unit, str) and not unit.strip()):
+            raise ValueError("unit 不能为空，可选：千 / 万 / 百万 / 亿，或 1e3 / 1e4 / 1e6 / 1e8")
+        if isinstance(unit, str):
+            name = unit.strip()
+            if name in scales:
+                self.spec["unit"] = name
+                return self
+            try:
+                num = float(name)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    "unit=%r 不支持，可选：千 / 万 / 百万 / 亿，或 1e3 / 1e4 / 1e6 / 1e8" % (unit,))
+        else:
+            try:
+                num = float(unit)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    "unit=%r 不支持，可选：千 / 万 / 百万 / 亿，或 1e3 / 1e4 / 1e6 / 1e8" % (unit,))
+        if num not in (1e3, 1e4, 1e6, 1e8):
+            raise ValueError(
+                "unit=%r 不是常用的数量级，可选：千 / 万 / 百万 / 亿，或 1e3 / 1e4 / 1e6 / 1e8" % (unit,))
+        self.spec["unit"] = int(num)
+        return self
+
     def save(self, path, inline=True):
         """保存为 HTML 文件，返回绝对路径。"""
         html = self.to_html(inline=inline)

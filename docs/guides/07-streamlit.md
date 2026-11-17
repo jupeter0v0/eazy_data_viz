@@ -35,6 +35,23 @@ Streamlit 负责控件、布局和状态。这一篇讲清集成方式、高度�
 > 下文 `## 1`~`## 9` 讲的仍是 v1 的 iframe 方式——在旧版 Streamlit 上依然有效，
 > 也是理解「为什么必须自己算 height」的最好材料。
 
+## 0. 点击图表会不会 rerun？
+
+这是 v2 路径最容易被问的问题，先讲清楚：
+
+- **会，而且正好一次**。v2 为了让你拿到 `result.select`，默认把图表点击通过 trigger
+  回传给 Python，Streamlit 收到就重跑整个脚本（页面右上角出现计算态）。
+- **但联动状态不会丢**。1.2.0 起图表 id 按位置稳定化（`eazy-0`、`eazy-1`…），rerun
+  前后组件 `data` 完全一致，组件不会重挂：联动筛选条、下钻层级、图例选中、主题切换
+  全部保留，只有 Python 侧重算（6 张图通常 200–300ms）。
+- **想彻底不 rerun**：
+  1. 用 v1 路径（`st.components.v1.html`），所有交互留在 iframe 内，零 rerun；
+  2. 把看板包进 `@st.fragment`（Streamlit ≥ 1.37），trigger 自带 `fragmentId`，只重跑这个 fragment；
+  3. 大屏场景（20 图 / 2 万行一次重算约 3.6s、payload 约 3.2MB）用 `st.cache_data` 缓存
+     `edv.render.build_fragment()` 的结果，见 §5。
+
+对照：v1 路径点击图表 0 次 rerun；v2 默认 1 次 rerun 且状态保留。两者联动效果一致。
+
 ## 0. 最小可运行应用
 
 新建 `app.py`（放在仓库根目录，保证 `import eazy_data_viz` 能找到包）：

@@ -107,34 +107,150 @@
   };
 
   // ------------------------------------------------------------------
-  // table 明细表
+  // table 明细表（中国式报表：序号 / 合计 / 数据条 / 斑马纹 / 固定首列）
   // ------------------------------------------------------------------
+  // 空值占位符：统一显示「−」，不要出现 None / null
+  var TABLE_EMPTY = '−';
+
+  function isBlank(v) {
+    return v === null || v === undefined || v === '';
+  }
+
+  // 颜色加透明度（hex / rgb() / rgba() 都支持），用于数据条底色
+  function fadeColor(color, alpha) {
+    var s = String(color || '').replace(/^\s+|\s+$/g, '');
+    if (s.charAt(0) === '#') {
+      var c = hexRgb(s);
+      return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + alpha + ')';
+    }
+    var m = /^rgba?\(([^)]+)\)$/.exec(s);
+    if (m) {
+      var p = m[1].split(',');
+      if (p.length >= 3) {
+        return 'rgba(' + p[0].replace(/^\s+|\s+$/g, '') + ',' +
+          p[1].replace(/^\s+|\s+$/g, '') + ',' + p[2].replace(/^\s+|\s+$/g, '') +
+          ',' + alpha + ')';
+      }
+    }
+    return s;
+  }
+
+  // 单元格文本：空值 → 「−」；数值列统一 thousands；时间列截到分钟
+  function cellText(v, kind, numFmt) {
+    if (isBlank(v)) return TABLE_EMPTY;
+    if (kind === 'num' && typeof v === 'number') return U.fmtValue(v, numFmt);
+    if (kind === 'time') return U.esc(String(U.catName(v)).slice(0, 16));
+    return U.esc(U.catName(v));
+  }
+
+  // spec.bar 归一化成列名数组（Python 已校验，这里再兜一次底）
+  function barColumns(spec, cols, kinds) {
+    var bar = spec.bar;
+    var out = [];
+    if (bar === true) {
+      for (var i = 0; i < cols.length; i++) {
+        if (kinds[cols[i]] === 'num') return [cols[i]];
+      }
+      return out;
+    }
+    if (typeof bar === 'string') bar = [bar];
+    if (!bar || !bar.length) return out;
+    for (var j = 0; j < bar.length; j++) {
+      if (bar[j] && out.indexOf(bar[j]) < 0 && kinds[bar[j]] === 'num') {
+        out.push(bar[j]);
+      }
+    }
+    return out;
+  }
+
   H['table'] = function (spec, data, state, theme) {
     var rows = U.filteredRows(spec, data, state);
     var cols = spec.columns || [];
     if (!rows.length || !cols.length) return '<div class="eazy-empty">当前条件下没有数据</div>';
     var limit = Math.min(spec.limit || 100, 500);
     var kinds = data.kinds || {};
-    var html = '<div class="eazy-table-wrap"><table class="eazy-table"><thead><tr>';
+    var showIndex = spec.index === true;
+    var showTotal = spec.total === true;
+    var striped = spec.stripe !== false;  // 斑马纹默认开启，stripe=False 关闭
+    var numFmt = spec.fmt === 'compact' ? 'thousands' : spec.fmt;
+    // 数据条 / 合计只统计真正渲染出来的行，和 limit 后的表格内容保持一致
+    var shown = rows.length > limit ? rows.slice(0, limit) : rows;
+    var barCols = barColumns(spec, cols, kinds);
+    var barColor = {}, barMax = {}, b, m;
+    for (b = 0; b < barCols.length; b++) {
+      var bc = barCols[b];
+      // 依次取主题配色；深色主题下加深一些，保证条和文字都看得清
+      barColor[bc] = fadeColor(theme.palette[b % theme.palette.length],
+        theme.name === 'dark' ? 0.34 : 0.22);
+      var mx = 0;
+      for (m = 0; m < shown.length; m++) {
+        var mv = shown[m][bc];
+        if (typeof mv === 'number' && isFinite(mv)) mx = Math.max(mx, Math.abs(mv));
+      }
+      barMax[bc] = mx || 1;
+    }
+
+    var html = '<div class="eazy-table-wrap"><table class="eazy-table' +
+      (striped ? ' eazy-table-stripe' : '') + '"><thead><tr>';
+    if (showIndex) html += '<th class="eazy-col-idx">序号</th>';
     for (var c = 0; c < cols.length; c++) {
       var numCol = kinds[cols[c]] === 'num' || kinds[cols[c]] === 'time';
       html += '<th' + (numCol ? ' class="num"' : '') + '>' + U.esc(cols[c]) + '</th>';
     }
     html += '</tr></thead><tbody>';
-    for (var i = 0; i < rows.length && i < limit; i++) {
+    for (var i = 0; i < shown.length; i++) {
       html += '<tr>';
+      if (showIndex) html += '<td class="eazy-col-idx">' + (i + 1) + '</td>';
       for (var k = 0; k < cols.length; k++) {
-        var v = rows[i][cols[k]];
-        var kind = kinds[cols[k]];
-        var text;
-        if (kind === 'num' && typeof v === 'number') text = U.fmtValue(v, spec.fmt === 'compact' ? 'thousands' : spec.fmt);
-        else if (kind === 'time') text = String(U.catName(v)).slice(0, 16);
-        else text = U.esc(U.catName(v));
-        html += '<td' + (kind === 'num' ? ' class="num"' : '') + '>' + text + '</td>';
+        var col = cols[k];
+        var v = shown[i][col];
+        var kind = kinds[col];
+        var text = cellText(v, kind, numFmt);
+        var cls = kind === 'num' ? 'num' : '';
+        var style = '';
+        if (barColor[col] && kind === 'num' && typeof v === 'number' && isFinite(v)) {
+          // 用 linear-gradient 在单元格背景上按「该列最大值」等比画条；
+          // 数值文字包一层 span，压在色条上层（不改变右对齐）
+          var pct = Math.max(0, Math.min(100, Math.abs(v) / barMax[col] * 100));
+          cls += ' eazy-bar-cell';
+          style = ' style="background-image:linear-gradient(90deg,' +
+            barColor[col] + ' ' + pct.toFixed(1) + '%,transparent ' + pct.toFixed(1) + '%)"';
+          text = '<span class="eazy-bar-val">' + text + '</span>';
+        }
+        html += '<td' + (cls ? ' class="' + cls + '"' : '') + style + '>' + text + '</td>';
       }
       html += '</tr>';
     }
-    html += '</tbody></table></div>';
+    html += '</tbody>';
+    if (showTotal) {
+      // 合计行：放在 tfoot，加粗 + 顶部双线 + 浅底色（样式见 render.py 的 _CSS）
+      html += '<tfoot><tr class="eazy-table-total">';
+      if (showIndex) html += '<td class="eazy-col-idx eazy-total-label">合计</td>';
+      for (var t = 0; t < cols.length; t++) {
+        var tcol = cols[t];
+        // 没有序号列时，「合计」标签占用第一列（通常是维度列）；
+        // 若第一列本身就是数值列，标签与该列合计同格显示，避免这一列的合计被吞掉
+        var firstIsNum = (!showIndex && t === 0 && kinds[tcol] === 'num');
+        if (!showIndex && t === 0 && !firstIsNum) {
+          html += '<td class="eazy-total-label">合计</td>';
+          continue;
+        }
+        if (kinds[tcol] !== 'num') {
+          html += '<td></td>';
+          continue;
+        }
+        var sum = 0, cnt = 0;
+        for (var s = 0; s < shown.length; s++) {
+          var sv = shown[s][tcol];
+          if (typeof sv === 'number' && isFinite(sv)) { sum += sv; cnt += 1; }
+        }
+        html += '<td class="num eazy-total-num' + (firstIsNum ? ' eazy-total-first' : '') + '">' +
+          (firstIsNum && cnt ? '<span class="eazy-total-tag">合计</span>' : '') +
+          (cnt ? U.fmtValue(sum, numFmt) : TABLE_EMPTY) + '</td>';
+      }
+      html += '</tr></tfoot>';
+    }
+    html += '</table></div>';
     if (rows.length > limit) {
       html += '<div class="eazy-table-more">共 ' + rows.length + ' 行，仅显示前 ' + limit + ' 行</div>';
     }

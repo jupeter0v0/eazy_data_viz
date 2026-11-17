@@ -3,7 +3,7 @@
 这份文档记录 **当前版本已确认、但尚未修改** 的行为差异，以及各图表的「参数生效范围」。
 写作原则：**宁可写清楚限制，也不假装参数一定生效。** 每条都给出规避方式。
 
-> 版本：1.0.0 · 最后更新：2026-11-16
+> 版本：1.2.0 · 最后更新：2026-11-17
 > 文中 `spec` 指图表对象内部的 `chart.spec`（调试时可用 `chart.spec` 查看）。
 
 ---
@@ -22,6 +22,7 @@
 | `target_value` 传非数字字符串被静默忽略 | 1.0.0 | `bullet`/`target` 统一经 `_num_param()` 校验并抛中文 `ValueError` |
 | `max_rows=100.5 / "abc" / -1` 抛原始异常 | 1.0.0 | `_frame.prepare()` 统一校验：非整数抛 `TypeError`，`<1` 抛 `ValueError`，`None` 表示不采样 |
 | `height=None` 时所有图都落到 380 | 1.0.0 | 按图表类型取默认高度（`_HEIGHT_DEFAULTS`，如 `gauge=260`、`bump=420`） |
+| Streamlit v2 每次 rerun 后看板整块重挂，联动筛选条 / 下钻 / 图例状态清零 | 1.2.0 | 图表 id 由自增计数器生成，每次 rerun 都变；`render.py` 改为按位置固定为 `eazy-<i>` |
 
 ---
 
@@ -50,6 +51,14 @@
 
 **通用建议**：拿不准时用 `chart.spec` 检查参数是否真的写进去了；如果某个参数只写进 `spec` 却没渲染，以本表为准。
 
+### 2.1 公共参数 `unit` 的生效范围（1.2.0）
+
+| 图表 / 场景 | `unit` | 说明 |
+| --- | --- | --- |
+| 核心图：`bar` `line` `area` `pie` `funnel` `gauge` `kpi` `table` `histogram` `heatmap` `scatter` `box` `treemap` 等 | ✓ | 坐标轴刻度、tooltip、数据标签、单元格与 KPI 读数统一换算 |
+| `assets/eazy_extra_a.js` / `eazy_extra_b.js` 里的扩展图 | △ | tooltip / label 在 hover 时才执行闭包，取不到单位；轴与其余数字正常 |
+| `fmt="raw"` / `"percent"` / `"thousands"` / `"currency"` | — | `fmt` 优先，避免双重换算；`table` 的 `thousands` 例外，仍按单位换算 |
+
 ---
 
 ## 3. 逐图限制
@@ -73,7 +82,9 @@
 - **`table`**：
   - 时间列截断到 16 字符（秒/时区会丢）；
   - `limit` 与 `max_rows` 双重限制，页面上最多 200 行；
-  - `fmt="compact"` 会被改成千分位显示。
+  - `fmt="compact"` 会被改成千分位显示；
+  - `total=True` 只统计 `limit` 内实际渲染的行（与「共 N 行，仅显示前 M 行」一致）；
+  - `bar` 指定的列必须在 `columns` 内且为数值列，否则抛中文 `ValueError`。
 - **`wordcloud`**：始终按词频降序，`fmt` 不生效，`value <= 0` 的词被丢弃。
 
 ### 3.3 交互与联动

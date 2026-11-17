@@ -1,6 +1,6 @@
 # eazy_data_viz 组件库说明书（给 AI 用）
 
-> 版本 1.1.0 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
+> 版本 1.2.0 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
 
 ## 0. 一句话
 
@@ -390,7 +390,7 @@ eazy_data_viz.trend(df, x="客户数", y="利润", color="产品")
 
 | 函数 | 签名 | 说明 |
 |---|---|---|
-| `table` | `table(data, columns=None, *, limit=100, title=None, subtitle=None, fmt='compact', height=400, theme='light', link=None, max_rows=200)` | 明细表（HTML 渲染）：把 DataFrame 前若干行渲染成表格。 |
+| `table` | `table(data, columns=None, *, limit=100, title=None, subtitle=None, fmt='compact', height=400, theme='light', link=None, max_rows=200, total=False, index=False, bar=None, stripe=True)` | 明细表（HTML 渲染）：把 DataFrame 前若干行渲染成表格。 |
 | `wordcloud` | `wordcloud(data, names=None, values=None, *, agg='sum', sort=None, top_n=30, title=None, subtitle=None, fmt='compact', height=360, theme='light', link=None, max_rows=200000)` | 词云（HTML/CSS 渲染）：每个类目一个词，字号随数值变化，最多 30 个。 |
 
 **`table`** — 明细表（HTML 渲染）：把 DataFrame 前若干行渲染成表格。

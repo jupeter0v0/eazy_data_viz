@@ -2,6 +2,36 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## 1.2.0 — 2026-11-17
+
+### 中文本地化：数字单位、日期轴、中国式报表表格
+
+- 新增 `Chart.unit(unit)`：给整张图统一数值单位，接受 `"千"` / `"万"` / `"百万"` / `"亿"`，
+  或等价的 `1e3` / `1e4` / `1e6` / `1e8`（也接受 `"1e6"` 这类字符串）。坐标轴刻度、tooltip、
+  数据标签、饼图/漏斗/仪表盘/KPI 与明细表统一按「值 ÷ 倍数」展示，最多 2 位小数；
+  `fmt` 为 `raw` / `percent` / `thousands` / `currency` 时以 `fmt` 为准（表格的 `thousands`
+  例外，仍按单位换算）。
+- `table()` 新增 4 个中国式报表参数（参考 FineReport 明细表、观远 BI 表格）：
+  `total` 表尾合计行（只统计 `limit` 内实际渲染的行）、`index` 序号列（横向滚动固定）、
+  `bar` 单元格数据条（`True` / 列名 / 多列）、`stripe` 斑马纹（默认开启，旧图外观会略有变化）。
+- 日期类目轴自动中文化：`2024-03-01` → `3月1日`，跨年补年份 → `2024年3月1日`，
+  `2024-03` → `3月`，带时间保留 `09:30`；支持 `-` / `/` 分隔与 `HH:MM[:SS]`。
+  只改坐标轴显示，tooltip、导出与下钻仍用原始日期。
+
+### Streamlit v2：rerun 后图表状态保留
+
+- 修复 v2 每次 rerun 时图表 id 漂移（自增计数器）导致整个看板 HTML 被重挂、
+  联动筛选条 / 下钻 / 图例状态被清零的问题：id 改为按位置固定（`eazy-0`、`eazy-1`…），
+  rerun 后状态保留。
+- 注意：v2 点击图表仍会触发一次脚本 rerun（事件回传 Python 的机制不变）；需要零 rerun
+  请用 v1（`st.components.v1.html`）或 `@st.fragment`，详见 `docs/guides/07-streamlit.md`。
+
+### 文档
+
+- 新增 `docs/guides/15-cn-conventions.md`：中文单位、日期轴、中国式报表表格。
+- `docs/guides/07-streamlit.md` 新增「点击图表会不会 rerun？」小节。
+- `docs/api/table.md` 补齐 `total` / `index` / `bar` / `stripe` 四个参数与示例 6。
+
 ## 1.1.0 — 2026-11-16
 
 ### Streamlit：迁移到 `st.components.v2`

@@ -49,6 +49,72 @@ TEST_JS = r"""
   ok('quantile', Math.abs(core0.quantile([1, 2, 3, 4], 0.5) - 2.5) < 1e-9, core0.quantile([1, 2, 3, 4], 0.5));
   ok('median', core0.median([1, 2, 3, 4, 100]) === 3, core0.median([1, 2, 3, 4, 100]));
 
+  // ---------------- 中文数字：自动缩略单位 ----------------
+  var U = core0.util;
+  var fv = U.fmtValue;
+  ok('fmt-wan-1', fv(10000) === '1万', fv(10000));
+  ok('fmt-wan-12.3', fv(123456) === '12.3万', fv(123456));
+  ok('fmt-wan-1235', fv(12345678) === '1235万', fv(12345678));
+  ok('fmt-yi', fv(1.5e8) === '1.5亿', fv(1.5e8));
+  ok('fmt-wan-neg', fv(-123456) === '-12.3万', fv(-123456));
+  ok('fmt-zero', fv(0) === '0', fv(0));
+  ok('fmt-under-wan', fv(9999) === '9,999', fv(9999));
+
+  // ---------------- 中文数字：显式单位 ----------------
+  ok('unit-baiwan', fv(2500000, null, { unit: '百万' }) === '2.5百万', fv(2500000, null, { unit: '百万' }));
+  ok('unit-scale-num', fv(2500000, null, { unit: 1e6 }) === '2.5百万', fv(2500000, null, { unit: 1e6 }));
+  ok('unit-wan-2dp', fv(12345678, null, { unit: '万' }) === '1234.57万', fv(12345678, null, { unit: '万' }));
+  ok('unit-qian', fv(1234, null, { unit: '千' }) === '1.23千', fv(1234, null, { unit: '千' }));
+  ok('unit-percent-wins', fv(12.5, 'percent', { unit: '万' }) === '12.5%', fv(12.5, 'percent', { unit: '万' }));
+  ok('unit-thousands-wins', fv(12345678, 'thousands', { unit: '万' }) === '12,345,678', fv(12345678, 'thousands', { unit: '万' }));
+  ok('unit-currency-wins', fv(1234.5, 'currency', { unit: '万' }) === '¥1,234.5', fv(1234.5, 'currency', { unit: '万' }));
+  ok('unit-raw-wins', fv(123456, 'raw', { unit: '万' }) === '123456', fv(123456, 'raw', { unit: '万' }));
+  ok('unit-table-col', fv(12345678, 'thousands', { unit: '万', type: 'table' }) === '1234.57万', fv(12345678, 'thousands', { unit: '万', type: 'table' }));
+  ok('unit-text-suffix', fv(12345, 'thousands', { unit: ' 单' }) === '12,345 单', fv(12345, 'thousands', { unit: ' 单' }));
+  var khtml = core0.kpiHTML({ type: 'kpi', value: 2500000, fmt: 'compact', unit: '万', label: 'KPI' },
+                            { cols: [], rows: [] }, null, core0.THEME.light);
+  ok('kpi-unit', khtml.indexOf('250万') >= 0, khtml.slice(0, 120));
+
+  // ---------------- 中文日期类目轴 ----------------
+  function catAxis(cats, spec) {
+    return U.makeCategoryAxis(spec || {}, cats, core0.THEME.light);
+  }
+  var ax1 = catAxis(['2024-03-01', '2024-03-02', '2024-03-03']);
+  ok('axis-day-same-year', ax1.axisLabel.formatter('2024-03-01') === '3月1日', ax1.axisLabel.formatter('2024-03-01'));
+  ok('axis-day-raw-data', ax1.data[0] === '2024-03-01', ax1.data[0]);
+  var ax2 = catAxis(['2023-12-31', '2024-01-01']);
+  ok('axis-day-cross-year', ax2.axisLabel.formatter('2024-01-01') === '2024年1月1日', ax2.axisLabel.formatter('2024-01-01'));
+  var ax3 = catAxis(['2024-03', '2024-04']);
+  ok('axis-month-same-year', ax3.axisLabel.formatter('2024-03') === '3月', ax3.axisLabel.formatter('2024-03'));
+  var ax4 = catAxis(['2023-11', '2024-01']);
+  ok('axis-month-cross-year', ax4.axisLabel.formatter('2024-01') === '2024年1月', ax4.axisLabel.formatter('2024-01'));
+  var ax5 = catAxis(['2024-03-01 09:30', '2024-03-01 10:30']);
+  ok('axis-datetime', ax5.axisLabel.formatter('2024-03-01 09:30') === '3月1日 09:30', ax5.axisLabel.formatter('2024-03-01 09:30'));
+  var ax6 = catAxis(['2024/03/01', '2024/03/02']);
+  ok('axis-slash-date', ax6.axisLabel.formatter('2024/03/01') === '3月1日', ax6.axisLabel.formatter('2024/03/01'));
+  var ax7 = catAxis(['1月', '2月']);
+  ok('axis-plain-month-keep', ax7.axisLabel.formatter('1月') === '1月', ax7.axisLabel.formatter('1月'));
+  var denseCats = [];
+  for (var dc = 1; dc <= 40; dc++) {
+    denseCats.push('2024-05-' + (dc < 10 ? '0' : '') + dc);
+  }
+  var ax8 = catAxis(denseCats);
+  ok('axis-dense-interval', ax8.axisLabel.interval >= 1, ax8.axisLabel.interval);
+  ok('axis-dense-label', ax8.axisLabel.formatter('2024-05-02') === '5月2日', ax8.axisLabel.formatter('2024-05-02'));
+  var ax9 = catAxis([1000, 2000], { unit: '万' });
+  ok('axis-cat-unit', ax9.axisLabel.formatter(2000) === '0.2万', ax9.axisLabel.formatter(2000));
+  var va = U.makeValueAxis({ unit: '亿' }, core0.THEME.light, null);
+  ok('axis-value-unit', va.axisLabel.formatter(150000000) === '1.5亿', va.axisLabel.formatter(150000000));
+
+  // tooltip 表头保留原始完整日期，数值按单位换算
+  var tipHtml = U.axisTooltip({ type: 'line' }, core0.THEME.light, false).formatter([
+    { axisValue: '2024-03-01', axisValueLabel: '3月1日', name: '2024-03-01',
+      seriesName: '销售额', marker: '', value: 123456 }]);
+  ok('tooltip-head-raw-date', tipHtml.indexOf('2024-03-01') >= 0, tipHtml.slice(0, 90));
+  var tipUnit = U.axisTooltip({ type: 'line', unit: '万' }, core0.THEME.light, false).formatter([
+    { axisValue: '3月', name: '3月', seriesName: 'A', marker: '', value: 123000 }]);
+  ok('tooltip-value-unit', tipUnit.indexOf('12.3万') >= 0, tipUnit.slice(0, 90));
+
   var r0 = core0.rowsOf(c0.data);
   ok('rows-nonempty', r0.length > 0, r0.length);
   var spec0 = c0.spec;
@@ -260,6 +326,20 @@ def build_page():
                 "件数": [320, 280, 260, 180]}),
             source="出发城市", target="到达城市", value="件数", title="城市飞线"),
     ]
+    # 中文单位：链式 unit() 只写进 spec，不影响页面里的图表数量
+    _u1 = eazy_data_viz.bar(df, x="大区", y="销售额").unit("万")
+    assert _u1.spec["unit"] == "万", _u1.spec.get("unit")
+    _u2 = eazy_data_viz.line(df, x="月份", y="销售额").unit(1e6)
+    assert _u2.spec["unit"] == 1000000, _u2.spec.get("unit")
+    _u3 = eazy_data_viz.kpi(df, value="销售额", agg="sum").unit("百万")
+    assert _u3.spec["unit"] == "百万", _u3.spec.get("unit")
+    for _bad in (None, "", "十", 42, 2e3):
+        try:
+            eazy_data_viz.bar(df, x="大区", y="销售额").unit(_bad)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("unit(%r) 应当报错" % (_bad,))
     for _c in charts[:3]:
         _c.spec["code"] = ('eazy_data_viz.%s(%s)' % (
             _c.spec["type"], "df, x=%r" % _c.spec["roles"].get("x")))

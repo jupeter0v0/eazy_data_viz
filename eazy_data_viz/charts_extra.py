@@ -2437,14 +2437,37 @@ def table(
     theme="light",
     link=None,
     max_rows=200,
+    total=False,
+    index=False,
+    bar=None,
+    stripe=True,
 ):
     """明细表（HTML 渲染）：把 DataFrame 前若干行渲染成表格。
 
     为控制页面体积，最多嵌入 200 行、展示 ``limit`` 行（上限 200）。
 
+    中国式报表参数（参考 FineReport 明细表 / 观远 BI 表格）
+    ------------------------------------------------------
+    total : bool
+        底部「合计」行：数值列按单元格同样的格式求和，文本 / 时间列留空；
+        合计行加粗、顶部双线、浅底色。空表（0 行）不显示合计；
+        没有 index 时「合计」两个字占用第一列（通常是维度列）；
+        第一列本身是数值列时，「合计」与该列合计同格显示。默认 False。
+    index : bool
+        最左侧「序号」列（1..N），该列同样固定在左侧。默认 False。
+    bar : bool | str | list[str] | None
+        单元格数据条（条件格式）：True 自动取第一个数值列；"列名" 指定一列；
+        ["列1", "列2"] 指定多列。条按该列最大值等比绘制，颜色取主题配色。
+        None 表示不画数据条（默认）。
+    stripe : bool
+        斑马纹（tbody 偶数行浅底色），默认 True。
+
     示例
     ----
     >>> eazy_data_viz.charts_extra.table(df, columns=["月份", "大区", "销售额"], limit=50)
+    >>> eazy_data_viz.charts_extra.table(
+    ...     df, columns=["大区", "销售额"], total=True, index=True, bar="销售额"
+    ... )
     """
     df = _frame.ensure_frame(data)
     if columns is None:
@@ -2460,6 +2483,15 @@ def table(
         raise ValueError("limit 需要是 >=1 的整数（最多显示多少行），收到 %r" % (limit,))
     show_limit = int(min(limit, 200))
     embed_rows = int(min(int(max_rows), 200))
+
+    # ---- 中国式报表参数校验（total / index / bar / stripe）----
+    for _pname, _pval in (("total", total), ("index", index), ("stripe", stripe)):
+        if not isinstance(_pval, bool):
+            raise ValueError(
+                "%s 需要是 bool（True / False），收到 %r" % (_pname, _pval)
+            )
+    bar_cols = _table_bar_cols(df, columns, bar)
+
     spec, records, ref, info = _ext(
         "table",
         df,
@@ -2484,6 +2516,10 @@ def table(
         max_rows=embed_rows,
         columns=[str(c) for c in columns],
         limit=show_limit,
+        total=total,
+        index=index,
+        bar=(list(bar_cols) if bar_cols else None),
+        stripe=stripe,
     )
     return Chart(spec, records, ref, info)
 
@@ -2743,3 +2779,66 @@ for _fn in _EXTRA_FUNCS:
     _doc = (_fn.__doc__ or "").rstrip()
     _fn.__doc__ = (_doc + "\n" + _COMMON_DOC).strip() if _doc else _COMMON_DOC.strip()
 del _fn, _doc, _EXTRA_FUNCS
+
+
+# ==========================================================================
+# table() 的辅助函数（中国式报表：数据条列归一化）
+# ==========================================================================
+def _table_bar_cols(df, columns, bar):
+    """把 ``table(bar=...)`` 归一化成数据条列名列表（保持用户给出的顺序）。
+
+    ``bar`` 支持 True（自动取第一个数值列）/ "列名" / ["列1", "列2"] / None，
+    类型或列名不合法时抛中文 ValueError。
+    """
+    col_map = {}
+    for c in columns:
+        col_map.setdefault(str(c), c)
+
+    if bar is None or bar is False:
+        return []
+    if bar is True:
+        for name in [str(c) for c in columns]:
+            if _frame.column_kind(df[col_map[name]]) == _frame.KIND_NUM:
+                return [name]
+        raise ValueError(
+            "bar=True 需要一个数值列来自动画数据条，但 columns 里没有数值列；"
+            '请改用 bar="列名" 指定数值列。'
+        )
+    if isinstance(bar, str):
+        names = [bar]
+    elif isinstance(bar, (list, tuple)):
+        names = list(bar)
+        if not names:
+            raise ValueError("bar 不能是空列表；不需要数据条请传 bar=None。")
+    else:
+        raise ValueError(
+            'bar 只支持 True / "列名" / ["列1", "列2"] / None，收到 %r' % (bar,)
+        )
+
+    out = []
+    kind_cn = {
+        _frame.KIND_NUM: "数值",
+        _frame.KIND_TIME: "时间",
+        _frame.KIND_CAT: "文本",
+        _frame.KIND_BOOL: "布尔",
+    }
+    for name in names:
+        if not isinstance(name, str):
+            raise ValueError(
+                'bar 列表里只能放列名（str），收到 %r。' % (name,)
+            )
+        if name in out:  # 去重，避免同一列画两遍
+            continue
+        if name not in col_map:
+            raise ValueError(
+                "bar 指定的列 %r 不在 columns 里；当前可用的列有：%s。"
+                % (name, "、".join([str(c) for c in columns]))
+            )
+        kind = _frame.column_kind(df[col_map[name]])
+        if kind != _frame.KIND_NUM:
+            raise ValueError(
+                "bar 只能用于数值列，%r 是%s列；请改用 total=True 求和或去掉 bar。"
+                % (name, kind_cn.get(kind, kind))
+            )
+        out.append(name)
+    return out

@@ -180,6 +180,11 @@
     return trimNum(r);
   }
 
+  // 自动缩略单位（帆软 FineBI 风格）：>=1e4 用「万」，>=1e8 用「亿」。
+  // 换算后的数字 < 100 保留 1 位小数，>= 100 取整：
+  //   123456 → 12.3万，12345678 → 1235万，1.5e8 → 1.5亿
+  // 缩略出来的数字不带千分位（12.3万 而不是 12.3,0000），末尾的 .0 去掉（10000 → 1万），
+  // 负数保留负号，0 → 0（走下面的千分位分支）。
   function compactCN(n) {
     var a = Math.abs(n);
     if (a >= 1e8) {
@@ -193,18 +198,83 @@
     return groupThousand(n);
   }
 
-  function fmtValue(v, fmt) {
+  // ======================================================================
+  // 显式单位（spec.unit）：千 / 万 / 百万 / 亿，或直接给倍数 1e3/1e4/1e6/1e8。
+  // 数值统一按 v / 倍数 展示，最多 2 位小数、去掉末尾 0，后面接单位字：
+  //   2500000 + unit="百万" → 2.5百万
+  // 与 fmt=percent/currency/raw/thousands 同时存在时以 fmt 为准（unit 不生效）。
+  // ======================================================================
+  var UNIT_TEXTS = { 1000: '千', 10000: '万', 1000000: '百万', 100000000: '亿' };
+  // 扩展图表（table / group_kpi 等）内部调用 fmtValue 时只传 fmt，
+  // 用这个模块变量兜底当前正在构建的 spec，才能拿到 unit
+  var activeSpec = null;
+
+  function unitInfo(spec) {
+    var u = spec && spec.unit;
+    if (u === null || u === undefined || u === '') return null;
+    if (typeof u === 'number') {
+      if (!isFinite(u) || u <= 0) return null;
+      return { scale: u, text: UNIT_TEXTS[String(Math.round(u))] || '' };
+    }
+    var s = String(u).replace(/^\s+|\s+$/g, '');
+    if (s === '千') return { scale: 1e3, text: s };
+    if (s === '万') return { scale: 1e4, text: s };
+    if (s === '百万') return { scale: 1e6, text: s };
+    if (s === '亿') return { scale: 1e8, text: s };
+    // 「 单 / % / ℃ / 万元」这类纯文字单位不做换算，只当后缀拼接
+    return null;
+  }
+
+  // fmt 优先：这几种格式下 unit 不参与换算
+  function unitBlocked(fmt) {
+    return fmt === 'raw' || fmt === 'percent' ||
+      fmt === 'thousands' || fmt === 'currency';
+  }
+
+  function fmtUnit(n, ui) {
+    return roundTo(n / ui.scale, 2) + (ui.text || '');
+  }
+
+  // 纯文字单位：数值不动，末尾补后缀（已经带同样的后缀就不重复补）
+  function unitSuffix(spec, txt) {
+    var u = spec && spec.unit;
+    if (u === null || u === undefined || u === '') return txt;
+    if (unitInfo(spec)) return txt;
+    var s = String(u);
+    return txt.slice(-s.length) === s ? txt : txt + s;
+  }
+
+  // 构建图时挂上当前 spec，供只传 fmt 的扩展脚本读单位；fn 结束后恢复
+  function withSpec(spec, fn) {
+    var prev = activeSpec;
+    activeSpec = spec;
+    try {
+      return fn();
+    } finally {
+      activeSpec = prev;
+    }
+  }
+
+  function fmtValue(v, fmt, spec) {
     if (v === null || v === undefined || v === '') return '-';
     if (typeof v === 'object') v = v.value;
     var n = num(v);
     if (n === null) return String(v);
+    if (!spec) spec = activeSpec;
+    var ui = unitInfo(spec);
+    // 明细表为了可读性把 compact 换成了 thousands，这类调用仍按显式单位展示，
+    // 否则表格里看不出「万 / 亿」
+    var useUnit = !!ui && (!unitBlocked(fmt) || (fmt === 'thousands' && spec && spec.type === 'table'));
+    if (useUnit) return fmtUnit(n, ui);
+    var s;
     switch (fmt) {
-      case 'raw': return trimNum(n);
-      case 'percent': return roundTo(n, 1) + '%';
-      case 'thousands': return groupThousand(n);
-      case 'currency': return '¥' + groupThousand(roundTo(n, 2));
-      default: return compactCN(n);
+      case 'raw': s = trimNum(n); break;
+      case 'percent': s = roundTo(n, 1) + '%'; break;
+      case 'thousands': s = groupThousand(n); break;
+      case 'currency': s = '¥' + groupThousand(roundTo(n, 2)); break;
+      default: s = compactCN(n);
     }
+    return unitSuffix(spec, s);
   }
 
   function truncate(s, n) {
@@ -443,12 +513,56 @@
     return axis;
   }
 
+  // 解析中文 BI 里常见的日期类目：
+  //   YYYY-MM-DD / YYYY/MM/DD（可带 HH:MM[:SS]）、YYYY-MM / YYYY/MM
+  function parseCatDate(v) {
+    var s = String(v);
+    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}:\d{2})(?::\d{2})?)?$/.exec(s);
+    if (!m) m = /^(\d{4})\/(\d{1,2})\/(\d{1,2})(?:[ T](\d{1,2}:\d{2})(?::\d{2})?)?$/.exec(s);
+    if (m) return { y: m[1], m: Number(m[2]), d: Number(m[3]), hm: m[4] || '', prec: 'day' };
+    m = /^(\d{4})-(\d{1,2})$/.exec(s);
+    if (!m) m = /^(\d{4})\/(\d{1,2})$/.exec(s);
+    if (m) return { y: m[1], m: Number(m[2]), d: 0, hm: '', prec: 'month' };
+    return null;
+  }
+
+  // 中文日期文本：同一年省略年份（3月1日 / 3月），跨年补上（2024年3月1日 / 2024年3月）
+  function dateCatText(p, sameYear) {
+    var head = sameYear ? '' : (p.y + '年');
+    if (p.prec === 'month') return head + p.m + '月';
+    return head + p.m + '月' + p.d + '日' + (p.hm ? ' ' + p.hm : '');
+  }
+
+  // 整个轴都能解析、粒度一致时才本地化；全部同一年才省略年份
+  function dateCatMode(cats) {
+    var year = null, prec = null, sameYear = true;
+    for (var i = 0; i < cats.length; i++) {
+      var p = parseCatDate(cats[i]);
+      if (!p) return null;
+      if (year === null) { year = p.y; prec = p.prec; }
+      if (p.y !== year) sameYear = false;
+      if (p.prec !== prec) return null;
+    }
+    return year === null ? null : { sameYear: sameYear };
+  }
+
   function makeCategoryAxis(spec, cats, theme) {
     // 类目很多时（例如按日期画线），自动抽稀标签，否则会挤成一堆斜字
     var n = cats.length;
     var dense = n > 12;
     var interval = dense ? Math.max(1, Math.ceil(n / 10) - 1) : 0;
-    var rotate = dense ? (axisLabelRotate(cats) > 0 ? 30 : 0) : axisLabelRotate(cats);
+    var dm = dateCatMode(cats);
+    var hasUnit = !!unitInfo(spec);
+    // 坐标轴显示文本：日期按中文习惯缩短 / 数值按显式单位换算 / 其它沿用截断
+    function labelText(v) {
+      var p = dm ? parseCatDate(v) : null;
+      if (p) return dateCatText(p, dm.sameYear);
+      if (hasUnit && /^-?\d+(\.\d+)?$/.test(String(v))) return fmtValue(v, spec.fmt, spec);
+      return truncate(v, 14);
+    }
+    var shown = [];
+    for (var si = 0; si < n; si++) shown.push(labelText(cats[si]));
+    var rotate = dense ? (axisLabelRotate(shown) > 0 ? 30 : 0) : axisLabelRotate(shown);
     return {
       type: 'category',
       data: cats,
@@ -459,12 +573,8 @@
         color: theme.subtext, hideOverlap: true,
         interval: interval,
         rotate: rotate,
-        formatter: function (v) {
-          var s = String(v);
-          var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
-          if (m) return dense ? (m[2] + '-' + m[3]) : s.slice(0, 10);
-          return truncate(v, 14);
-        }
+        // 注意：只缩短坐标轴文本，类目原始值不变，tooltip 表头仍是完整日期
+        formatter: function (v) { return labelText(v); }
       },
       splitLine: { show: false }
     };
@@ -478,7 +588,7 @@
       splitLine: { lineStyle: { color: theme.split, type: 'dashed' } },
       axisLabel: {
         color: theme.subtext,
-        formatter: function (v) { return fmtValue(v, spec.fmt); }
+        formatter: function (v) { return fmtValue(v, spec.fmt, spec); }
       }
     };
     return applyLim(axis, lim);
@@ -501,8 +611,13 @@
     tip.axisPointer = { type: spec.type === 'bar' ? 'shadow' : 'line', lineStyle: { color: theme.axis } };
     tip.formatter = function (params) {
       if (!params || !params.length) return '';
+      // 表头用原始类目值：日期类目在坐标轴上会缩成「3月1日」，tooltip 里要看完整日期
+      var headVal = params[0].axisValue;
+      if (headVal === undefined || headVal === null || headVal === '') {
+        headVal = params[0].axisValueLabel || params[0].name;
+      }
       var head = '<div style="font-weight:600;margin-bottom:4px">' +
-        esc(params[0].axisValueLabel || params[0].name) + '</div>';
+        esc(headVal) + '</div>';
       var lines = [], total = 0, hasTotal = false;
       for (var i = 0; i < params.length; i++) {
         var p = params[i];
@@ -513,13 +628,13 @@
         lines.push(
           '<div style="display:flex;align-items:center;gap:6px;line-height:19px">' + p.marker +
           '<span style="flex:1;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
-          esc(p.seriesName) + '</span><b style="margin-left:10px">' + fmtValue(raw, spec.fmt) + '</b></div>'
+          esc(p.seriesName) + '</span><b style="margin-left:10px">' + fmtValue(raw, spec.fmt, spec) + '</b></div>'
         );
       }
       if (stacked && hasTotal && params.length > 1) {
         lines.push('<div style="border-top:1px dashed ' + theme.axis +
           ';margin-top:4px;padding-top:4px;display:flex"><span style="flex:1">合计</span><b>' +
-          fmtValue(total, spec.fmt) + '</b></div>');
+          fmtValue(total, spec.fmt, spec) + '</b></div>');
       }
       return head + lines.join('');
     };
@@ -651,7 +766,7 @@
           barSeries.label = {
             show: true, position: spec.horizontal ? 'right' : 'top',
             color: theme.subtext, fontSize: 10,
-            formatter: function (p) { return fmtValue(p.value, spec.fmt); }
+            formatter: function (p) { return fmtValue(p.value, spec.fmt, spec); }
           };
         }
         series.push(barSeries);
@@ -672,7 +787,7 @@
         if (spec.labels) {
           lineSeries.label = {
             show: true, position: 'top', color: theme.subtext, fontSize: 10,
-            formatter: function (p) { return fmtValue(p.value, spec.fmt); }
+            formatter: function (p) { return fmtValue(p.value, spec.fmt, spec); }
           };
         }
         series.push(lineSeries);
@@ -795,7 +910,7 @@
         tip.trigger = 'item';
         tip.formatter = function (p) {
           return '<div style="font-weight:600;margin-bottom:3px">' + esc(p.name) + '</div>' +
-            p.marker + ' ' + fmtValue(p.value, spec.fmt) + '（' + p.percent + '%）';
+            p.marker + ' ' + fmtValue(p.value, spec.fmt, spec) + '（' + p.percent + '%）';
         };
         return tip;
       })(),
@@ -815,7 +930,10 @@
         itemStyle: { borderColor: theme.bg, borderWidth: 2 },
         label: {
           show: spec.labels !== false,
-          formatter: spec.labels !== false ? '{b}\n{d}%' : '{b}',
+          // 设了换算单位时，饼图标签带出「数值 + 单位」和占比，否则沿用「名称 + 百分比」
+          formatter: spec.labels === false ? '{b}' : (unitInfo(spec) ? function (p) {
+            return p.name + '\n' + fmtValue(p.value, spec.fmt, spec) + '（' + p.percent + '%）';
+          } : '{b}\n{d}%'),
           color: theme.text, fontSize: 11, lineHeight: 15
         },
         labelLine: { show: spec.labels !== false, length: 10, length2: 8, lineStyle: { color: theme.axis } },
@@ -885,9 +1003,9 @@
           var d = p.data || [];
           var html = '';
           if (cdim) html += '<div style="font-weight:600;margin-bottom:2px">' + esc(d[3]) + '</div>';
-          html += '<div style="line-height:19px">' + esc(xdim) + '：<b>' + fmtValue(d[0], spec.fmt) + '</b></div>';
-          html += '<div style="line-height:19px">' + esc(ydim) + '：<b>' + fmtValue(d[1], spec.fmt) + '</b></div>';
-          if (sdim) html += '<div style="line-height:19px">' + esc(sdim) + '：<b>' + fmtValue(d[2], spec.fmt) + '</b></div>';
+          html += '<div style="line-height:19px">' + esc(xdim) + '：<b>' + fmtValue(d[0], spec.fmt, spec) + '</b></div>';
+          html += '<div style="line-height:19px">' + esc(ydim) + '：<b>' + fmtValue(d[1], spec.fmt, spec) + '</b></div>';
+          if (sdim) html += '<div style="line-height:19px">' + esc(sdim) + '：<b>' + fmtValue(d[2], spec.fmt, spec) + '</b></div>';
           return html;
         };
         return tip;
@@ -947,7 +1065,7 @@
           var p = params[0];
           var lo = min + p.dataIndex * width, hi = lo + width;
           return '<div style="font-weight:600">' + esc(col) + '</div>' +
-            '<div style="line-height:19px">区间：' + fmtValue(lo, spec.fmt) + ' ~ ' + fmtValue(hi, spec.fmt) + '</div>' +
+            '<div style="line-height:19px">区间：' + fmtValue(lo, spec.fmt, spec) + ' ~ ' + fmtValue(hi, spec.fmt, spec) + '</div>' +
             '<div style="line-height:19px">频数：<b>' + p.value + '</b></div>';
         };
         return tip;
@@ -1012,7 +1130,7 @@
         tip.formatter = function (p) {
           return '<div style="font-weight:600">' + esc(xdim) + '：' + esc(xOrder[p.data[0]]) + '</div>' +
             '<div style="line-height:19px">' + esc(ydim) + '：' + esc(yOrder[p.data[1]]) + '</div>' +
-            '<div style="line-height:19px">' + esc(vdim) + '：<b>' + fmtValue(p.data[2], spec.fmt) + '</b></div>';
+            '<div style="line-height:19px">' + esc(vdim) + '：<b>' + fmtValue(p.data[2], spec.fmt, spec) + '</b></div>';
         };
         return tip;
       })(),
@@ -1022,14 +1140,14 @@
         min: min, max: max, calculable: false, orient: 'vertical',
         right: 2, top: 'middle', itemWidth: 10, itemHeight: 90,
         textStyle: { color: theme.subtext, fontSize: 10 },
-        formatter: function (v) { return fmtValue(v, spec.fmt); },
+        formatter: function (v) { return fmtValue(v, spec.fmt, spec); },
         inRange: { color: theme.heat }
       },
       series: [{
         type: 'heatmap', data: points,
         label: {
           show: showLabel, color: theme.text, fontSize: 10,
-          formatter: function (p) { return fmtValue(p.data[2], spec.fmt); }
+          formatter: function (p) { return fmtValue(p.data[2], spec.fmt, spec); }
         },
         itemStyle: { borderColor: theme.bg, borderWidth: 1 },
         emphasis: { itemStyle: { borderColor: theme.text, borderWidth: 1 } }
@@ -1077,11 +1195,11 @@
         tip.formatter = function (p) {
           var d = p.data;
           return '<div style="font-weight:600;margin-bottom:3px">' + esc(p.name) + '</div>' +
-            '<div style="line-height:19px">最大：<b>' + fmtValue(d[4], spec.fmt) + '</b></div>' +
-            '<div style="line-height:19px">上四分位：' + fmtValue(d[3], spec.fmt) + '</div>' +
-            '<div style="line-height:19px">中位数：<b>' + fmtValue(d[2], spec.fmt) + '</b></div>' +
-            '<div style="line-height:19px">下四分位：' + fmtValue(d[1], spec.fmt) + '</div>' +
-            '<div style="line-height:19px">最小：' + fmtValue(d[0], spec.fmt) + '</div>';
+            '<div style="line-height:19px">最大：<b>' + fmtValue(d[4], spec.fmt, spec) + '</b></div>' +
+            '<div style="line-height:19px">上四分位：' + fmtValue(d[3], spec.fmt, spec) + '</div>' +
+            '<div style="line-height:19px">中位数：<b>' + fmtValue(d[2], spec.fmt, spec) + '</b></div>' +
+            '<div style="line-height:19px">下四分位：' + fmtValue(d[1], spec.fmt, spec) + '</div>' +
+            '<div style="line-height:19px">最小：' + fmtValue(d[0], spec.fmt, spec) + '</div>';
         };
         return tip;
       })(),
@@ -1112,11 +1230,18 @@
       if (sel !== null && sel !== undefined && it.name !== sel) item.itemStyle = { opacity: 0.3 };
       return item;
     });
+    var funnelLabel = { show: spec.labels !== false, position: 'inside', color: '#fff', fontSize: 11 };
+    if (unitInfo(spec)) {
+      // 设了换算单位时，漏斗标签带出换算后的数值（名称 + 2.5百万）
+      funnelLabel.formatter = function (p) {
+        return p.name + ' ' + fmtValue(p.value, spec.fmt, spec);
+      };
+    }
     return {
       tooltip: (function () {
         var tip = tooltipBox(theme);
         tip.trigger = 'item';
-        tip.formatter = function (p) { return esc(p.name) + '：<b>' + fmtValue(p.value, spec.fmt) + '</b>'; };
+        tip.formatter = function (p) { return esc(p.name) + '：<b>' + fmtValue(p.value, spec.fmt, spec) + '</b>'; };
         return tip;
       })(),
       toolbox: makeToolbox(theme),
@@ -1125,7 +1250,7 @@
         type: 'funnel', sort: 'descending', gap: 3,
         left: '8%', right: '8%', top: 24, bottom: 12,
         minSize: '18%', maxSize: '100%',
-        label: { show: spec.labels !== false, position: 'inside', color: '#fff', fontSize: 11 },
+        label: funnelLabel,
         labelLine: { show: false },
         itemStyle: { borderColor: theme.bg, borderWidth: 1.5 },
         emphasis: { label: { fontSize: 13 } },
@@ -1166,7 +1291,7 @@
         tip.trigger = 'item';
         tip.formatter = function (p) {
           return '<div style="font-weight:600">' + esc(p.name) + '</div>' +
-            '<div style="line-height:19px">' + esc(valCol) + '：<b>' + fmtValue(p.value, spec.fmt) + '</b></div>';
+            '<div style="line-height:19px">' + esc(valCol) + '：<b>' + fmtValue(p.value, spec.fmt, spec) + '</b></div>';
         };
         return tip;
       })(),
@@ -1192,7 +1317,6 @@
 
   // ---- 仪表盘 -----------------------------------------------------------
   function buildGauge(spec, data, state, theme) {
-    var unit = spec.unit || '';
     return {
       series: [{
         type: 'gauge',
@@ -1210,10 +1334,8 @@
         axisLabel: { distance: 10, color: theme.subtext, fontSize: 9 },
         detail: {
           valueAnimation: true,
-          formatter: function (v) {
-            if (spec.fmt === 'percent') return roundTo(v, 1) + '%' + unit;
-            return fmtValue(v, spec.fmt) + unit;
-          },
+          // 换算单位（万 / 亿）和文字后缀（% / ℃ / 单）统一由 fmtValue 处理
+          formatter: function (v) { return fmtValue(v, spec.fmt, spec); },
           color: theme.text, fontSize: 28, fontWeight: 600, offsetCenter: [0, '42%']
         },
         title: { show: !!spec.label, offsetCenter: [0, '70%'], color: theme.subtext, fontSize: 12 },
@@ -1288,9 +1410,9 @@
     var pal = theme.palette || PALETTES.google.colors;
     var accent = pal[Math.abs(Number(spec.accent) || 0) % pal.length];
     var val = kpiValue(spec, data, state);
-    var txt = fmtValue(val, spec.fmt);
+    // 换算单位（万 / 亿 / 百万）和文字后缀（ 单 / ℃ / %）都由 fmtValue 拼好
+    var txt = fmtValue(val, spec.fmt, spec);
     if (spec.prefix) txt = spec.prefix + txt;
-    if (spec.unit) txt = txt + spec.unit;
 
     var html = '<div class="eazy-kpi" style="--eazy-accent:' + accent + '">';
     html += '<div class="eazy-kpi-head"><span class="eazy-kpi-label">' +
@@ -1300,7 +1422,7 @@
         isFinite(targetV) && targetV !== 0) {
       achieved = (num(val) || 0) / targetV * 100;
       html += '<span class="eazy-kpi-badge">' +
-        esc(spec.targetLabel || ('目标 ' + fmtValue(targetV, spec.fmt))) + '</span>';
+        esc(spec.targetLabel || ('目标 ' + fmtValue(targetV, spec.fmt, spec))) + '</span>';
     }
     html += '</div>';
 
@@ -1374,7 +1496,10 @@
     state = state || { filters: {}, drill: [] };
     var builder = BUILDERS[spec.type] || EXTRA[spec.type];
     if (!builder) throw new Error('不支持的图表类型: ' + spec.type);
-    var opt = builder(spec, data || { cols: [], rows: [] }, state, theme);
+    // 构建期间挂上 spec：扩展图表（eazy_extra_*.js）只传 fmt，靠它拿到显式单位
+    var opt = withSpec(spec, function () {
+      return builder(spec, data || { cols: [], rows: [] }, state, theme);
+    });
     if (!opt) return null;
     opt.backgroundColor = 'transparent';
     opt.textStyle = { fontFamily: FONT, color: theme.text, fontSize: 12 };
@@ -1467,7 +1592,10 @@
     var spec = c.spec;
     var htmlBuilder = HTML_BUILDERS[spec.type];
     if (htmlBuilder) {
-      c.el.innerHTML = htmlBuilder(spec, c.data, c.state, c.theme);
+      // KPI / 明细表等 HTML 图：构建期间挂上 spec，扩展脚本里的 fmtValue 才能拿到 unit
+      c.el.innerHTML = withSpec(spec, function () {
+        return htmlBuilder(spec, c.data, c.state, c.theme);
+      });
       renderToolbar(c);
       return;
     }

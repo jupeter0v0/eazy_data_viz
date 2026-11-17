@@ -376,6 +376,16 @@ def t_streamlit_v2():
     assert ":host" in frag["css"], "CSS 没有作用域化为 :host"
     assert "html[data-theme" not in frag["css"], "CSS 仍带全局选择器"
     assert frag["page"]["charts"], "片段缺少图表 spec"
+    # 稳定 id：Chart 构造时是自增 id，渲染层必须按位置覆盖；否则 v2 每次 rerun
+    # 都会因 data 变化重挂整块看板，联动/下钻状态被清空。
+    import json as _json
+    a = _render.build_fragment([eazy_data_viz.bar(DF, x="大区", y="销售额"),
+                                eazy_data_viz.kpi(DF, value="销售额")])
+    b = _render.build_fragment([eazy_data_viz.bar(DF, x="大区", y="销售额"),
+                                eazy_data_viz.kpi(DF, value="销售额")])
+    assert [c["id"] for c in a["page"]["charts"]] == ["eazy-0", "eazy-1"]
+    assert _json.dumps(a["page"], sort_keys=True) == _json.dumps(b["page"], sort_keys=True), \
+        "同一批数据两次构建的 page 不一致：v2 会判定 data 变化并重挂组件"
 
     import eazy_data_viz.streamlit_v2 as v2
 

@@ -373,15 +373,34 @@ html[data-theme=dark] .eazy-kpi-delta.eazy-down{background:rgba(242,139,130,.14)
 .eazy-tile .t-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .eazy-tile .t-val{font-family:"Google Sans",Roboto,sans-serif;font-size:16px;font-weight:500}
 
-/* ---------- table 明细表 ---------- */
+/* ---------- table 明细表（含中国式报表：序号 / 合计 / 数据条 / 斑马纹 / 固定首列） ---------- */
 .eazy-table-wrap{overflow:auto;max-height:100%}
 .eazy-table{width:100%;border-collapse:collapse;font-size:12.5px}
-.eazy-table th{position:sticky;top:0;background:var(--pv-surface-1);color:var(--pv-on-surface-var);
+.eazy-table th{position:sticky;top:0;z-index:2;background:var(--pv-surface-1);color:var(--pv-on-surface-var);
   font-weight:500;text-align:left;padding:9px 12px;border-bottom:1px solid var(--pv-outline);
   white-space:nowrap}
 .eazy-table td{padding:8px 12px;border-bottom:1px solid var(--pv-outline-var);
   white-space:nowrap;color:var(--pv-on-surface)}
-.eazy-table tbody tr:hover td{background:var(--pv-surface-3)}
+/* 首列固定：横向滚动时保持可见（有 index 时是序号列），右缘阴影提示还有内容 */
+.eazy-table thead th:first-child{left:0;z-index:3}
+.eazy-table tbody td:first-child,.eazy-table tfoot td:first-child{position:sticky;left:0;z-index:1;
+  background-color:var(--pv-surface-1);box-shadow:8px 0 8px -4px var(--pv-scrim)}
+/* 序号列：居中、定宽、弱化文字 */
+.eazy-table .eazy-col-idx{text-align:center;color:var(--pv-on-surface-var);width:48px;min-width:48px;
+  font-variant-numeric:tabular-nums}
+/* 斑马纹：tbody 偶数行浅底色（默认开启，stripe=False 时不加 class） */
+.eazy-table.eazy-table-stripe tbody tr:nth-child(even) td{background-color:var(--pv-surface-2)}
+/* 合计行：加粗 + 顶部双线 + 浅底色，不参与斑马纹 */
+.eazy-table tfoot td{font-weight:600;background-color:var(--pv-surface-3);
+  border-top:4px double var(--pv-outline);border-bottom:1px solid var(--pv-outline)}
+.eazy-table tfoot td:first-child{background-color:var(--pv-surface-3)}
+.eazy-table tfoot .eazy-total-label{color:var(--pv-on-surface)}
+.eazy-table tfoot .eazy-total-tag{font-weight:600;color:var(--pv-on-surface-var);font-size:11.5px;margin-right:8px}
+/* 数据条：色条画在单元格背景上，数值文字用 span 压在条上层 */
+.eazy-table td.eazy-bar-cell{background-repeat:no-repeat}
+.eazy-table .eazy-bar-val{position:relative;z-index:1}
+/* hover 覆盖斑马纹底色（含固定首列），但保留数据条的 background-image */
+.eazy-table tbody tr:hover td,.eazy-table.eazy-table-stripe tbody tr:hover td{background-color:var(--pv-surface-3)}
 .eazy-table .num{text-align:right;font-variant-numeric:tabular-nums}
 .eazy-table-more{font-size:11.5px;color:var(--pv-on-surface-var);padding:8px 2px 0}
 
