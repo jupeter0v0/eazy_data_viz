@@ -3,7 +3,7 @@
 这份文档记录 **当前版本已确认、但尚未修改** 的行为差异，以及各图表的「参数生效范围」。
 写作原则：**宁可写清楚限制，也不假装参数一定生效。** 每条都给出规避方式。
 
-> 版本：1.2.0 · 最后更新：2026-11-17
+> 版本：1.3.0 · 最后更新：2026-11-17
 > 文中 `spec` 指图表对象内部的 `chart.spec`（调试时可用 `chart.spec` 查看）。
 
 ---
@@ -23,6 +23,7 @@
 | `max_rows=100.5 / "abc" / -1` 抛原始异常 | 1.0.0 | `_frame.prepare()` 统一校验：非整数抛 `TypeError`，`<1` 抛 `ValueError`，`None` 表示不采样 |
 | `height=None` 时所有图都落到 380 | 1.0.0 | 按图表类型取默认高度（`_HEIGHT_DEFAULTS`，如 `gauge=260`、`bump=420`） |
 | Streamlit v2 每次 rerun 后看板整块重挂，联动筛选条 / 下钻 / 图例状态清零 | 1.2.0 | 图表 id 由自增计数器生成，每次 rerun 都变；`render.py` 改为按位置固定为 `eazy-<i>` |
+| Streamlit v2 只要点击图表就会触发一次脚本 rerun（即使不需要 Python 响应） | 1.3.0 | 改为按需：只有传了 `on_select` 才挂 trigger；默认点击在浏览器内完成，0 rerun，`result.select` 为 `None` |
 
 ---
 

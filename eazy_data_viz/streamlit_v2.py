@@ -7,8 +7,9 @@
   没有二次滚动条、没有 iframe 高度裁剪问题，图表宽度跟随列宽自适应；
 - 组件高度默认「按内容撑开」（``height="content"``），不需要手工计算
   ``page_height()``；
-- 支持 **双向通信**：图表点击会以 trigger 值回传给 Python（``on_select``），
-  可据此做详情表、跳转、写 session_state 等；
+- 支持 **可选的双向通信**：只有显式传了 ``on_select`` 时，图表点击才会以 trigger
+  值回传给 Python，可据此做详情表、跳转、写 session_state 等；不传 ``on_select``
+  时点击完全在浏览器内处理，**不会触发脚本 rerun**；
 - ``data`` 参数原生支持 JSON / bytes / Arrow，不必再把数据序列化进 HTML 字符串。
 
 本模块的用法（推荐）：::
@@ -53,6 +54,7 @@ export default function (component) {
   const host = (parentElement && parentElement.host) ? parentElement.host : parentElement;
   const payload = data || {};
   const SOURCES = __SOURCES__;
+  const ORDER = __ORDER__;
 
   function inject(code) {
     const s = document.createElement('script');
@@ -67,9 +69,15 @@ export default function (component) {
     window.EAZY_MAPS = payload.maps || {};
     window.EAZY_CITIES = payload.cities || {};
     if (!window.EazyViz) throw new Error('eazy.js 未加载');
-    window.EazyViz.onSelect = function (info) {
-      try { setTriggerValue('select', info); } catch (e) { /* 忽略 */ }
-    };
+    // 只有调用方显式传了 on_select（data.trigger 为真）才把点击回传 Python；
+    // 否则 onSelect 置空，点图 / 联动 / 下钻全部在浏览器内完成，不触发脚本 rerun。
+    if (payload.trigger) {
+      window.EazyViz.onSelect = function (info) {
+        try { setTriggerValue('select', info); } catch (e) { /* 忽略 */ }
+      };
+    } else {
+      window.EazyViz.onSelect = null;
+    }
     window.EazyViz.init(payload.page || {}, root);
     if (host && host.setAttribute) {
       host.setAttribute('data-eazy-ready', '1');
@@ -79,13 +87,12 @@ export default function (component) {
   }
 
   try {
-    if (!window.echarts) inject(SOURCES.echarts);
+    if (!window.echarts) inject(SOURCES['__ECHARTS__']);
     if (!window.EazyViz) {
-      inject(SOURCES.runtime);
-      inject(SOURCES.main);
-      inject(SOURCES.extra_a);
-      inject(SOURCES.extra_b);
-      inject(SOURCES.extra_html);
+      for (let i = 0; i < ORDER.length; i++) {
+        if (ORDER[i] === '__ECHARTS__') continue;
+        inject(SOURCES[ORDER[i]]);
+      }
     }
   } catch (err) {
     const box = document.createElement('pre');
@@ -133,17 +140,12 @@ def _asset_signature():
 
 
 def _sources():
-    out = {}
-    for name, key in (
-        (_render.ECHARTS_JS, "echarts"),
-        (_render.RUNTIME_JS, "runtime"),
-        ("eazy_extra_main.js", "main"),
-        ("eazy_extra_a.js", "extra_a"),
-        ("eazy_extra_b.js", "extra_b"),
-        ("eazy_extra_html.js", "extra_html"),
-    ):
-        out[key] = _render._read_asset(name)
-    return out
+    """按文件名收集全部资源。
+
+    必须用 ``_render.ALL_JS`` 而不是手写清单：少一个文件（例如
+    ``eazy_map.js``）就会让对应图表在 v2 下报「不支持的图表类型」。
+    """
+    return {name: _render._read_asset(name) for name in _render.ALL_JS}
 
 
 def _component():
@@ -155,7 +157,12 @@ def _component():
     key = _asset_signature()
     if _COMPONENT is not None and key == _COMPONENT_KEY:
         return _COMPONENT
-    js = _JS_TEMPLATE.replace("__SOURCES__", json.dumps(_sources(), ensure_ascii=True))
+    js = (
+        _JS_TEMPLATE
+        .replace("__ECHARTS__", _render.ECHARTS_JS)
+        .replace("__ORDER__", json.dumps(list(_render.ALL_JS), ensure_ascii=True))
+        .replace("__SOURCES__", json.dumps(_sources(), ensure_ascii=True))
+    )
     _COMPONENT = mount_component(
         "eazy_data_viz.dashboard",
         html=_HTML_PLACEHOLDER,
@@ -188,12 +195,16 @@ def render_dashboard(charts, *, title=None, desc=None, cols=None, theme=None,
     on_select : callable or None
         图表点击回调（无参数）。回调里可读 :class:`ComponentResult` 的
         ``select`` 属性；也可直接用返回值。
+        默认 ``None``：不挂 trigger 通道，点击只在浏览器内完成，**不会触发
+        脚本 rerun**，此时返回值的 ``select`` 恒为 ``None``。需要「点图 → 重新
+        计算」时才传回调；若只是想在浏览器内联动/下钻，不需要传。
 
     返回
     ----
     ComponentResult
         带有 ``select`` 触发值（最近一次点击：``chart`` / ``title`` / ``type`` /
         ``dim`` / ``value`` / ``drill`` / ``link``）以及组件状态。
+        未传 ``on_select`` 时 ``select`` 为 ``None``。
     """
     if not is_available():
         raise RuntimeError(
@@ -209,13 +220,13 @@ def render_dashboard(charts, *, title=None, desc=None, cols=None, theme=None,
         "data_store": frag["data_store"],
         "maps": frag["maps"],
         "cities": frag["cities"],
+        # 前端据此决定是否挂 setTriggerValue；False 时点击不产生任何 rerun。
+        "trigger": on_select is not None,
     }
     renderer = _component()
-    kwargs = {
-        "data": data,
-        "key": key,
-        "on_select_change": on_select if on_select is not None else (lambda: None),
-    }
+    kwargs = {"data": data, "key": key}
+    if on_select is not None:
+        kwargs["on_select_change"] = on_select
     if height is not None:
         kwargs["height"] = int(height)
     return renderer(**kwargs)

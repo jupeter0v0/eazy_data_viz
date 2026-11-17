@@ -25,8 +25,9 @@ Streamlit 负责控件、布局和状态。这一篇讲清集成方式、高度�
 >           edv.bar(df, x="大区", y="销售额", link="g1"),
 >           edv.line(df, x="月份", y="销售额", link="g1")]
 >
-> result = edv.streamlit_dashboard(charts, cols=2, title="经营驾驶舱")
-> if result.select:                 # 点击图表 → Python 收到事件
+> result = edv.streamlit_dashboard(charts, cols=2, title="经营驾驶舱")  # 默认零 rerun
+> # 需要 Python 感知点击时才传回调：on_select=...
+> if result.select:                 # 传了 on_select 才有值
 >     st.write(result.select)       # {chart, title, type, dim, value, drill, link}
 > ```
 >
@@ -35,22 +36,35 @@ Streamlit 负责控件、布局和状态。这一篇讲清集成方式、高度�
 > 下文 `## 1`~`## 9` 讲的仍是 v1 的 iframe 方式——在旧版 Streamlit 上依然有效，
 > 也是理解「为什么必须自己算 height」的最好材料。
 
-## 0. 点击图表会不会 rerun？
+## 点击图表会不会 rerun？（v2 必读）
 
-这是 v2 路径最容易被问的问题，先讲清楚：
+**默认不会。** 1.3.0 起，`streamlit_dashboard()` 只有显式传了 `on_select` 才把图表点击
+通过 trigger 回传给 Python；不传时前端 `EazyViz.onSelect` 为 `null`，点击、联动、下钻、
+图例开关全部在浏览器内完成，**脚本一次都不 rerun**，此时返回值的 `result.select` 恒为
+`None`。
 
-- **会，而且正好一次**。v2 为了让你拿到 `result.select`，默认把图表点击通过 trigger
-  回传给 Python，Streamlit 收到就重跑整个脚本（页面右上角出现计算态）。
-- **但联动状态不会丢**。1.2.0 起图表 id 按位置稳定化（`eazy-0`、`eazy-1`…），rerun
-  前后组件 `data` 完全一致，组件不会重挂：联动筛选条、下钻层级、图例选中、主题切换
-  全部保留，只有 Python 侧重算（6 张图通常 200–300ms）。
-- **想彻底不 rerun**：
-  1. 用 v1 路径（`st.components.v1.html`），所有交互留在 iframe 内，零 rerun；
-  2. 把看板包进 `@st.fragment`（Streamlit ≥ 1.37），trigger 自带 `fragmentId`，只重跑这个 fragment；
-  3. 大屏场景（20 图 / 2 万行一次重算约 3.6s、payload 约 3.2MB）用 `st.cache_data` 缓存
-     `edv.render.build_fragment()` 的结果，见 §5。
+- **浏览器内交互（默认）**：联动筛选条、下钻、图例开关都只改 DOM / ECharts，不碰 Python。
+  图表 id 从 1.2.0 起按位置稳定化（`eazy-0`、`eazy-1`…），即使侧栏控件改动导致脚本重跑，
+  组件 `data` 也不变、组件不会重挂，交互状态照常保留。
+- **需要感知点击**：传 `on_select`，点击会 trigger 一次，Streamlit 重跑整个脚本（右上角
+  出现计算态）。6 张图重算通常 200–300ms；20 图 / 2 万行约 3.6s、payload 约 3.2MB（见 §6）。
+- **要回调又不想整页重跑**：把看板包进 `@st.fragment`（Streamlit ≥ 1.37），trigger 自带
+  `fragmentId`，只重跑这个 fragment。
 
-对照：v1 路径点击图表 0 次 rerun；v2 默认 1 次 rerun 且状态保留。两者联动效果一致。
+```python
+# 默认：零 rerun，点图 / 联动 / 下钻全在浏览器里处理
+result = edv.streamlit_dashboard(charts, cols=2, title="经营驾驶舱")
+
+# 需要 Python 侧响应点击：传回调（此时点击会触发一次 rerun）
+def on_click():
+    st.toast("图表被点击了")
+
+result = edv.streamlit_dashboard(charts, cols=2, on_select=on_click)
+if result.select:
+    st.write(result.select)   # {chart, title, type, dim, value, drill, link}
+```
+
+对照：v1 路径点击图表 0 次 rerun；v2 默认 0 次、传 `on_select` 时 1 次且联动状态保留。
 
 ## 0. 最小可运行应用
 

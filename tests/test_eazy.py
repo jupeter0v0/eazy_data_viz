@@ -395,6 +395,38 @@ def t_streamlit_v2():
     assert "streamlit_dashboard" in eazy_data_viz.__all__
     assert "streamlit_available" in eazy_data_viz.__all__
 
+    # 1.3.0：只有传 on_select 才挂 trigger；默认点击不 rerun。
+    assert "payload.trigger" in v2._JS_TEMPLATE
+
+    # v2 必须把所有运行时资源都喂给前端：手写清单漏掉 eazy_map.js 时，
+    # geo_map / map_bubble / map_flow 会报「不支持的图表类型」。
+    assert set(v2._sources()) == set(_render.ALL_JS), "v2 资源清单与 ALL_JS 不一致"
+    assert "B.geo_map" in v2._sources()["eazy_map.js"]
+    assert "window.EazyViz.onSelect = null" in v2._JS_TEMPLATE
+    if v2.is_available():
+        captured = {}
+
+        class _FakeComp(object):
+            def __call__(self, **kw):
+                captured.clear(); captured.update(kw)
+                return type("R", (), {"select": None})()
+
+        frag = {"html": "<div></div>", "page": {"charts": []}, "data_store": {},
+                "maps": {}, "cities": {}, "css": "", "cols": 1}
+        old_frag, old_comp = v2._render.build_fragment, v2._component
+        try:
+            v2._render.build_fragment = lambda *a, **k: dict(frag)
+            v2._component = lambda: _FakeComp()
+            v2.render_dashboard([eazy_data_viz.bar(DF, x="大区", y="销售额")])
+            assert captured["data"]["trigger"] is False
+            assert "on_select_change" not in captured
+            v2.render_dashboard([eazy_data_viz.bar(DF, x="大区", y="销售额")],
+                                on_select=lambda: None)
+            assert captured["data"]["trigger"] is True
+            assert "on_select_change" in captured
+        finally:
+            v2._render.build_fragment, v2._component = old_frag, old_comp
+
 
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):
     check(name, fn)

@@ -8,8 +8,8 @@
 * 优先用 st.components.v2（edv.streamlit_dashboard）：无 iframe、高度自适应、点击可回传 Python
 * 旧版 Streamlit 自动回退到 components.v1.html（那时需要显式给 height）
 * 跨图联动要放进同一个 dashboard / streamlit_dashboard
-* v2 路径：点击图表会把事件回传给 Python，会触发一次脚本 rerun；
-  但图表 id 已按位置稳定化，联动/下钻/筛选状态不会丢。
+* v2 路径默认零 rerun：不传 on_select 时，点击 / 联动 / 下钻全部在浏览器内完成；
+  侧栏勾选「点图回传 Python」后才会 trigger 一次，且图表 id 已稳定化，联动状态不丢。
 * v1 路径（旧版 Streamlit）：下钻 / 联动 / 主题全在 iframe 内完成，不触发 rerun
 """
 from __future__ import annotations
@@ -29,11 +29,13 @@ from eazy_data_viz import render as edv_render  # noqa: E402
 
 st.set_page_config(page_title="eazy_data_viz × Streamlit", layout="wide")
 st.title("eazy_data_viz × Streamlit")
-st.caption("v2 路径：点图会触发一次 rerun（事件回传 Python），联动状态由稳定图表 id 保留；v1 路径完全在 iframe 内完成，不触发 rerun。")
+st.caption("v2 路径默认零 rerun：点图 / 联动 / 下钻全在浏览器内完成；勾选左侧「点图回传 Python」后才会 trigger 一次。v1 路径同样零 rerun。")
 
 rows = st.sidebar.slider("数据行数", 300, 3000, 1500, step=100)
 palette = st.sidebar.selectbox("配色", edv.palette.names(), index=0)
 theme = st.sidebar.radio("主题", ["light", "dark"], horizontal=True)
+trigger = st.sidebar.checkbox("点图回传 Python（on_select）", value=False,
+                              help="不勾选：点图 / 联动 / 下钻全在浏览器内完成，零 rerun；勾选：点图触发一次脚本 rerun。")
 edv.set_palette(palette)
 
 df = edv.sample_df(rows=rows)
@@ -50,12 +52,16 @@ charts = [
 ]
 
 if edv.streamlit_available():
-    # 推荐：components v2 —— 无 iframe、高度自适应、点击事件可回传 Python
-    result = edv.streamlit_dashboard(
-        charts, cols=2, title="经营驾驶舱（Streamlit 内嵌）",
-        theme=theme, palette=palette,
-    )
-    if result.select:
+    # 推荐：components v2 —— 无 iframe、高度自适应；默认点图不 rerun
+    def on_click():
+        st.session_state["eazy_clicked"] = 1
+
+    kwargs = dict(cols=2, title="经营驾驶舱（Streamlit 内嵌）",
+                  theme=theme, palette=palette)
+    if trigger:
+        kwargs["on_select"] = on_click
+    result = edv.streamlit_dashboard(charts, **kwargs)
+    if trigger and result.select:
         st.info("你点中了：%s = %s" % (result.select.get("dim"), result.select.get("value")))
 else:
     # 旧版回退：components v1 的 iframe 需要显式 height

@@ -330,8 +330,14 @@ charts = [
     edv.line(df, x="月份", y="销售额", link="g1"),
 ]
 
+# 默认：零 rerun，点图 / 联动 / 下钻全在浏览器里完成，result.select 为 None
 result = edv.streamlit_dashboard(charts, cols=2, title="经营驾驶舱")
 
+# 需要 Python 感知点击时才传 on_select（点击会触发一次 rerun）
+def on_click():
+    st.toast("图表被点击了")
+
+result = edv.streamlit_dashboard(charts, cols=2, on_select=on_click)
 if result.select:            # 点击图表后，Python 收到事件
     st.write(result.select)  # {chart, title, type, dim, value, drill, link}
 ```
@@ -339,7 +345,8 @@ if result.select:            # 点击图表后，Python 收到事件
 - `.show()` / `edv.dashboard(...).show()` 会自动优先走 v2，旧版 Streamlit 自动回退到 v1；
   在普通布局里单独放一张图也可以直接 `edv.bar(df, x="大区", y="销售额").show()`。
 - v2 不需要自己算高度（`height=None` 即按内容撑开）；传 `height=800` 可以固定高度。
-- 双向事件：给 `streamlit_dashboard(..., on_select=回调)`，钩子触发后读取 `result.select`；
+- **默认 0 rerun**：不传 `on_select` 时点击 / 联动 / 下钻全部在浏览器内完成（`result.select` 为 `None`）。
+- 双向事件：传 `streamlit_dashboard(..., on_select=回调)` 后，点击会 trigger 一次脚本 rerun，再读取 `result.select`；
   `gallery/app.py` 的「v2 双向事件」页有完整演示。
 
 **旧版回退（`st.components.v1.html`，需要显式 height）**：

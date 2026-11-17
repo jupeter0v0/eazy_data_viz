@@ -1036,7 +1036,9 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     opts = opts || {};
     var grid = {
       left: 10, right: 22, containLabel: true,
-      top: opts.legend ? 48 : 30,
+      // 有图例时顶部要同时留给「图例 + 纵轴名（nameLocation:end, nameGap:14）」，
+      // 60 才不会让纵轴名压在图例文字上
+      top: opts.legend ? 60 : 30,
       bottom: 44
     };
     if (opts.zoom) grid.bottom = 76;
@@ -1047,9 +1049,13 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
   function makeLegend(theme, selected, show) {
     if (!show) return { show: false };
     var legend = {
-      show: true, type: 'scroll', top: 6, left: 'center',
-      itemWidth: 12, itemHeight: 8, itemGap: 12,
-      textStyle: { color: theme.subtext, fontSize: 11 }
+      // width 要写死：不给宽度时 ECharts 会把图例当成无限长，
+      // 项目多了就直接溢出卡片（最后一项被截断），而不是分页。
+      show: true, type: 'scroll', top: 6, left: 'center', width: '92%',
+      itemWidth: 10, itemHeight: 8, itemGap: 8,
+      pageIconColor: theme.subtext, pageIconInactiveColor: theme.axis,
+      pageTextStyle: { color: theme.subtext, fontSize: 10 },
+      textStyle: { color: theme.subtext, fontSize: 10 }
     };
     if (selected) legend.selected = selected;
     return legend;
@@ -1412,6 +1418,9 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
 
     if (spec.horizontal) {
       catAxis.boundaryGap = true;
+      // 横向条形图的类目在 Y 轴上，已经是横着读的，再旋转 30°
+      // 反而要歪着脖子看，这里强制不旋转。
+      catAxis.axisLabel.rotate = 0;
       setAxisName(valAxis, axisTitle(spec.xtitle, ydim || '记录数'), theme, true);
       setAxisName(catAxis, axisTitle(spec.ytitle, xdim), theme, false, 20);
       opt.xAxis = applyLim(valAxis, spec.xlim);
@@ -2093,6 +2102,43 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     };
   }
 
+  // 图例排版：项目少时用 plain 自动换行（不会把最后一项截断成「1/2」），
+  // 项目多时仍用 scroll；并按图例行数把 grid.top 往下推，避免压住纵轴名。
+  function legendRowInfo(opt) {
+    var names = [];
+    if (opt.legend && opt.legend.data && opt.legend.data.length) {
+      names = opt.legend.data.slice();
+    } else {
+      (opt.series || []).forEach(function (s) {
+        if (s && s.name && names.indexOf(s.name) < 0) names.push(s.name);
+      });
+    }
+    if (!names.length) return null;
+    var chars = 0;
+    names.forEach(function (n) { chars += Math.min(String(n).length, 10) * 7 + 22; });
+    return { rows: Math.max(1, Math.ceil(chars / 440)) };
+  }
+
+  function layoutLegend(opt) {
+    if (!opt || !opt.legend || opt.legend.show === false) return opt;
+    var info = legendRowInfo(opt);
+    if (!info) return opt;
+    var lg = opt.legend;
+    lg.width = '92%';
+    lg.left = 'center';
+    lg.top = 6;
+    lg.itemGap = 8;
+    if (info.rows <= 2) {
+      lg.type = 'plain';
+      // 图例占 6 + rows*20，再加纵轴名的 14px，所以 46 + rows*20
+      if (opt.grid) opt.grid.top = 46 + info.rows * 20;
+    } else {
+      lg.type = 'scroll';
+      if (opt.grid) opt.grid.top = 60;
+    }
+    return opt;
+  }
+
   function buildOption(spec, data, state, theme) {
     theme = theme || THEME.light;
     state = state || { filters: {}, drill: [] };
@@ -2111,7 +2157,7 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     opt.animationDuration = 380;
     opt.animationDurationUpdate = 260;
     opt.animationEasing = 'cubicOut';
-    return opt;
+    return layoutLegend(opt);
   }
 
   // ======================================================================
