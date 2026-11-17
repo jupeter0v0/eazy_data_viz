@@ -1584,18 +1584,35 @@
     try { return n.querySelectorAll(sel); } catch (e) { return document.querySelectorAll(sel); }
   }
 
+  // 一个页面上可以有多个 streamlit_dashboard（每个是一个 components v2 实例），
+  // 它们共享 window.EazyViz，所以查找要按当前挂载点（EazyViz.scope）过一遍，
+  // 否则点第二个看板的「代码」按钮会打开第一个看板的卡片。
+  function inScope(el) {
+    var scope = EazyViz.scope;
+    if (!scope || !el || !el.isConnected) return false;
+    return scope === document ? true : (scope.contains ? scope.contains(el) : false);
+  }
+
   function chartById(id) {
+    var fallback = null;
     for (var i = 0; i < EazyViz.charts.length; i++) {
-      if (EazyViz.charts[i].spec.id === id) return EazyViz.charts[i];
+      var c = EazyViz.charts[i];
+      if (c.spec.id !== id) continue;
+      if (!fallback) fallback = c;
+      if (inScope(c.el)) return c;
     }
-    return null;
+    return fallback;
   }
 
   function chartByIndex(idx) {
+    var fallback = null;
     for (var i = 0; i < EazyViz.charts.length; i++) {
-      if (EazyViz.charts[i].index === idx) return EazyViz.charts[i];
+      var c = EazyViz.charts[i];
+      if (c.index !== idx) continue;
+      if (!fallback) fallback = c;
+      if (inScope(c.el)) return c;
     }
-    return null;
+    return fallback;
   }
 
   function syncFilters(c) {
@@ -1913,8 +1930,17 @@
 
   EazyViz.init = function (page, rootEl) {
     EazyViz.page = page || {};
-    EazyViz.charts = [];
-    EazyViz.links = {};
+    // 同一个页面可能挂了几个看板：不能每次 init 都把别人的图清掉，
+    // 否则后面的看板一初始化，前面看板的联动就失效了。
+    // 这里只剔除已经从 DOM 上摘掉的图（streamlit rerun 会换 innerHTML）。
+    var alive = [];
+    for (var ai = 0; ai < (EazyViz.charts || []).length; ai++) {
+      var oldc = EazyViz.charts[ai];
+      if (oldc.el && oldc.el.isConnected) alive.push(oldc);
+      else if (oldc.ec && oldc.ec.dispose) { try { oldc.ec.dispose(); } catch (e0) { /* ignore */ } }
+    }
+    EazyViz.charts = alive;
+    if (!alive.length) EazyViz.links = {};
     EazyViz.dataStore = global.EAZY_DATA || {};
     EazyViz.scope = rootEl || null;
     EazyViz.host = (rootEl && rootEl.host) ? rootEl.host : null;
