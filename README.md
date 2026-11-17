@@ -103,7 +103,9 @@ edv.show(
 `edv.help()` 会打印 48 种图表的速查表；`edv.gallery()` 启动 Streamlit 版画廊。
 
 更多可运行示例见 [`examples/`](examples)：`cockpit.py`（完整驾驶舱）、`kpi_cards.py`、
-`palettes.py`、`drill_link.py`、`streamlit_app.py`。
+`palettes.py`、`drill_link.py`、`streamlit_app.py`，以及
+[`streamlit_sales_demo/`](examples/streamlit_sales_demo)（把 ERP 里全是主键的销售明细
+翻译成中文名，做出一整套经营分析看板 + 中国式报表）。
 
 **三种输出载体**（同一份 spec）：
 
@@ -449,6 +451,7 @@ tests/
   test_eazy.py           # Python 测试（28 项）
   js_test.py             # 前端测试（59 项，headless Chrome 内断言）
 examples/                # 可直接运行的示例（驾驶舱 / KPI / 配色 / 下钻联动 / Streamlit）
+  streamlit_sales_demo/  # 销售经营分析看板（含 prepare_data.py 主键→中文名转换）
 docs/
   AI_GUIDE.md            # 给 AI 的说明书（人读）
   eazy_catalog.json      # 机器可读目录（由 gen_ai_doc.py 生成）
