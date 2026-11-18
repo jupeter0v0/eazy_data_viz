@@ -22,7 +22,8 @@
 | `target_value` 传非数字字符串被静默忽略 | 1.0.0 | `bullet`/`target` 统一经 `_num_param()` 校验并抛中文 `ValueError` |
 | `max_rows=100.5 / "abc" / -1` 抛原始异常 | 1.0.0 | `_frame.prepare()` 统一校验：非整数抛 `TypeError`，`<1` 抛 `ValueError`，`None` 表示不采样 |
 | `height=None` 时所有图都落到 380 | 1.0.0 | 按图表类型取默认高度（`_HEIGHT_DEFAULTS`，如 `gauge=260`、`bump=420`） |
-| Streamlit v2 每次 rerun 后看板整块重挂，联动筛选条 / 下钻 / 图例状态清零 | 1.2.0 | 图表 id 由自增计数器生成，每次 rerun 都变；`render.py` 改为按位置固定为 `eazy-<i>` |
+| Streamlit v2 每次 rerun 后看板整块重挂，联动筛选条 / 下钻 / 图例状态清零 | 1.2.0 | 图表 id 由自增计数器生成，每次 rerun 都变；`render.py` 改为按位置固定为 `eazy-<i>`（1.4.0 起变为 `eazy-<看板指纹>-<i>`） |
+| 同一页面挂多个 `streamlit_dashboard()` 时，表格点单元格的联动对另一个看板的图不生效 | 1.4.0 | 各看板都从 `eazy-0` 编号，id 跳组件撞车，被联动的图误判为「自己是发起者」而跳过过滤；`_assign_ids()` 改为「看板指纹 + 位置」 |
 | Streamlit v2 只要点击图表就会触发一次脚本 rerun（即使不需要 Python 响应） | 1.3.0 | 改为按需：只有传了 `on_select` 才挂 trigger；默认点击在浏览器内完成，0 rerun，`result.select` 为 `None` |
 
 ---

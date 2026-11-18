@@ -164,6 +164,7 @@
   }
 
   H['table'] = function (spec, data, state, theme) {
+    state = state || {};
     var rows = U.filteredRows(spec, data, state);
     var cols = spec.columns || [];
     if (!rows.length || !cols.length) return '<div class="eazy-empty">当前条件下没有数据</div>';
@@ -175,6 +176,10 @@
     var numFmt = spec.fmt === 'compact' ? 'thousands' : spec.fmt;
     // 数据条 / 合计只统计真正渲染出来的行，和 limit 后的表格内容保持一致
     var shown = rows.length > limit ? rows.slice(0, limit) : rows;
+    // 联动：表格既可以「被图筛」（rows 已经过滤过），也可以「筛图」——
+    // 后者说明这条联动是表格自己发起的，行不筛掉，只把命中的行高亮出来。
+    var link = (spec.link && state.link && state.link.sourceId === spec.id) ? state.link : null;
+    var clickable = !!spec.link;
     var barCols = barColumns(spec, cols, kinds);
     var barColor = {}, barMax = {}, b, m;
     for (b = 0; b < barCols.length; b++) {
@@ -199,7 +204,8 @@
     }
     html += '</tr></thead><tbody>';
     for (var i = 0; i < shown.length; i++) {
-      html += '<tr>';
+      var rowHit = !!(link && U.catName(shown[i][link.dim]) === String(link.value));
+      html += '<tr' + (rowHit ? ' class="eazy-row-hit"' : '') + '>';
       if (showIndex) html += '<td class="eazy-col-idx">' + (i + 1) + '</td>';
       for (var k = 0; k < cols.length; k++) {
         var col = cols[k];
@@ -207,7 +213,14 @@
         var kind = kinds[col];
         var text = cellText(v, kind, numFmt);
         var cls = kind === 'num' ? 'num' : '';
-        var style = '';
+        var style = '', attrs = '';
+        // 维度列可点：点了按「列 = 单元格值」联动同组图表（数值/时间列点着没意义，不挂）
+        if (clickable && kind !== 'num' && kind !== 'time' && !isBlank(v)) {
+          var catv = U.catName(v);
+          cls += ' eazy-cell-link';
+          attrs = ' data-eazy-cell="' + U.esc(col) + '" data-eazy-val="' + U.esc(catv) + '"' +
+            ' title="按「' + U.esc(col) + ' = ' + U.esc(catv) + '」联动同组图表（再点一次取消）"';
+        }
         if (barColor[col] && kind === 'num' && typeof v === 'number' && isFinite(v)) {
           // 用 linear-gradient 在单元格背景上按「该列最大值」等比画条；
           // 数值文字包一层 span，压在色条上层（不改变右对齐）
@@ -217,7 +230,7 @@
             barColor[col] + ' ' + pct.toFixed(1) + '%,transparent ' + pct.toFixed(1) + '%)"';
           text = '<span class="eazy-bar-val">' + text + '</span>';
         }
-        html += '<td' + (cls ? ' class="' + cls + '"' : '') + style + '>' + text + '</td>';
+        html += '<td' + (cls ? ' class="' + cls + '"' : '') + style + attrs + '>' + text + '</td>';
       }
       html += '</tr>';
     }

@@ -408,7 +408,16 @@ def t_streamlit_v2():
                                 eazy_data_viz.kpi(DF, value="销售额")])
     b = _render.build_fragment([eazy_data_viz.bar(DF, x="大区", y="销售额"),
                                 eazy_data_viz.kpi(DF, value="销售额")])
-    assert [c["id"] for c in a["page"]["charts"]] == ["eazy-0", "eazy-1"]
+    _ids = [c["id"] for c in a["page"]["charts"]]
+    # 形如 eazy-<看板指纹>-<位置>：同一看板稳定，不同看板不撞车
+    assert all(_i.startswith("eazy-") for _i in _ids), _ids
+    assert len(set(_ids)) == 2, _ids
+    assert _ids[0] != _ids[1]
+
+    # 不同看板（同一页面挂多个 streamlit_dashboard）的 id 不能重复
+    other = _render.build_fragment([eazy_data_viz.bar(DF, x="大区", y="销售额", title="另一个看板")])
+    other_ids = [c["id"] for c in other["page"]["charts"]]
+    assert not (set(_ids) & set(other_ids)), (_ids, other_ids)
     assert _json.dumps(a["page"], sort_keys=True) == _json.dumps(b["page"], sort_keys=True), \
         "同一批数据两次构建的 page 不一致：v2 会判定 data 变化并重挂组件"
 

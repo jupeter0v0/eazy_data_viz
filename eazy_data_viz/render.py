@@ -11,6 +11,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import html as _html
 import io
 import json
@@ -401,6 +402,15 @@ html[data-theme=dark] .eazy-kpi-delta.eazy-down{background:rgba(242,139,130,.14)
 /* 数据条：色条画在单元格背景上，数值文字用 span 压在条上层 */
 .eazy-table td.eazy-bar-cell{background-repeat:no-repeat}
 .eazy-table .eazy-bar-val{position:relative;z-index:1}
+/* 可点单元格（联动的来源）：手型光标 + hover 底色，提示「点了能筛图」 */
+.eazy-table td.eazy-cell-link{cursor:pointer}
+.eazy-table tbody td.eazy-cell-link:hover{background-color:var(--pv-surface-3);color:var(--pv-primary)}
+/* 表格发起联动时命中的行：一层半透明主色蒙层（inset 阴影，压在数据条之上，深浅色主题都成立）
+   + 首列左侧竖条；不用 background-color，否则会盖掉数据条的 background-image */
+.eazy-table tbody tr.eazy-row-hit td{box-shadow:inset 0 0 0 9999px rgba(26,115,232,.08)}
+.eazy-table tbody tr.eazy-row-hit td:first-child{
+  box-shadow:inset 3px 0 0 var(--pv-primary),inset 0 0 0 9999px rgba(26,115,232,.08),
+    8px 0 8px -4px var(--pv-scrim)}
 /* hover 覆盖斑马纹底色（含固定首列），但保留数据条的 background-image */
 .eazy-table tbody tr:hover td,.eazy-table.eazy-table-stripe tbody tr:hover td{background-color:var(--pv-surface-3)}
 .eazy-table .num{text-align:right;font-variant-numeric:tabular-nums}
@@ -560,6 +570,32 @@ def streamlit_show(charts, cols=2, title=None, desc=None, theme=None, palette=No
     return "v1"
 
 
+def _assign_ids(specs):
+    """给每张图分配「稳定」且「全局唯一」的 id。
+
+    Chart 构造时用的是全局自增 id（c1、c2…），每次 rerun 都会变，
+    components.v2 会因此判定 data 变化、整块重挂组件，导致联动/下钻状态被清空；
+    所以真正渲染时要重新赋值。
+
+    但只按位置（eazy-0、eazy-1…）也不够：一个页面里挂多个
+    streamlit_dashboard 时，每个组件都从 eazy-0 开始编号，id 会跳组件撞车。
+    联动里的 sourceId 一旦撞上其它看板里的图，那张图就会误以为自己是发起者而不过滤
+    （表格点单元格、多看板互联都会失果）。
+
+    这里用「看板内容指纹 + 位置」：同一看板 rerun 前后指纹不变（数据不变就不重挂），
+    不同看板指纹几乎必定不同。指纹取自 spec 本身（排除 id）。
+    """
+    h = hashlib.sha1()
+    for s in specs:
+        payload = {k: v for k, v in s.items() if k != "id"}
+        h.update(json.dumps(payload, sort_keys=True, ensure_ascii=False,
+                            default=str).encode("utf-8"))
+        h.update(b"\x00")
+    tag = h.hexdigest()[:6]
+    for i, s in enumerate(specs):
+        s["id"] = "eazy-%s-%d" % (tag, i)
+
+
 def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None,
                palette=None):
     """把一组 Chart 组装成一个完整 HTML 文档字符串。
@@ -592,11 +628,7 @@ def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None
         data_store[ref] = payload
 
     specs = [c.spec for c in charts]
-    # 按位置固定 id：Chart 构造时用的是全局自增 id（c1、c2…），每次 rerun 都会变，
-    # components.v2 会因此判定 data 变化、整块重挂组件，导致联动/下钻状态被清空。
-    # 这里统一按位置覆盖成稳定 id，rerun 前后 data 完全一致，组件就不再重挂。
-    for _i, _s in enumerate(specs):
-        _s["id"] = "eazy-%d" % _i
+    _assign_ids(specs)
     has_filters = any(s.get("link") for s in specs)
 
     header = _appbar_html(title, desc, palette, specs)
@@ -726,11 +758,7 @@ def build_fragment(charts, title=None, desc=None, cols=None, theme=None, palette
         data_store[ref] = payload
 
     specs = [c.spec for c in charts]
-    # 按位置固定 id：Chart 构造时用的是全局自增 id（c1、c2…），每次 rerun 都会变，
-    # components.v2 会因此判定 data 变化、整块重挂组件，导致联动/下钻状态被清空。
-    # 这里统一按位置覆盖成稳定 id，rerun 前后 data 完全一致，组件就不再重挂。
-    for _i, _s in enumerate(specs):
-        _s["id"] = "eazy-%d" % _i
+    _assign_ids(specs)
     has_filters = any(s.get("link") for s in specs)
 
     header = _appbar_html(title, desc, palette, specs)

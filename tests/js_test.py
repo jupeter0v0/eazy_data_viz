@@ -40,7 +40,7 @@ TEST_JS = r"""
   try {
 
   // ---------------- 纯逻辑 ----------------
-  ok('charts-count', EazyViz.charts.length === 19, EazyViz.charts.length);
+  ok('charts-count', EazyViz.charts.length === 20, EazyViz.charts.length);
   ok('dataStore', Object.keys(EazyViz.dataStore).length >= 1);
   ok('fmt-compact', core0.fmtValue(12345678, 'compact') === '1235万', core0.fmtValue(12345678, 'compact'));
   ok('fmt-percent', core0.fmtValue(12.5, 'percent') === '12.5%', core0.fmtValue(12.5, 'percent'));
@@ -161,6 +161,12 @@ TEST_JS = r"""
       ok('kpi-html-' + c.index, /总销售额|平均|KPI 进阶/.test(c.el.innerHTML), c.el.innerHTML.slice(0, 30));
       return;
     }
+    // 表格/瓦片等 HTML 图没有 ECharts option，单独断言它们渲染出了内容
+    if (c.spec.type === 'table') {
+      ok('table-html-' + c.index, c.el.querySelectorAll('tbody tr').length > 0,
+         c.el.querySelectorAll('tbody tr').length);
+      return;
+    }
     var opt = core0.buildOption(c.spec, c.data, c.state, c.theme);
     ok('option-' + c.spec.type, opt && opt.series && opt.series.length >= 1, c.spec.type);
   });
@@ -231,6 +237,56 @@ TEST_JS = r"""
   });
   steps.push(function () {
     ok('link-cleared', Object.keys(EazyViz.links).length === 0, JSON.stringify(EazyViz.links));
+  });
+
+  // ---------------- 交互：表格 ↔ 图表 双向联动 ----------------
+  var tbl = chart(19);
+  var tblCat = null, tblVal = null;
+  function cellOf(col) {
+    var tds = tbl.el.querySelectorAll('td[data-eazy-cell]');
+    for (var i = 0; i < tds.length; i++) {
+      if (tds[i].getAttribute('data-eazy-cell') === col) return tds[i];
+    }
+    return null;
+  }
+  function fire(el) {
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  }
+  steps.push(function () {
+    var cell = cellOf('大区');
+    ok('tbl-cell-exists', !!cell);
+    ok('tbl-cell-attr', !!cell && cell.getAttribute('data-eazy-val') === cell.textContent.trim(),
+       cell && (cell.getAttribute('data-eazy-val') + '/' + cell.textContent.trim()));
+    // 数值列不该变成可点的联动源
+    var numCell = tbl.el.querySelector('td.eazy-bar-cell');
+    ok('tbl-num-cell-not-link', !!numCell && !numCell.hasAttribute('data-eazy-cell'));
+    if (cell) fire(cell);
+  });
+  steps.push(function () {
+    var lk = (EazyViz.links || {}).g1 || null;
+    ok('tbl-link-set', !!lk && lk.sourceId === tbl.spec.id && lk.dim === '大区', JSON.stringify(lk));
+    ok('tbl-chart-filtered', !!c1.state.filters['大区'], JSON.stringify(c1.state.filters));
+    ok('tbl-row-hit', tbl.el.querySelectorAll('tr.eazy-row-hit').length > 0,
+       tbl.el.querySelectorAll('tr.eazy-row-hit').length);
+    ok('tbl-keeps-rows', tbl.el.querySelectorAll('tbody tr').length === 5,
+       tbl.el.querySelectorAll('tbody tr').length);
+    var cell = cellOf('大区');
+    if (cell) fire(cell);
+  });
+  steps.push(function () {
+    ok('tbl-link-cleared', !(EazyViz.links || {}).g1, JSON.stringify(EazyViz.links || {}));
+    ok('tbl-hit-cleared', tbl.el.querySelectorAll('tr.eazy-row-hit').length === 0);
+    var gd = core0.groupBy(core0.rowsOf(c1.data), [c1.spec.roles.x], c1.spec.roles.y, 'sum');
+    tblCat = gd[0].key; tblVal = gd[0].value;
+    clickCat(c1, tblCat, tblVal);
+  });
+  steps.push(function () {
+    ok('tbl-filtered-by-chart', !!tbl.state.filters['产品'], JSON.stringify(tbl.state.filters));
+    ok('tbl-no-hit-when-target', tbl.el.querySelectorAll('tr.eazy-row-hit').length === 0,
+       tbl.el.querySelectorAll('tr.eazy-row-hit').length);
+    var tb = document.querySelector('[data-eazy-toolbar="19"]');
+    ok('tbl-toolbar-hint', !!tb && /单元格/.test(tb.textContent), tb && tb.textContent.slice(0, 30));
+    clickCat(c1, tblCat, tblVal);
   });
 
   // ---------------- KPI 卡片 ----------------
@@ -345,6 +401,9 @@ def build_page():
             source="出发城市", target="到达城市", value="件数", title="城市飞线"),
         eazy_data_viz.bar(df, x="渠道", y="销售额", drill=["渠道", "产品"], link="g1",
                            title="下钻 + 联动"),
+        eazy_data_viz.table(df, columns=["大区", "产品", "销售额"], limit=5, index=True,
+                            total=True, bar="销售额", link="g1", height=360,
+                            title="明细联动表"),
     ]
     # 中文单位：链式 unit() 只写进 spec，不影响页面里的图表数量
     _u1 = eazy_data_viz.bar(df, x="大区", y="销售额").unit("万")

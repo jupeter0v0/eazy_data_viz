@@ -248,6 +248,22 @@ def t_total_numeric_first():
     assert "eazy-total-label" in _page(c2)
 
 
+def t_link_source():
+    """表格当联动源：spec 带 link，CSS/JS 里有可点单元格与命中行高亮。"""
+    tbl = eazy_data_viz.table(DF, columns=COLS, link="g1")
+    assert tbl.spec.get("link") == "g1", tbl.spec.get("link")
+    assert eazy_data_viz.table(DF, columns=COLS).spec.get("link") is None
+
+    page = _page(tbl)
+    css = page.split("</style>", 1)[0]
+    assert ".eazy-table td.eazy-cell-link{cursor:pointer}" in css
+    assert ".eazy-table tbody tr.eazy-row-hit td" in css
+    # 服务端不做表格渲染，但内联的 JS 模板必须带上可点单元格的 data 属性
+    assert "data-eazy-cell" in page
+    assert "data-eazy-val" in page
+    assert "eazy-row-hit" in page
+
+
 def t_page_dark():
     """深色主题：斑马纹 / 合计行 / 数据条都用主题变量或调深后的 rgba。"""
     page = _page(

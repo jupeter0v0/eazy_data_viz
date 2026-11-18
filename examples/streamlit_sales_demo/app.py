@@ -18,6 +18,7 @@
 * **下钻**：大区 → 省份 → 客户；
 * **中文本地化**：``.unit("万")`` 纵轴缩略、``年月`` 自动显示「3月 / 2026年3月」；
 * **中国式报表**：``table(total=True, index=True, bar="销售额")`` 合计行 + 序号列 + 数据条；
+* **表格 ↔ 图表 双向联动**：``link="biz"``，点表格里的维度单元格即可筛同组图表；
 * **可选的双向事件**：勾选侧栏「点图回传 Python」后传 ``on_select``，点击触发一次 rerun。
 """
 
@@ -179,25 +180,26 @@ charts = [
     edv.geo_map(df, region="省份", value="销售额", link="biz", theme=theme,
                 title="各省销售额"),
     # TOP 客户：自己算好前 10 再画。组件内置的 top_n 会补一根「其他」，
-    # 排行图里那根没有名字的柱子反而挡视线；排序用升序，横向条形图会把
-    # 第一行画在最下面，升序看起来才是「最大在最上面」。
+    # 「其他」是剩下上千个客户的和，比第一名还长，会把横轴撑爆；排序用升序，
+    # 横向条形图会把第一行画在最下面，升序看起来才是「最大在最上面」。
+    # 这里是**预聚合快照**，没有「大区」列，所以不参与联动过滤（图注里已说明）。
     edv.bar(
         df.groupby("客户简称", as_index=False)["销售额"].sum()
           .nlargest(10, "销售额").sort_values("销售额"),
-        x="客户简称", y="销售额", horizontal=True, link="biz", theme=theme,
+        x="客户简称", y="销售额", horizontal=True, theme=theme,
         title="销售额 TOP 10 客户",
     ).unit("万"),
     # 双轴：柱子看销售额、折线看回款率（%）
-    edv.combo(region_agg, x="大区", bar="销售额", line="回款率", theme=theme,
-              title="大区销售额与回款率"),
+    edv.combo(region_agg, x="大区", bar="销售额", line="回款率", link="biz",
+              theme=theme, title="大区销售额与回款率"),
     # 占比：订单类型
     edv.pie(df, names="订单类型", values="销售额", donut=True, labels=False,
-            theme=theme, title="订单类型占比").unit("万"),
+            link="biz", theme=theme, title="订单类型占比").unit("万"),
 ]
 
 st.subheader("经营分析")
-st.caption("趋势 / 大区 / 地图 / TOP 客户 四张图共享 `link=\"biz\"`：点任意一根柱子，其余图会跟着过滤；"
-           "再点一次取消。堆叠图还支持下钻（大区 → 省份 → 客户）。")
+st.caption("趋势 / 大区 / 地图 / 双轴 / 饼图 五张图共享 `link=\"biz\"`：点任意一根柱子，其余图会跟着过滤"
+           "（TOP 10 客户是预聚合快照，不参与）；再点一次取消。堆叠图还支持下钻（大区 → 省份 → 客户）。")
 
 dash_kwargs = {"cols": 2, "title": None, "theme": theme}
 if trigger:
@@ -214,8 +216,10 @@ if trigger and result.select:
 # 中国式报表
 # ---------------------------------------------------------------------------
 st.subheader("销售明细（中国式报表）")
-st.caption("`table(total=True, index=True, bar=\"销售额\")`：表尾合计、固定序号列、单元格数据条、"
-           "斑马纹；只统计实际渲染的前 20 行。")
+st.caption("`table(total=True, index=True, bar=\"销售额\", link=\"biz\")`：表尾合计、固定序号列、"
+           "单元格数据条、斑马纹；只统计实际渲染的前 20 行。"
+           "**点表里的「大区 / 省份 / 客户 / 订单类型」单元格**，上面 6 张图会一起被筛，"
+           "命中的行高亮显示，再点同一格取消。")
 
 detail = df.sort_values("销售额", ascending=False)
 tbl = edv.table(
@@ -223,6 +227,7 @@ tbl = edv.table(
     columns=["下单日期", "大区", "省份", "客户", "产品大类", "订单类型", "数量",
              "销售额", "已回款", "应收余额"],
     limit=20, total=True, index=True, bar="销售额", theme=theme,
+    link="biz",  # 表格既是联动的接收方，也能点单元格反过来筛图
     height=800, title=None,
 )
 # 表格是「固定高度 + 内部滚动」的 HTML 组件，v2 默认给 500px，20 行会被裁掉

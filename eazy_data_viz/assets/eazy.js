@@ -1663,6 +1663,15 @@
     return fallback;
   }
 
+  // 按元素归属反查图表：明细表的单元格点击没有 chart index，只能靠 DOM 包含关系定位。
+  function chartOfEl(el) {
+    for (var i = 0; i < EazyViz.charts.length; i++) {
+      var c = EazyViz.charts[i];
+      if (c && c.el && c.el.contains && c.el.contains(el)) return c;
+    }
+    return null;
+  }
+
   // 按「点击发生的那块看板根节点」定位图表：多个看板的 chart index 都从 0 开始，
   // 只用 chartByIndex 会在多看板页面里点错图（面包屑/返回指向另一块看板）。
   function chartFor(el, idx) {
@@ -1687,6 +1696,9 @@
       }
     }
     c.state.filters = f;
+    // 把本组的联动条件也记到 state 上：明细表据此知道「这条联动是不是我发起的」，
+    // 是的话就不筛行，而是把命中的行高亮出来（和图表「自己不过滤、只高亮」一致）。
+    c.state.link = (c.spec.link && EazyViz.links && EazyViz.links[c.spec.link]) || null;
   }
 
   // 面包屑每一段显示成「维度:值」（例如 地区:北京）。
@@ -1723,7 +1735,9 @@
       html += '<span class="eazy-hint">' +
         (depthNow >= spec.drill.length ? '已到最末级' : ('点击图形下钻到「' + esc(spec.drill[depthNow]) + '」')) +
         '</span>';
-    } else if (spec.link && !HTML_BUILDERS[spec.type]) {
+    } else if (spec.link && HTML_BUILDERS[spec.type]) {
+      html += '<span class="eazy-hint" style="margin-left:0">点击单元格可按该列联动同组图表</span>';
+    } else if (spec.link) {
       html += '<span class="eazy-hint" style="margin-left:0">点击图形可联动同组图表</span>';
     }
     el.innerHTML = html;
@@ -2039,6 +2053,32 @@
           }
           var gl = el.getAttribute('data-clear-link');
           if (gl) { clearLink(gl); return; }
+          // 明细表单元格 → 联动：把「列 = 单元格值」写进联动组，图表跟着筛。
+          // 点同一格再点一次 = 取消（setLink 内部做 toggle）。
+          var cellDim = el.getAttribute('data-eazy-cell');
+          if (cellDim !== null && cellDim !== undefined && cellDim !== '') {
+            var cellChart = chartOfEl(el);
+            if (cellChart && cellChart.spec && cellChart.spec.link) {
+              var cellVal = el.getAttribute('data-eazy-val');
+              setLink(cellChart.spec.link, cellDim, cellVal, cellChart);
+              syncFilterBar();
+              // 表格单元格点击同样是「选中了一个数据点」：开了 on_select 就回传 Python
+              if (EazyViz.onSelect) {
+                try {
+                  EazyViz.onSelect({
+                    chart: cellChart.spec.id,
+                    title: cellChart.spec.title || '',
+                    type: 'table',
+                    dim: cellDim,
+                    value: cellVal,
+                    drill: [],
+                    link: EazyViz.links[cellChart.spec.link] || null
+                  });
+                } catch (err) { /* 回调异常不影响渲染 */ }
+              }
+            }
+            return;
+          }
         }
         el = el.parentNode;
       }
@@ -2113,6 +2153,7 @@
 
   // 供外部（streamlit 回调 / 自定义工具栏）主动重置下钻
   EazyViz.resetDrill = resetDrill;
+  EazyViz.chartOfEl = chartOfEl;
 
   EazyViz.init = function (page, rootEl) {
     EazyViz.page = page || {};

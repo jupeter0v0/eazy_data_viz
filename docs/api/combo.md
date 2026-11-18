@@ -21,6 +21,7 @@ eazy_data_viz.combo(
     height=400,
     theme="light",
     zoom="auto",
+    link=None,
     max_rows=200000,
 ) -> Chart
 ```
@@ -42,6 +43,7 @@ eazy_data_viz.combo(
 | `height` | `int` | `400` | 否 | 画布高度（默认 400） |
 | `theme` | `str` | `'light'` | 否 | light / dark |
 | `zoom` | `bool \| str` | `'auto'` | 否 | 类目多时缩放条 |
+| `link` | `str \| None` | `None` | 否 | 联动组名（1.4.0 起支持） |
 | `max_rows` | `int` | `200000` | 否 | 最大绘制行数 |
 
 ## 参数详解
@@ -128,9 +130,17 @@ eazy_data_viz.combo(
 
 ### `zoom` — 类目多时缩放条（`bool | str`，默认 `'auto'`）
 
-- **作用**：`"auto"`：类目数 >15 时自动开启 dataZoom；`True` 强制开启；`False` 关闭。 缩放条作用于横轴，方便类目多时拖拽查看。 combo 没有 drill/link 参数。
+- **作用**：`"auto"`：类目数 >15 时自动开启 dataZoom；`True` 强制开启；`False` 关闭。 缩放条作用于横轴，方便类目多时拖拽查看。 combo 没有 drill 参数。
 - **建议**：月份 12 个默认不开启；城市/省份多时保持 auto。
 - **示例**：`zoom=True`
+
+### `link` — 联动组名（`str | None`，默认 `None`，1.4.0 起支持）
+
+- **作用**：给一组图表起一个组名（例如 `"biz"`），同组图表已聊动：点一张图的图形/`table` 的单元格，
+  其余图按该维度过滤；发起者自己不过滤（与`bar`/`line` 一致）。参与联动要求数据里含有对应的维度列。
+- **建议**：同一页面的图用同一个组名；不需要联动就不要传（看板不渲染顶栏工具栏）。
+- **示例**：`link="biz"`
+- **限制**：combo 仍不支持 `drill`（逐级下钻）；起源不能是 combo 自己（combo 底层的柱/线可点击下钻而非联动）。
 
 ### `max_rows` — 最大参与绘制的行数（`int`，默认 `200000`）
 
@@ -144,8 +154,8 @@ eazy_data_viz.combo(
 
 本图的 `spec` 额外包含：
 
-- `roles`：`{"x": x, "y": bar, "y2": line}`；`legend=True`、`labels=False`、`drill=None`、`link=None`。
-- combo 没有 `color` / `stack` / `horizontal` / `percent` / `sort` / `top_n` / `xlim` / `ylim` / `drill` / `link` / `section` 参数。
+- `roles`：`{"x": x, "y": bar, "y2": line}`；`legend=True`、`labels=False`、`drill=None`、`link` 取传入值。
+- combo 没有 `color` / `stack` / `horizontal` / `percent` / `sort` / `top_n` / `xlim` / `ylim` / `drill` / `section` 参数。
 - 右轴标题固定为 line 列名；`ytitle` 只写左轴。
 
 ## 完整示例
@@ -257,7 +267,7 @@ chart.save("examples/output/combo_5.html")
 - **combo 为什么没有第二个 y 轴标题参数？** `ytitle` 只作用于左轴（bar 列）；右轴标题固定读取 line 列名，无法单独改。 需要自定义右轴名称时，把 line 列名改成想要的名称（再在数据里对应）。
 - **两个指标量级差很多怎么办？** 双轴本来就是各自缩放，视觉高度不具可比性；请在副标题里写清“左轴=…，右轴=…”。 若两个指标量纲相同，直接用 line 双系列更诚实。
 - **combo 能堆叠柱子吗？** 不能。combo 固定一根柱 + 一条线，没有 stack 参数。 需要堆叠柱 + 折线请用 dashboard 组合 bar(stack=True) 与 line。
-- **combo 能联动/下钻吗？** 签名没有 drill 与 link 参数；需要联动请把 combo 与其它图放进 dashboard，或改用 bar/line。
+- **combo 能联动/下钻吗？** 1.4.0 起可以传 `link="G"` 参与联动（受同组图表筛选）；下钻仍不支持，需要下钻请用 bar。
 
 ## 相关图表
 

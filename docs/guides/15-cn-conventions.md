@@ -176,7 +176,7 @@ chart.save("examples/output/cn_table.html")
 * **`unit` 不做自动降级**：强制单位后，数值再小也按该单位显示（`0.16万`）。单位要跟数据量级匹配，见 1.3。
 * **`fmt` 优先**：`fmt` 为 `raw` / `percent` / `thousands` / `currency` 时 `unit` 不生效，只有表格的 `thousands` 例外。
 * **`stripe` 默认开启**：1.2.0 起旧图会多一层很浅的斑马纹；要还原旧观感传 `stripe=False`。
-* **Streamlit v2 默认不 rerun**：1.3.0 起，不传 `on_select` 时点击、联动、下钻全部在浏览器内完成，零次脚本 rerun（`result.select` 恒为 `None`）；传了 `on_select` 才会回传一次。1.2.0 修复的是「图表 id 每次 rerun 漂移导致整块重挂、状态清零」，现在 id 按位置固定、状态保留。完整说明见 [07 · Streamlit 集成](07-streamlit.md) 的「点击图表会不会 rerun？（v2 必读）」。
+* **Streamlit v2 默认不 rerun**：1.3.0 起，不传 `on_select` 时点击、联动、下钻全部在浏览器内完成，零次脚本 rerun（`result.select` 恒为 `None`）；传了 `on_select` 才会回传一次。1.2.0 修复的是「图表 id 每次 rerun 漂移导致整块重挂、状态清零」，现在 id 稳定（1.4.0 起形如 `eazy-<看板指纹>-<位置>`）、状态保留。完整说明见 [07 · Streamlit 集成](07-streamlit.md) 的「点击图表会不会 rerun？（v2 必读）」。
 
 ## 下一篇 / 相关文档
 

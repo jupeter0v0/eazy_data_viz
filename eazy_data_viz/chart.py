@@ -1210,11 +1210,13 @@ def combo(
     height=400,
     theme="light",
     zoom="auto",
+    link=None,
     max_rows=_frame.MAX_ROWS,
 ):
     """柱线混合图（一根柱子 + 一条折线，双坐标轴）。
 
     ``zoom="auto"`` 在类目很多时自动开启缩放；``zoom=True`` 强制开启。
+    ``link`` 参与看板内的联动组（1.4.0 起）。
     """
     if bar is None or line is None:
         raise ValueError("combo 需要同时指定 bar=\"数值列\" 和 line=\"数值列\"。")
@@ -1239,7 +1241,7 @@ def combo(
         labels=False,
         zoom=zoom,
         drill=None,
-        link=None,
+        link=link,
         max_rows=max_rows,
     )
     _ensure_numeric(records, bar, "bar")

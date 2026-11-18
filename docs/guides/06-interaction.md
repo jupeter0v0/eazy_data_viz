@@ -227,10 +227,11 @@ table 嵌入的列: {'columns': ['日期', '销售额']}
 
 这是最容易踩的一条：
 
-| 图型 | 点击图形发起联动 | 接收联动过滤 |
+| 图型 | 发起联动 | 接收联动过滤 |
 | --- | --- | --- |
-| ECharts 系列（bar/line/pie/scatter/treemap/…） | ✅ | ✅ |
-| HTML 组件（kpi/table/progress/tile/wordcloud/group_kpi） | ❌ 点击无反应 | ✅（KPI 会按筛选后数据重算） |
+| ECharts 系列（bar/line/pie/scatter/treemap/…） | ✅ 点图形 | ✅ |
+| 明细表 `table`（1.4.0 起） | ✅ 点单元格 | ✅ 只留命中的行 |
+| HTML 组件（kpi/progress/tile/wordcloud/group_kpi） | ❌ 点击无反应 | ✅（KPI 会按筛选后数据重算） |
 | 图例区域 | ❌（只显隐系列） | — |
 
 验证方式：`kpi(link="G")` 作为接收方时，值会从全量合计变成“某大区合计”；
@@ -253,6 +254,41 @@ KPI 是否记录了 link: ['G', 'G', 'G']
 
 `dashboard.charts` 顺序与传参一致：柱图在第一个，两张 KPI 在后，三者都记录了 `link="G"`。
 浏览器里点“平板”柱形，两张 KPI 的数字会立即变成平板品类的合计。
+
+### 2.4 表格也能当联动源（1.4.0 起）
+
+给 `table(link="G")` 之后，表里的**维度列**（文本/日期列，数值列不算）会变成可点单元格：
+鼠标移上去是手型，点一下就把「列 = 该格的值」写进联动组，同组图表立刻被筛。
+
+```python
+tbl = edv.table(df, columns=["大区", "产品", "销售额"], limit=20,
+                index=True, total=True, bar="销售额", link="G")
+page = edv.dashboard(
+    edv.bar(df, x="大区", y="销售额", link="G"),
+    edv.line(df, x="月份", y="销售额", link="G"),
+    tbl, cols=2, title="表格 ↔ 图表 双向联动",
+)
+print("表格 link:", tbl.spec.get("link"))
+```
+
+```text
+表格 link: G
+```
+
+点表格里某个「大区」单元格之后：
+
+- 同组的柱图/折线按 `大区 = 华东` 过滤；
+- 表格**自己不过滤**，而是把命中的行高亮（左侧主色竖条 + 浅色蒙层），
+  方便你接着看「这几行是怎么构成的」；
+- 顶栏筛选条出现 `大区 = 华东 ×`，再点同一格或点 `×` 即取消；
+- 反过来点柱图，表格就只留该大区的行，底部提示会变成 `共 80 行，仅显示前 20 行`。
+
+要点：
+
+- 只有 `link` 已设置、且列是维度列时单元格才可点；数值列（含数据条列）不可点。
+- 点单元格同样会触发 `on_select`（`type` 为 `"table"`、带 `dim` / `value`），
+  Streamlit 里想把它回传 Python 才需要传 `on_select`。
+- 表格行的过滤发生在浏览器端，不会因为点单元格就 rerun 整个脚本。
 
 ## 3. 图例点选：只影响自己
 
