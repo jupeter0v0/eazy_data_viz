@@ -1614,6 +1614,24 @@
     try { return n.querySelectorAll(sel); } catch (e) { return document.querySelectorAll(sel); }
   }
 
+  // 按图形自己的根节点查找。多组件页面里 EazyViz.scope 只指向「最后挂载」的那个组件，
+  // 用 findOne 去别的组件里找工具条 / 筛选条会落空，面包屑与 chip 就永远不刷新。
+  function rootOfChart(c) {
+    try { return (c && c.el && c.el.getRootNode) ? c.el.getRootNode() : document; }
+    catch (e) { return document; }
+  }
+
+  // 当前页面上所有看板根节点（去重）；静态 HTML 只有 document 一个。
+  function chartRoots() {
+    var out = [], i, r;
+    for (i = 0; i < EazyViz.charts.length; i++) {
+      r = rootOfChart(EazyViz.charts[i]);
+      if (out.indexOf(r) < 0) out.push(r);
+    }
+    if (!out.length) out.push(scopeNode());
+    return out;
+  }
+
   // 一个页面上可以有多个 streamlit_dashboard（每个是一个 components v2 实例），
   // 它们共享 window.EazyViz，所以查找要按当前挂载点（EazyViz.scope）过一遍，
   // 否则点第二个看板的「代码」按钮会打开第一个看板的卡片。
@@ -1680,7 +1698,10 @@
   }
 
   function renderToolbar(c) {
-    var el = findOne('[data-eazy-toolbar="' + c.index + '"]');
+    var root = rootOfChart(c), el = null;
+    try { el = root.querySelector('[data-eazy-toolbar="' + c.index + '"]'); }
+    catch (e) { el = null; }
+    if (!el) el = findOne('[data-eazy-toolbar="' + c.index + '"]');
     if (!el) return;
     var spec = c.spec, html = '';
     if (spec.drill && spec.drill.length) {
@@ -1805,22 +1826,22 @@
   }
 
   function syncFilterBar() {
-    var el = findOne('#eazy-filters');
-    if (!el) return;
     var groups = Object.keys(EazyViz.links || {});
     var html = '<span class="eazy-filters-label">联动筛选</span>';
-    if (!groups.length) {
-      el.style.display = 'none';
-      el.innerHTML = html;
-      return;
-    }
     for (var i = 0; i < groups.length; i++) {
       var g = groups[i], link = EazyViz.links[g];
       html += '<span class="eazy-chip"><span>' + esc(link.dim) + ' = <b>' + esc(link.value) +
         '</b></span><span class="eazy-chip-x" data-clear-link="' + esc(g) + '" title="清除">×</span></span>';
     }
-    el.innerHTML = html;
-    el.style.display = '';
+    // 每个看板都有自己的筛选条：都刷一遍，别只刷最后挂载的那块。
+    var roots = chartRoots();
+    for (var k = 0; k < roots.length; k++) {
+      var el = null;
+      try { el = roots[k].querySelector('#eazy-filters'); } catch (e) { el = null; }
+      if (!el) continue;
+      el.innerHTML = html;
+      el.style.display = groups.length ? '' : 'none';
+    }
   }
 
   // 一个页面上可以挂多个看板，「重置下钻」只应该动当前这个看板：

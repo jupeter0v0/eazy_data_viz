@@ -2,6 +2,20 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## 1.3.2 — 2026-11-18
+
+### Streamlit 多组件页面：面包屑 / 返回 / 联动 chip 不刷新
+
+- 现象：一个页面里挂多个 `streamlit_dashboard()` 时（例如 KPI + 图表 + 明细表），点图下钻后
+  数据确实变了，但图表顶部的面包屑一直停在「全部」、不出现「返回」按钮、联动 chip 也不更新；
+  单文件 `to_html()` 导出没有这个问题。
+- 原因：`EazyViz.scope` 只指向**最后挂载**的组件（components v2 各自一个 ShadowRoot），
+  `renderToolbar()` / `syncFilterBar()` 用 `findOne()` 在 scope 里找
+  `[data-eazy-toolbar]` / `#eazy-filters`，找的是别的组件，自然找不到就直接返回了。
+- 修复：新增 `rootOfChart(c)` / `chartRoots()`，工具条按图形自己的根节点（`c.el.getRootNode()`）
+  查找；筛选条改为遍历页面上所有看板根节点各刷新一遍。
+- 顺带：`syncFilterBar()` 在没有联动时也会把各看板的筛选条正确隐藏。
+
 ## 1.3.1 — 2026-11-18
 
 ### 下钻 / 联动交互修复
