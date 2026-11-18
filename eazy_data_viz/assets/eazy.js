@@ -1645,6 +1645,20 @@
     return fallback;
   }
 
+  // 按「点击发生的那块看板根节点」定位图表：多个看板的 chart index 都从 0 开始，
+  // 只用 chartByIndex 会在多看板页面里点错图（面包屑/返回指向另一块看板）。
+  function chartFor(el, idx) {
+    var root = rootOf(el), fallback = null;
+    for (var i = 0; i < EazyViz.charts.length; i++) {
+      var c = EazyViz.charts[i];
+      if (c.index !== idx) continue;
+      if (!fallback) fallback = c;
+      if (root && c.el && root.contains && root.contains(c.el)) return c;
+      if (!root && inScope(c.el)) return c;
+    }
+    return fallback;
+  }
+
   function syncFilters(c) {
     var f = {};
     if (c.spec.link && EazyViz.links && EazyViz.links[c.spec.link]) {
@@ -1657,24 +1671,37 @@
     c.state.filters = f;
   }
 
+  // 面包屑每一段显示成「维度:值」（例如 地区:北京）。
+  function crumbLabel(entry) {
+    if (!entry) return '';
+    var d = (entry.dim === null || entry.dim === undefined) ? '' : String(entry.dim);
+    var v = (entry.value === null || entry.value === undefined) ? '' : String(entry.value);
+    return d ? (d + ':' + v) : v;
+  }
+
   function renderToolbar(c) {
     var el = findOne('[data-eazy-toolbar="' + c.index + '"]');
     if (!el) return;
     var spec = c.spec, html = '';
     if (spec.drill && spec.drill.length) {
+      var depthNow = c.state.drill.length;
       html += '<div class="eazy-crumb">';
-      html += '<button data-chart="' + c.index + '" data-crumb="0">全部</button>';
-      for (var i = 0; i < c.state.drill.length; i++) {
+      html += '<button data-chart="' + c.index + '" data-crumb="0"' +
+        (depthNow ? '' : ' class="cur"') + ' title="返回到「全部」">全部</button>';
+      for (var i = 0; i < depthNow; i++) {
         html += '<span class="sep">›</span>';
-        var cur = (i === c.state.drill.length - 1) ? ' class="cur"' : '';
-        html += '<button' + cur + ' data-chart="' + c.index + '" data-crumb="' + (i + 1) + '">' +
-          esc(c.state.drill[i].value) + '</button>';
+        var cur = (i === depthNow - 1) ? ' class="cur"' : '';
+        var label = crumbLabel(c.state.drill[i]);
+        html += '<button' + cur + ' data-chart="' + c.index + '" data-crumb="' + (i + 1) + '"' +
+          ' title="返回到「' + esc(label) + '」层">' + esc(label) + '</button>';
       }
       html += '</div>';
-      if (c.state.drill.length) {
+      if (depthNow) {
         html += '<button class="eazy-btn" data-back="' + c.index + '">↰ 返回</button>';
       }
-      html += '<span class="eazy-hint">点击图形逐级下钻</span>';
+      html += '<span class="eazy-hint">' +
+        (depthNow >= spec.drill.length ? '已到最末级' : ('点击图形下钻到「' + esc(spec.drill[depthNow]) + '」')) +
+        '</span>';
     } else if (spec.link && !HTML_BUILDERS[spec.type]) {
       html += '<span class="eazy-hint" style="margin-left:0">点击图形可联动同组图表</span>';
     }
@@ -1720,14 +1747,18 @@
     if (value === '其他') return;
 
     var drilled = false;
-    if (spec.drill && c.state.drill.length < spec.drill.length - 1) {
+    if (spec.drill && c.state.drill.length < spec.drill.length) {
       var depth = c.state.drill.length;
       if (spec.drill[depth] === xdim) {
         c.state.drill.push({ dim: xdim, value: value });
         drilled = true;
       }
     }
-    if (spec.link) {
+    // 带下钻的图：它发出的联动始终等于「当前最深一级的下钻条件」，回退时就不会残留旧层级；
+    // 纯联动图（没有下钻）：按点击切换联动。
+    if (spec.link && spec.drill) {
+      afterDrillChange(c);
+    } else if (spec.link) {
       setLink(spec.link, xdim, value, c);
     } else if (drilled) {
       renderChart(c);
@@ -1820,6 +1851,40 @@
     for (var j = 0; j < groups.length; j++) reRenderGroup(groups[j]);
   }
 
+  // 把「本图当前最深的下钻条件」同步成它发出的联动：
+  //   - 还有下钻：联动 = 最深一级的 {dim, value}（与面包屑当前层级一致）
+  //   - 已回到顶层：清掉本图自己发出的那条联动
+  // 返回是否改动过联动，调用方据此决定要不要重绘本组。
+  function applyDrillLink(c) {
+    if (!c || !c.spec || !c.spec.link || !EazyViz.links) return false;
+    var group = c.spec.link;
+    var drill = (c.state && c.state.drill) ? c.state.drill : [];
+    var cur = EazyViz.links[group];
+    if (drill.length) {
+      var last = drill[drill.length - 1];
+      var dim = (last.dim === null || last.dim === undefined) ? '' : String(last.dim);
+      var val = (last.value === null || last.value === undefined) ? '' : String(last.value);
+      if (!cur || cur.dim !== dim || cur.value !== val || cur.sourceId !== c.spec.id) {
+        EazyViz.links[group] = { dim: dim, value: val, sourceId: c.spec.id };
+        return true;
+      }
+      return false;
+    }
+    if (cur && cur.sourceId === c.spec.id) { delete EazyViz.links[group]; return true; }
+    return false;
+  }
+
+  // 下钻状态改变后的统一收尾：同步联动（需要时重绘本组，本图也在组内）→ 否则只重绘本图 → 刷新筛选条。
+  function afterDrillChange(c) {
+    var changed = applyDrillLink(c);
+    if (changed && c.spec && c.spec.link) {
+      reRenderGroup(c.spec.link);
+    } else {
+      renderChart(c);
+    }
+    syncFilterBar();
+  }
+
   // 重置下钻：把当前看板里所有图的 drill 清空（并清掉它们自己发出的联动），
   // 回到第一层。返回被重置的图数，没有下钻时不重绘。
   function resetDrill(el) {
@@ -1834,7 +1899,7 @@
     if (!hit.length) return 0;
     for (i = 0; i < hit.length; i++) {
       hit[i].state.drill = [];
-      dropOwnLinks(hit[i]);
+      applyDrillLink(hit[i]);
     }
     for (i = 0; i < EazyViz.charts.length; i++) {
       var ch = EazyViz.charts[i];
@@ -1847,19 +1912,17 @@
   }
 
   function handleCrumb(c, depth) {
-    if (!c) return;
+    if (!c || !c.state) return;
+    var n = (c.state.drill || []).length;
+    depth = Math.max(0, Math.min(Number(depth) || 0, n));
     c.state.drill = c.state.drill.slice(0, depth);
-    if (!c.state.drill.length) dropOwnLinks(c);
-    renderChart(c);
-    syncFilterBar();
+    afterDrillChange(c);
   }
 
   function handleBack(c) {
-    if (!c || !c.state.drill.length) return;
+    if (!c || !c.state || !c.state.drill || !c.state.drill.length) return;
     c.state.drill.pop();
-    if (!c.state.drill.length) dropOwnLinks(c);
-    renderChart(c);
-    syncFilterBar();
+    afterDrillChange(c);
   }
 
   function resizeAll() {
@@ -1917,12 +1980,19 @@
   }
 
   function bindGlobalEvents() {
-    scopeNode().addEventListener('click', function (e) {
+    var node = scopeNode();
+    // 关键：Streamlit 组件在同一 ShadowRoot 上可能重复调用 init()，
+    // 若每次都 addEventListener，一个「返回」点击会被处理多次（回退多级甚至跳空），
+    // 联动也会被 setLink 反复 toggle。这里保证同一个挂载点只绑定一次。
+    if (node.__eazyGlobalBound) return;
+    node.__eazyGlobalBound = true;
+
+    node.addEventListener('click', function (e) {
       var el = e.target;
       while (el && el !== document) {
         if (el.getAttribute) {
           if (el.hasAttribute('data-crumb')) {
-            handleCrumb(chartByIndex(Number(el.getAttribute('data-chart'))),
+            handleCrumb(chartFor(el, Number(el.getAttribute('data-chart'))),
               Number(el.getAttribute('data-crumb')));
             return;
           }
@@ -1943,7 +2013,7 @@
             return;
           }
           if (el.hasAttribute('data-back')) {
-            handleBack(chartByIndex(Number(el.getAttribute('data-back'))));
+            handleBack(chartFor(el, Number(el.getAttribute('data-back'))));
             return;
           }
           var gl = el.getAttribute('data-clear-link');
@@ -1953,7 +2023,7 @@
       }
     });
 
-    scopeNode().addEventListener('change', function (e) {
+    node.addEventListener('change', function (e) {
       var el = e.target;
       if (el && el.getAttribute && el.getAttribute('data-eazy-palette') !== null) {
         setPalette(el.value);
@@ -2108,6 +2178,11 @@
     buildTreemapTree: buildTreemapTree,
     onChartClick: onChartClick,
     setLink: setLink,
+    applyDrillLink: applyDrillLink,
+    afterDrillChange: afterDrillChange,
+    handleCrumb: handleCrumb,
+    handleBack: handleBack,
+    renderToolbar: renderToolbar,
     setTheme: setTheme,
     setPalette: setPalette,
     PALETTES: PALETTES,
