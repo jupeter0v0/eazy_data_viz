@@ -208,6 +208,8 @@
   // 扩展图表（table / group_kpi 等）内部调用 fmtValue 时只传 fmt，
   // 用这个模块变量兜底当前正在构建的 spec，才能拿到 unit
   var activeSpec = null;
+  // 当前渲染时的容器宽度（px）：窄卡片里图例要挪到底部、字号要收，靠它判断；0 = 未知
+  var activeWidth = 0;
 
   function unitInfo(spec) {
     var u = spec && spec.unit;
@@ -926,6 +928,9 @@
       if (sel !== null && sel !== undefined && it.name !== sel) item.itemStyle = { opacity: 0.3 };
       return item;
     });
+    // 窄卡片（手机）里外置标签会和环、图例互相压，改成「关标签 + 底部横排图例」
+    var narrow = activeWidth > 0 && activeWidth < 430;
+    var showLabels = spec.labels !== false && !narrow;
     return {
       tooltip: (function () {
         var tip = tooltipBox(theme);
@@ -936,29 +941,38 @@
         };
         return tip;
       })(),
-      legend: {
+      legend: narrow ? {
+        // 窄屏饼图图例：放到底部并允许换行（plain）。
+        // scroll 模式下 6 个分类会只显示前 4 个再出现「1/2」翻页箭头，底部就两个小字还看不全。
+        show: spec.legend !== false, type: 'plain', orient: 'horizontal',
+        left: 'center', bottom: 2, width: '94%', itemWidth: 9, itemHeight: 7,
+        itemGap: 6, textStyle: { color: theme.subtext, fontSize: 9.5 },
+        selected: state.legendSel || undefined
+      } : {
         show: spec.legend !== false, type: 'scroll', orient: 'vertical',
         right: 6, top: 'middle', itemWidth: 10, itemHeight: 8,
         textStyle: { color: theme.subtext, fontSize: 11 },
         selected: state.legendSel || undefined
       },
+      __legendFixed: narrow,
       toolbox: makeToolbox(theme),
       series: [{
         type: 'pie',
-        radius: spec.donut ? ['46%', '70%'] : ['0%', '68%'],
-        center: ['38%', '52%'],
+        radius: narrow ? (spec.donut ? ['28%', '60%'] : ['0%', '60%'])
+                       : (spec.donut ? ['46%', '70%'] : ['0%', '68%']),
+        center: narrow ? ['50%', '44%'] : ['38%', '52%'],
         avoidLabelOverlap: true,
         minAngle: 2,
         itemStyle: { borderColor: theme.bg, borderWidth: 2 },
         label: {
-          show: spec.labels !== false,
+          show: showLabels,
           // 设了换算单位时，饼图标签带出「数值 + 单位」和占比，否则沿用「名称 + 百分比」
-          formatter: spec.labels === false ? '{b}' : (unitInfo(spec) ? function (p) {
+          formatter: showLabels ? (unitInfo(spec) ? function (p) {
             return p.name + '\n' + fmtValue(p.value, spec.fmt, spec) + '（' + p.percent + '%）';
-          } : '{b}\n{d}%'),
-          color: theme.text, fontSize: 11, lineHeight: 15
+          } : '{b}\n{d}%') : '{b}',
+          color: theme.text, fontSize: narrow ? 10 : 11, lineHeight: 15
         },
-        labelLine: { show: spec.labels !== false, length: 10, length2: 8, lineStyle: { color: theme.axis } },
+        labelLine: { show: showLabels, length: 10, length2: 8, lineStyle: { color: theme.axis } },
         emphasis: { scale: true, scaleSize: 6, itemStyle: { shadowBlur: 12, shadowColor: 'rgba(0,0,0,.2)' } },
         data: dataArr
       }]
@@ -1515,7 +1529,18 @@
 
   // 图例排版：项目少时用 plain 自动换行（不会把最后一项截断成「1/2」），
   // 项目多时仍用 scroll；并按图例行数把 grid.top 往下推，避免压住纵轴名。
-  function legendRowInfo(opt) {
+  // 图例单项的像素宽度：图标 22px + 文字。中文按 1em、西文按 0.56em 估，
+  // 之前按「字符数 * 7」一律算宽，中文名会被低估 → 行数算少 → 图例压到纵轴名上。
+  function legendItemPx(name, fs) {
+    var t = String(name || '');
+    var px = 0;
+    for (var i = 0; i < t.length; i++) {
+      px += t.charCodeAt(i) > 255 ? fs : fs * 0.56;
+    }
+    return px + 22;
+  }
+
+  function legendRowInfo(opt, avail) {
     var names = [];
     if (opt.legend && opt.legend.data && opt.legend.data.length) {
       names = opt.legend.data.slice();
@@ -1525,9 +1550,12 @@
       });
     }
     if (!names.length) return null;
-    var chars = 0;
-    names.forEach(function (n) { chars += Math.min(String(n).length, 10) * 7 + 22; });
-    return { rows: Math.max(1, Math.ceil(chars / 440)) };
+    var fs = 11;
+    var total = 0;
+    names.forEach(function (n) { total += legendItemPx(n, fs) + 8; });
+    // 每行能放多少像素取决于容器宽度：手机卡片只有 ~150px，按 440 估会严重低估行数
+    var per = Math.max(120, avail || 440);
+    return { rows: Math.max(1, Math.ceil(total / per)) };
   }
 
   // 日期轴拆成两行（「2025年\n3月」）时，x 轴名与 grid 底部要再多让一行，
@@ -1549,14 +1577,34 @@
 
   function layoutLegend(opt) {
     if (!opt || !opt.legend || opt.legend.show === false) return opt;
-    var info = legendRowInfo(opt);
-    if (!info) return opt;
+    // 饼图 / 漏斗自带竖排图例（贴着卡片右侧），不要被通用排版改成顶部横排
+    if (opt.legend.orient === 'vertical' || opt.__legendFixed) return opt;
     var lg = opt.legend;
-    lg.width = '92%';
+    var w = activeWidth || 0;
+    // 极窄容器（手机竖屏一张卡片 ~150px、窄侧栏）：顶部图例能占掉三分之一高度，
+    // 改成底部一行可滚动图例，纵向空间全留给绘图区。
+    // 323px 这种「窄但还放得下两行图例」的情况仍留在顶部，底栏会和 x 轴刻度/轴名打架。
+    var narrow = w > 0 && w < 270;
+    lg.width = narrow ? '96%' : '92%';
     lg.left = 'center';
+    lg.itemGap = narrow ? 6 : 8;
+    lg.textStyle = { fontSize: narrow ? 10 : 11 };
+    if (narrow) {
+      lg.type = 'scroll';
+      lg.top = 'auto';
+      lg.bottom = 0;
+      if (opt.grid) {
+        opt.grid.top = 34;
+        opt.grid.bottom = 26;
+      }
+      return opt;
+    }
+    var info = legendRowInfo(opt, w ? w - 28 : 440);
+    if (!info) return opt;
     lg.top = 6;
-    lg.itemGap = 8;
-    if (info.rows <= 2) {
+    // 半屏 / 窄侧栏允许三行，桌面只放两行就转成可滚动，避免图例压到绘图区
+    var maxRows = (w > 0 && w < 720) ? 4 : 2;
+    if (info.rows <= maxRows) {
       lg.type = 'plain';
       // 图例占 6 + rows*20，再加纵轴名的 14px，所以 46 + rows*20
       if (opt.grid) opt.grid.top = 46 + info.rows * 20;
@@ -1578,7 +1626,8 @@
     });
     if (!opt) return null;
     opt.backgroundColor = 'transparent';
-    opt.textStyle = { fontFamily: FONT, color: theme.text, fontSize: 12 };
+    opt.textStyle = { fontFamily: FONT, color: theme.text,
+      fontSize: (activeWidth > 0 && activeWidth < 480) ? 11 : 12 };
     // 配色库：ECharts 默认按 option.color 循环取色，builder 自己指定过的优先
     if (!opt.color && theme.palette) opt.color = theme.palette.slice();
     opt.animation = true;
@@ -1743,15 +1792,88 @@
     el.innerHTML = html;
   }
 
+  // KPI 数字按容器宽度自动缩：手机上一张指标卡只有 ~120px 宽，
+  // 「47,771,40…」被裁掉就看不出数了，所以从设计字号起按 2px 递减直到放得下。
+  function fitTexts(root) {
+    if (!root || !root.querySelectorAll) return;
+    var els = root.querySelectorAll('.eazy-kpi-value,.eazy-metric .m-value');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      el.style.fontSize = '';
+      var cs = global.getComputedStyle ? global.getComputedStyle(el) : null;
+      var base = parseInt(cs ? cs.fontSize : '', 10) || 30;
+      var box = el.parentNode;
+      var room = (box && box.clientWidth) || 0;
+      if (!room) continue;
+      var size = base, guard = 0;
+      el.style.fontSize = size + 'px';
+      while (el.scrollWidth > room && size > 13 && guard < 24) {
+        size -= 2;
+        el.style.fontSize = size + 'px';
+        guard++;
+      }
+    }
+  }
+
+  // 窄屏把画布高度压到视口比例：390px 宽时 380px 高的图又细又长，
+  // 压到约 0.8 倍屏宽（不低于 210）更顺手；表格压到 60vh，免得一屏只看到表头。
+  function fitResponsiveHeights() {
+    var vw = global.innerWidth || 0;
+    var root = EazyViz.scope || document;
+    if (!root.querySelectorAll) return;
+    // 媒体查询看的是视口宽度，但 Streamlit 里组件可能只占半屏/侧栏：
+    // 组件实际宽度不够 720px 时也把栅格降成一列，否则卡片会挤成一条缝。
+    var grid = root.querySelector ? root.querySelector('.eazy-grid') : null;
+    if (grid) {
+      var gw = grid.clientWidth || 0;
+      if (!grid.getAttribute('data-eazy-cols')) {
+        grid.setAttribute('data-eazy-cols', grid.style.getPropertyValue('--eazy-cols') || '2');
+      }
+      var colsWanted = (gw > 0 && gw < 720) ? '1' : (EazyViz.page && EazyViz.page.cols
+        ? String(EazyViz.page.cols) : grid.getAttribute('data-eazy-cols'));
+      if (String(colsWanted) !== grid.style.getPropertyValue('--eazy-cols')) {
+        grid.style.setProperty('--eazy-cols', String(colsWanted));
+      }
+    }
+    if (!vw) return;
+    var narrow = vw <= 720;
+    var els = root.querySelectorAll('[data-eazy-chart]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      var h = parseInt(el.getAttribute('data-eazy-h') || '', 10);
+      if (!h) {
+        h = parseInt(el.style.height || '0', 10) || 0;
+        if (!h) continue; // KPI 等按内容自适应高度，不动
+        el.setAttribute('data-eazy-h', String(h));
+      }
+      var target = h;
+      if (narrow) {
+        target = el.querySelector('.eazy-table')
+          ? Math.round((global.innerHeight || 700) * 0.6)
+          : Math.max(210, Math.min(h, Math.round(vw * 0.8)));
+      }
+      if ((parseInt(el.style.height || '0', 10) || 0) !== target) el.style.height = target + 'px';
+      var card = el.parentNode;
+      while (card && card.classList && !card.classList.contains('eazy-card')) card = card.parentNode;
+      if (card) {
+        if (!card.getAttribute('data-eazy-mh')) card.setAttribute('data-eazy-mh', card.style.minHeight || '');
+        card.style.minHeight = narrow ? (target + 96) + 'px' : (card.getAttribute('data-eazy-mh') || '');
+      }
+    }
+  }
+
   function renderChart(c) {
     var spec = c.spec;
     var htmlBuilder = HTML_BUILDERS[spec.type];
+    // 先记下容器宽度，图例排版 / 字号收敛 / KPI 缩放都依赖它
+    activeWidth = c.el.clientWidth || 0;
     if (htmlBuilder) {
       // KPI / 明细表等 HTML 图：构建期间挂上 spec，扩展脚本里的 fmtValue 才能拿到 unit
       c.el.innerHTML = withSpec(spec, function () {
         return htmlBuilder(spec, c.data, c.state, c.theme);
       });
       renderToolbar(c);
+      fitTexts(c.el);
       return;
     }
     if (!c.ec) {
@@ -1771,6 +1893,7 @@
     c.ec.setOption(opt, true);
     renderToolbar(c);
     c._w = c.el.clientWidth;
+    c._narrow = activeWidth > 0 && activeWidth < 480;
   }
 
   function onChartClick(c, p) {
@@ -1963,12 +2086,22 @@
   function resizeAll() {
     for (var i = 0; i < EazyViz.charts.length; i++) {
       var c = EazyViz.charts[i];
-      if (!c.ec) continue;
       var w = c.el.clientWidth;
-      if (c._w === w) continue;
-      c._w = w;
-      c.ec.resize();
+      var narrow = w > 0 && w < 480;
+      // 宽度跨过断点：图例位置 / 字号 / grid 边距都要重算，光 resize 只是拉伸旧布局
+      if (c.ec && c._narrow !== undefined && c._narrow !== narrow) {
+        activeWidth = w;
+        c.ec.setOption(buildOption(c.spec, c.data, c.state, c.theme), true);
+      }
+      c._narrow = narrow;
+      if (c.ec) {
+        if (c._w === w) { continue; }
+        c._w = w;
+        c.ec.resize();
+      }
+      fitTexts(c.el);
     }
+    fitResponsiveHeights();
   }
 
   // ----- 卡片代码区（查看 / 复制生成这张图的 Python 代码）-----
@@ -2200,6 +2333,9 @@
     EazyViz.charts.forEach(function (c) { renderChart(c); });
     syncFilterBar();
     bindGlobalEvents();
+    // 窄屏（手机 / 窄侧栏）先把画布高度收一收，再让 ECharts 按新高度重排
+    fitResponsiveHeights();
+    EazyViz.charts.forEach(function (c) { if (c.ec) { c._w = 0; c.ec.resize(); } });
     document.documentElement.setAttribute('data-eazy-ready', '1');
     document.documentElement.setAttribute('data-eazy-count', String(EazyViz.charts.length));
     return EazyViz;

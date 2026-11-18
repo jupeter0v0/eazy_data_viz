@@ -250,6 +250,44 @@ page.show()
 - 控件放 `sidebar` 是习惯问题，不影响渲染；`st.form` 可以把多个控件合并成一次重跑，
   但提交后同样会重建 iframe。
 
+## 手机 / 窄容器
+
+1.4.0 起，看板会按**可用宽度**自己收，不必为手机单独写一套页面：
+
+- **`cols=4` 到手机上会被断点接管。** 栅格是 `repeat(var(--eazy-cols,N),minmax(0,1fr))`，
+  视口 `≤720px` 时 CSS 把 `--eazy-cols` 压成 2：KPI / 指标卡每行两张，
+  图表卡、表格卡用 `grid-column:1/-1` 各自占满一行。卡片类型靠 `:has(.eazy-kpi)` 判断，
+  老浏览器不支持 `:has()` 时退化成「所有卡片整行」，只是少了 KPI 并排。
+  另外，组件实际宽度不足 720px（宽视口 + 窄侧栏）时，`fitResponsiveHeights()` 会把
+  `--eazy-cols` 内联成 1 兜底。所以 `cols` 是宽屏下的「上限」，不是「保证」。
+- **排版看组件宽度，不看窗口宽度。** 同一块看板放进 `st.columns` 的一列或窄侧栏，
+  视口明明 1440px，卡片也只有 300px 宽。图例换行、KPI 字号、饼图要不要关标签都按组件宽度算。
+- **`height` 与自适应高度的关系。** 你传的 `height` 是宽屏下的目标高度；视口 `≤720px` 时
+  JS 会把它压到 `max(210, min(height, 视口宽 × 0.8))`，表格压到 `60vh`——手机上 380px 高的图
+  又细又长，压扁一点更好用。`page_height()` 仍按宽屏算，用它给的 iframe 高度在窄屏只是多留白，不会截断。
+- **饼图窄屏自己关标签。** 组件宽 `<430px` 时外置标签自动关掉（等同 `labels=False`），
+  图例移到底部、环径放大；hover 仍能看到数值和占比。
+- **表格窄屏横向滚动。** 列多时 `.eazy-table-wrap` 出现横向滚动条，`position:sticky` 的
+  表头（`top:0`）和首列（`left:0`）照常吸住，左右滑不会丢列名 / 行名。
+- **真要强制多列**：`streamlit_dashboard(charts, cols=3)` 只在宽屏生效；视口 `≤720px` 时
+  KPI 恒为两列、图表与表格恒为整行，库里没有「手机上也要 3 列」的开关。
+
+```python
+import eazy_data_viz as edv
+
+df = edv.sample_df()
+charts = [edv.kpi(df, value="销售额", label="销售额合计"),
+          edv.bar(df, x="大区", y="销售额", link="g1"),
+          edv.line(df, x="月份", y="销售额", link="g1"),
+          edv.table(df, columns=["日期", "大区", "产品", "销售额"], limit=20, link="g1")]
+
+# cols=2 指宽屏两列：手机 / 窄侧栏里改由断点接管——KPI 两列、图表整行，height 也跟着压
+result = edv.streamlit_dashboard(charts, cols=2, title="经营驾驶舱")
+```
+
+侧栏的列数交给用户自己选就行（`st.sidebar.slider("每行列数", 1, 3, 2)`），
+宽屏给 2~3 列；手机上 KPI 固定两列、图表一张一行，不必为两种屏幕写两套代码。
+
 ## 4. `@st.cache_data`：别在每次重跑时重算数据
 
 `sample_df()` 很快，真实业务查询/聚合往往很慢。用 `st.cache_data` 缓存**数据准备**和

@@ -263,7 +263,8 @@ html[data-theme=dark] .eazy-textbtn:hover{background:rgba(138,180,248,.12)}
   color:var(--pv-on-surface-var);font-size:13px}
 
 /* ---------- Card ---------- */
-.eazy-grid{display:grid;gap:16px;padding:16px 24px 0;align-items:start}
+.eazy-grid{display:grid;grid-template-columns:repeat(var(--eazy-cols,2),minmax(0,1fr));
+  gap:16px;padding:16px 24px 0;align-items:start}
 .eazy-section{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;
   margin:14px 2px -2px;font-family:"Google Sans",Roboto,sans-serif;
   font-size:16px;font-weight:500;letter-spacing:.1px;color:var(--pv-on-surface)}
@@ -421,6 +422,52 @@ html[data-theme=dark] .eazy-kpi-delta.eazy-down{background:rgba(242,139,130,.14)
   height:100%;padding:6px 4px;overflow:hidden}
 .eazy-wc-word{font-weight:500;line-height:1.15;transition:transform .15s;cursor:default}
 .eazy-wc-word:hover{transform:scale(1.06)}
+
+/* ---------- 响应式：窄屏自适应 ----------
+   同一份页面要塞进手机、窄侧栏、半屏窗口：栅格自动降列、字号收紧、顶栏换行。
+   KPI 数字还有 JS 兜底（fitTexts 按容器宽度缩），表格保持横向滚动。 */
+@media (max-width: 1100px){
+  .eazy-grid{gap:14px;padding:14px 16px 0}
+}
+@media (max-width: 720px){
+  /* 窄屏搞成两列：KPI 两列并排、图表和表格各占满一行
+     （图表挤到 170px 宽就没法看了，KPI 一行一张又太浪费纵向空间） */
+  .eazy-grid{--eazy-cols:2!important;gap:12px;padding:12px 12px 0}
+  .eazy-card{grid-column:1/-1}
+  .eazy-card:has(.eazy-kpi),.eazy-card:has(.eazy-metric){grid-column:auto}
+  .eazy-appbar{padding:10px 12px;gap:6px;min-height:0;display:block}
+  .eazy-appbar-actions{margin-top:6px}
+  .eazy-appbar-title{font-size:16px;line-height:1.3}
+  .eazy-appbar-desc{font-size:11.5px}
+  .eazy-appbar-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start}
+  .eazy-textbtn{padding:3px 9px;font-size:11.5px}
+  .eazy-iconbtn{width:26px;height:26px;font-size:13px}
+  .eazy-select{max-width:156px;font-size:11px;height:28px}
+  .eazy-card{padding:12px 12px 10px;border-radius:12px;min-height:0!important}
+  /* 手机上一张 KPI 卡固定 150px 太占地方，压到内容高度 */
+  .eazy-kpi{min-height:86px!important;gap:4px;padding:0}
+  .eazy-card-title{font-size:14px}
+  .eazy-card-sub{font-size:11px}
+  .eazy-toolbar{font-size:11.5px;gap:6px}
+  .eazy-kpi-group{grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:10px}
+  .eazy-kpi-value{font-size:24px;letter-spacing:-.3px;white-space:nowrap}
+  /* 两张 KPI 并排后每张只有 ~135px：数字先占满一行，同比小标签换到第二行，
+     否则「同比」两个字会被挤成竖排 */
+  .eazy-kpi-main{gap:2px 6px;flex-wrap:wrap}
+  .eazy-kpi-delta{font-size:11px;padding:1px 5px}
+  .eazy-kpi-deltalabel{font-size:10px;white-space:nowrap}
+  .eazy-metric .m-value{font-size:22px;white-space:nowrap}
+  .eazy-table th,.eazy-table td{font-size:12px;padding:6px 8px}
+  .eazy-table-more{font-size:11px}
+  .eazy-chip{height:28px;font-size:11.5px;padding:0 5px 0 10px}
+  .eazy-filters{padding:8px 12px;gap:6px}
+}
+@media (max-width: 460px){
+  .eazy-appbar-desc{display:none}
+  .eazy-kpi-value{font-size:23px}
+  .eazy-table th,.eazy-table td{font-size:11.5px;padding:5px 7px}
+  .eazy-crumb button{font-size:11.5px;padding:2px 4px}
+}
 """
 
 _JS_ERR = """
@@ -666,7 +713,7 @@ def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None
 <div class="eazy-root">
 {header}
 {filters}
-<div class="eazy-grid" style="grid-template-columns:repeat({cols},minmax(0,1fr))">
+<div class="eazy-grid" style="--eazy-cols:{cols}">
 {cards}
 </div>
 </div>
@@ -778,7 +825,7 @@ def build_fragment(charts, title=None, desc=None, cols=None, theme=None, palette
                    '<span class="eazy-filters-label">联动筛选</span></div>')
 
     markup = ('<div class="eazy-root" data-theme="%s" data-palette="%s">%s'
-              '<div class="eazy-grid" style="grid-template-columns:repeat(%d,minmax(0,1fr))">'
+              '<div class="eazy-grid" style="--eazy-cols:%d">'
               '%s</div></div>' % (theme, palette, header + filters, cols, cards))
 
     page = {"theme": theme, "palette": palette, "charts": specs, "links": []}

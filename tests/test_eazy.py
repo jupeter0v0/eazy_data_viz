@@ -462,6 +462,21 @@ def t_streamlit_v2():
             v2._render.build_fragment, v2._component = old_frag, old_comp
 
 
+def t_responsive():
+    from eazy_data_viz import render as _render
+
+    # 窄屏 / 窄容器自适应：网格列数走 CSS 变量（内联 repeat 写死时媒体查询盖不住），
+    # 响应式断点、KPI 数字自动缩放、图例按容器宽度排版都在样式/脚本里。
+    html = eazy_data_viz.dashboard([eazy_data_viz.bar(DF, x="大区", y="销售额")],
+                                   cols=2, title="响应式").to_html()
+    assert 'style="--eazy-cols:2"' in html
+    assert "grid-template-columns:repeat(var(--eazy-cols,2)" in html
+    assert "@media (max-width: 720px)" in html
+    assert "--eazy-cols:2!important" in html
+    js = _render._read_asset("eazy.js")
+    for token in ("function fitTexts", "function fitResponsiveHeights",
+                  "var activeWidth", "function legendItemPx", "function layoutLegend"):
+        assert token in js, token
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):
     check(name, fn)
 
