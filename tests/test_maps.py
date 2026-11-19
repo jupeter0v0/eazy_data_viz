@@ -3,7 +3,7 @@
 
 覆盖四块内容：
 
-1. 内置 GeoJSON（china.json / world.json）的合法性、feature 数、关键区域名；
+1. 内置 GeoJSON（china.json / world.json / beijing.json）的合法性、feature 数、关键区域名；
 2. ``geo_map`` / ``map_bubble`` / ``map_flow`` 的 spec 组装（type / roles /
    map / dataRef / 标题 / 下钻 / 配色等）；
 3. 静态参数校验的中文报错（列不存在、map 非法、min_value >= max_value、
@@ -184,7 +184,7 @@ def t_normalize_region():
 
 
 def t_maps_constant():
-    assert MAPS == ("china", "world")
+    assert MAPS == ("china", "world", "beijing")
     assert maps.__all__ and "geo_map" in maps.__all__
 
 
@@ -534,6 +534,63 @@ def t_world_map():
     # 世界地图的中文国名在前端有别名表；Python 侧原样保留
     rows = geo_map(WORLD, "国家", "GDP", map="world").data["rows"]
     assert rows[0][0] == "美国"
+
+
+# ---------------------------------------------------------------- 北京区级地图
+BEIJING = pd.DataFrame(
+    {
+        "区": ["朝阳区", "海淀区", "东城区", "西城区", "大兴区"],
+        "销售额": [90, 80, 70, 60, 50],
+    }
+)
+
+
+def t_geojson_beijing():
+    geo = _load_geo("beijing")
+    assert geo["type"] == "FeatureCollection"
+    features = geo["features"]
+    assert len(features) == 16, "beijing.json 应有 16 个市辖区，实际 %d" % len(features)
+    names = [f.get("properties", {}).get("name") for f in features]
+    for key in ("东城区", "西城区", "朝阳区", "丰台区", "石景山区", "海淀区",
+                "门头沟区", "房山区", "通州区", "顺义区", "昌平区", "大兴区",
+                "怀柔区", "平谷区", "密云区", "延庆区"):
+        assert key in names, "beijing.json 缺少区：%s" % key
+    assert len(names) == len(set(names)) == 16
+    for f in features:
+        geom = f.get("geometry") or {}
+        assert geom.get("type") in ("Polygon", "MultiPolygon"), geom.get("type")
+        center = (f.get("properties") or {}).get("center")
+        assert center and 115 <= float(center[0]) <= 118 and 39 <= float(center[1]) <= 41, center
+
+
+def t_beijing_map():
+    # 区名带不带「区」都能归一化匹配
+    assert normalize_region("朝阳区") == "朝阳"
+    assert normalize_region("朝阳") == "朝阳"
+    chart = geo_map(BEIJING, "区", "销售额", map="beijing")
+    spec = _spec(chart)
+    _has_data(spec)
+    assert spec["type"] == "geo_map"
+    assert spec["map"] == "beijing"
+    assert "北京" in spec["title"]
+    # 便捷封装 edv.beijing_map 等价于 map="beijing"
+    assert _spec(eazy_data_viz.beijing_map(BEIJING, "区", "销售额"))["map"] == "beijing"
+    rows = chart.data["rows"]
+    assert len(rows) == 5, rows
+    # 未知区名不报错，但会给出提示
+    bad = pd.DataFrame({"区": ["朝阳区", "火星区"], "销售额": [1, 2]})
+    ch = geo_map(bad, "区", "销售额", map="beijing")
+    msgs = " ".join(ch.warnings.get("warnings") or [])
+    assert "火星区" in msgs, msgs
+    # 气泡 / 飞线也支持北京地图
+    assert _spec(map_bubble(BEIJING, "区", "销售额", map="beijing"))["map"] == "beijing"
+    flow = pd.DataFrame({"起点": ["朝阳区", "海淀区"], "终点": ["海淀区", "朝阳区"], "值": [1, 2]})
+    assert _spec(map_flow(flow, "起点", "终点", "值", map="beijing"))["map"] == "beijing"
+    # HTML 只注入 beijing，不注入 china
+    html = chart.to_html()
+    assert '"beijing"' in html, "北京 GeoJSON 应被注入 window.EAZY_MAPS"
+    head = html.split("window.EAZY_DATA")[0]
+    assert '"china"' not in head, "未使用 china 时不应注入 china 地图"
 
 
 # ---------------------------------------------------------------- HTML 产物

@@ -204,20 +204,23 @@ edv.wordcloud(df, names="城市", values="销售额", top_n=12)
 
 ### 4.7 地图
 
-内置中国地图与**世界地图**（本地 GeoJSON，离线可用，不依赖任何 CDN）；城市名支持
+内置中国地图、**世界地图**与**北京区级地图**（本地 GeoJSON，离线可用，不依赖任何 CDN）；城市名支持
 「广州 / 广州市」两种写法，内置 725 条城市名称/坐标映射，气泡图与飞线图按真实城市坐标落点。
 
 ```python
 edv.geo_map(df, region="省份", value="销售额")                      # 中国省级填色
 edv.geo_map(df, region="国家", value="销售额", map="world")         # 世界地图
+edv.beijing_map(df, region="区", value="销售额")                    # 北京 16 区填色
 edv.geo_map(df, region="省份", value="销售额", name_map={"广东": "广东省"})
 edv.map_bubble(df, region="城市", value="销售额")                    # 城市气泡
 edv.map_flow(df, source="出发城市", target="到达城市", value="件数")  # 城市飞线
 ```
 
 - `region` 列写「广东 / 广东省」都可以，前端会自动归一化；匹配不到的区域会跳过并给出提示。
+- 北京区级地图（`map="beijing"`）传区名即可，`"朝阳"` / `"朝阳区"` 两种写法都能匹配；
+  非北京的区域会被跳过，可用 `edv.maps.known_region_keys("beijing")` 自查。
 - 地图同样支持 `drill` 下钻、`link` 联动、`palette` 配色与深色主题。
-- 地图数据放在 `eazy_data_viz/assets/maps/`（`china.json` / `world.json` / `china_cities.json`）。
+- 地图数据放在 `eazy_data_viz/assets/maps/`（`china.json` / `world.json` / `beijing.json` / `china_cities.json`）。
 
 ---
 

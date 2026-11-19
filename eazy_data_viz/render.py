@@ -105,7 +105,7 @@ def _read_map(name):
     path = os.path.join(MAPS_DIR, name + ".json")
     if not os.path.isfile(path):
         raise ValueError(
-            "未知地图 %r；当前只内置 china（中国）与 world（世界）。" % name)
+            "未知地图 %r；当前内置 china（中国）/ world（世界）/ beijing（北京）。" % name)
     with io.open(path, encoding="utf-8") as f:
         geo = json.load(f)
     _MAP_CACHE[name] = geo
@@ -691,7 +691,7 @@ def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None
 
     page = {"theme": theme, "palette": palette, "charts": specs, "links": []}
     maps = _map_payload(specs)
-    cities = _cities_payload() if maps else {}
+    cities = _cities_payload() if "china" in maps else {}
     payload = {"maps": _frame.to_json(maps) if maps else "{}",
                "cities": _frame.to_json(cities) if cities else "{}",
                "data": _frame.to_json(data_store), "page": _frame.to_json(page)}
@@ -830,7 +830,7 @@ def build_fragment(charts, title=None, desc=None, cols=None, theme=None, palette
 
     page = {"theme": theme, "palette": palette, "charts": specs, "links": []}
     maps = _map_payload(specs)
-    cities = _cities_payload() if maps else {}
+    cities = _cities_payload() if "china" in maps else {}
     return {
         "html": markup,
         "css": _scope_css(_CSS),

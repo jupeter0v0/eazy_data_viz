@@ -62,13 +62,13 @@ from .charts_extra import (
     waterfall,
     wordcloud,
 )
-from .maps import geo_map, map_bubble, map_flow
+from .maps import geo_map, beijing_map, map_bubble, map_flow
 from . import palette
 from .render import Dashboard, dashboard
 from .render import streamlit_show as _streamlit_show
 from .streamlit_v2 import is_available as streamlit_available
 
-__version__ = "1.4.0"
+__version__ = "1.4.1"
 
 __all__ = [
     "Chart",
@@ -131,6 +131,7 @@ __all__ = [
     "wordcloud",
     # ---- 地图（3）----
     "geo_map",
+    "beijing_map",
     "map_bubble",
     "map_flow",
     "group_kpi",

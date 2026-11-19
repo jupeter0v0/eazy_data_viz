@@ -24,7 +24,7 @@ eazy_data_viz.map_bubble(
 | `data` | `pandas.DataFrame \| dict \| list \| Series` | `—` | 是 | 数据源 DataFrame |
 | `region` | `str` | `—` | 是 | 区域列：城市 / 省份 / 国家名 |
 | `value` | `str` | `None` | 否 | 气泡数值列（tooltip 与颜色/大小映射的基准） |
-| `map` | `str` | `'china'` | 否 | 内置地图：`china` / `world` |
+| `map` | `str` | `'china'` | 否 | 内置地图：`china` / `world` / `beijing` |
 | `agg` | `str` | `'sum'` | 否 | 同一区域多行时的聚合方式 |
 | `size` | `str` | `None` | 否 | 气泡大小指标列；省略时用 `value` 映射半径 |
 | `color` | `str` | `None` | 否 | 分组列，每个取值一组气泡并进入图例 |
@@ -181,7 +181,7 @@ eazy_data_viz.map_bubble(
 ```python
 import eazy_data_viz as edv
 
-print(edv.maps.MAPS)   # ('china', 'world')
+print(edv.maps.MAPS)   # ('china', 'world', 'beijing')
 print(len(edv.maps.province_centers()))  # 34
 ```
 

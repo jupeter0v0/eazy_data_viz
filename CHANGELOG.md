@@ -2,6 +2,28 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## 1.4.1 — 2026-11-19
+
+### 新增：北京区级地图（`map="beijing"` / `edv.beijing_map`）
+
+- 内置北京 16 个市辖区行政区划 GeoJSON（`assets/maps/beijing.json`，约 0.10 MB），
+  `MAPS` 从 `("china", "world")` 扩展为 `("china", "world", "beijing")`。
+- 新增便捷函数 `edv.beijing_map(data, region="区", value=..., **kwargs)`，
+  等价于 `geo_map(..., map="beijing")`，一行出图。也支持
+  `map_bubble` / `map_flow` 在区级质心上打点、画线。
+- 区名短名 / 全名都能匹配：`"朝阳"` 与 `"朝阳区"` 等价（行政区后缀表新增 `区` / `县`，
+  Python 与前端两份表保持同步）。
+- 前端 `initialView`：未知地图（如 beijing）不再强行套用中国视角，
+  改为交给 ECharts 按 GeoJSON 包围盒自动缩放居中，地图不再跑偏。
+- 渲染层：`_map_payload` 只在真正用到中国地图时才注入 39 KB 的城市表
+  （`window.EAZY_CITIES`），北京 / 世界地图页面更轻。
+- 匹配告警文案通用化：`区 列有 N 个区域名没匹配到内置北京地图…`，
+  未匹配区域被静默跳过（不参与色阶与总计），北京地图也做匹配检查。
+- 文档：`docs/api/geo_map.md`、`map_bubble.md`、`map_flow.md`、`guides/map.md`
+  补充北京地图说明与示例；新增 `examples/beijing_map_demo.py`。
+- 测试：新增 `t_geojson_beijing`、`t_beijing_map` 等，`tests/test_maps.py`
+  断言更新为 `MAPS == ("china", "world", "beijing")`。
+
 ## 1.4.0 — 2026-11-18
 
 ### 表格 ↔ 图表 双向筛选联动

@@ -49,6 +49,7 @@ from .chart import Chart, _base_spec, _check_agg
 
 __all__ = [
     "geo_map",
+    "beijing_map",
     "map_bubble",
     "map_flow",
     "MAPS",
@@ -57,10 +58,10 @@ __all__ = [
 ]
 
 # 内置地图名（与 assets/maps/<name>.json 一一对应）
-MAPS = ("china", "world")
+MAPS = ("china", "world", "beijing")
 
 # 地图显示名，用于自动标题 / 报错提示
-_MAP_LABELS = {"china": "中国", "world": "世界"}
+_MAP_LABELS = {"china": "中国", "world": "世界", "beijing": "北京"}
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 _MAPS_DIR = os.path.join(_ASSETS_DIR, "maps")
@@ -111,6 +112,8 @@ _ADMIN_SUFFIXES = (
     "盟",
     "林区",
     "矿区",
+    "区",
+    "县",
     "维吾尔",
     "壮族",
     "回族",
@@ -130,14 +133,19 @@ def _check_map(map_name):
         return "china"
     if not isinstance(map_name, str):
         raise ValueError(
-            'map 只支持 "china"（中国）/ "world"（世界），收到 %r。' % (map_name,)
+            "map 只支持 %s，收到 %r。" % (_supported_map_text(), map_name)
         )
     name = map_name.strip().lower()
     if name not in MAPS:
         raise ValueError(
-            'map 只支持 "china"（中国）/ "world"（世界），收到 %r。' % (map_name,)
+            "map 只支持 %s，收到 %r。" % (_supported_map_text(), map_name)
         )
     return name
+
+
+def _supported_map_text():
+    """把内置地图拼成报错文案：``"china"（中国）/ "world"（世界）/ "beijing"（北京）``。"""
+    return " / ".join('"%s"（%s）' % (key, _MAP_LABELS.get(key, key)) for key in MAPS)
 
 
 def _check_str(value, name, allow_none=True):
@@ -433,7 +441,7 @@ def region_centers(map_name="china"):
     一般不需要直接调用：``map_bubble`` / ``map_flow`` 在前端会自动算质心。
     这个函数主要用于「自己算距离 / 画别的图」等高级场景。
 
-    :param map_name: ``"china"`` 或 ``"world"``。
+    :param map_name: ``"china"``（中国）、``"world"``（世界）或 ``"beijing"``（北京区级）。
     """
     return _region_centers(map_name)
 
@@ -517,7 +525,8 @@ def known_region_keys(map_name="china"):
     """内置地图能识别的区域名（已 :func:`normalize_region` 归一化）。
 
     中国地图同时包含省级与城市级名称（城市来自 ``china_cities.json``）；
-    世界地图只有 GeoJSON 里的国家名。返回值是新的 ``set``，可以随意改动。
+    世界地图只有 GeoJSON 里的国家名；北京地图只有 16 个市辖区名。
+    返回值是新的 ``set``，可以随意改动。
     """
     cached = _REGION_KEYS_CACHE.get(map_name)
     if cached is not None:
@@ -542,7 +551,7 @@ def known_region_keys(map_name="china"):
 
 def _region_warning(df, region, map_name, name_map=None):
     """检查 region 列有多少值匹配不到地图，返回提示文案或 None（不抛异常）。"""
-    if map_name != "china":
+    if map_name == "world":
         return None
     known = _REGION_KEYS_CACHE.get(map_name) or known_region_keys(map_name)
     if not known:
@@ -565,9 +574,9 @@ def _region_warning(df, region, map_name, name_map=None):
     head = "、".join(miss[:6])
     more = "" if len(miss) <= 6 else " 等 %d 个" % len(miss)
     return (
-        "%s 列有 %d 个区域名没匹配到内置中国地图，地图上不会显示这些数据：%s%s。"
+        "%s 列有 %d 个区域名没匹配到内置%s地图，地图上不会显示这些数据：%s%s。"
         "可用 eazy_data_viz.maps.normalize_region() 自查，或用 name_map 改名。"
-        % (region, len(miss), head, more))
+        % (region, len(miss), _MAP_LABELS.get(map_name, map_name), head, more))
 
 
 def _coerce_numeric(df, cols):
@@ -618,16 +627,21 @@ def geo_map(
     legend=True,
     section=None,
 ):
-    """区域填色地图：用颜色深浅表达一个指标在各省 / 各国上的高低。
+    """区域填色地图：用颜色深浅表达一个指标在各省 / 各国 / 北京各区上的高低。
 
     ``region`` 列可以是短名（``"广东"``）也可以是全名（``"广东省"``），
     前端会自动归一化后与内置 GeoJSON 匹配；匹配不到的区域显示为「无数据色」。
+
+    ``map`` 支持 ``"china"``（中国省级）、``"world"``（国家）与 ``"beijing"``
+    （北京 16 个市辖区，区级）。用 ``map="beijing"`` 时 ``region`` 传区名即可，
+    ``"朝阳"``、``"朝阳区"`` 两种写法都能匹配。
 
     示例
     ----
     >>> eazy_data_viz.maps.geo_map(df, region="省份", value="销售额")
     >>> eazy_data_viz.maps.geo_map(df, region="大区", map="china", min_value=0,
     ...                            max_value=100000)
+    >>> eazy_data_viz.maps.geo_map(df, region="区", value="销售额", map="beijing")
 
     参数
     ----
@@ -679,6 +693,25 @@ def geo_map(
     if _warn:
         info.setdefault("warnings", []).append(_warn)
     return Chart(spec, records, ref, info)
+
+
+# ==========================================================================
+# 1.1 beijing_map —— 北京区级填色地图（geo_map 的便捷封装）
+# ==========================================================================
+def beijing_map(data, region="区", value=None, **kwargs):
+    """北京 16 个市辖区的区级填色地图。
+
+    等价于 ``geo_map(data, region, value, map="beijing", ...)``，只是把
+    ``map`` 固定成 ``"beijing"``，省去每次手写。区名写短名 ``"朝阳"`` 或
+    全名 ``"朝阳区"`` 都能匹配；匹配不到的区会给出提示。
+
+    示例
+    ----
+    >>> eazy_data_viz.beijing_map(df, region="区", value="销售额")
+    >>> eazy_data_viz.beijing_map(df, region="区", value="销售额", labels=True)
+    """
+    kwargs.pop("map", None)  # 固定用 beijing，忽略误传的 map
+    return geo_map(data, region, value, map="beijing", **kwargs)
 
 
 # ==========================================================================

@@ -32,6 +32,7 @@ GROUPS = [
     ("结构与占比", ["pie", "rose", "funnel", "treemap", "sunburst", "tree", "tile"]),
     ("分布与关系", ["scatter", "histogram", "box", "heatmap", "matrix", "radar", "parallel",
                     "quadrant", "sankey", "graph", "trend"]),
+    ("地图", ["geo_map", "beijing_map", "map_bubble", "map_flow"]),
     ("明细与文本", ["table", "wordcloud"]),
 ]
 
@@ -101,6 +102,8 @@ EXAMPLES = {
     "quadrant": 'quadrant(df, x="订单数", y="销售额", color="大区")',
     "trend": 'trend(df, x="客户数", y="利润", color="产品")',
     "geo_map": 'geo_map(df, region="省份", value="销售额")',
+    "beijing_map": 'beijing_map(pd.DataFrame({"区": ["朝阳区", "海淀区"], '
+                   '"销售额": [128, 142]}), region="区", value="销售额")',
     "map_bubble": 'map_bubble(df, region="城市", value="销售额")',
     "map_flow": 'map_flow(pd.DataFrame({"出发城市": ["北京市", "上海市", "广州市"], '
                 '"到达城市": ["广州市", "成都市", "上海市"], "件数": [320, 280, 260]}), '

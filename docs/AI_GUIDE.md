@@ -1,6 +1,6 @@
 # eazy_data_viz 组件库说明书（给 AI 用）
 
-> 版本 1.4.0 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
+> 版本 1.4.1 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
 
 ## 0. 一句话
 
@@ -58,7 +58,7 @@ eazy_data_viz.dashboard(c1, c2, palette="morandi").save("x.html")      # 整页�
 eazy_data_viz.set_palette("carbon")                                     # 改全局默认
 ```
 
-## 4. 图表函数（按场景分组，共 49 个）
+## 4. 图表函数（按场景分组，共 50 个）
 
 ### 核心指标
 
@@ -120,7 +120,7 @@ eazy_data_viz.progress(df, x="大区", y="销售额")
 |---|---|---|
 | `line` | `line(data, x, y, color=None, *, agg='sum', smooth=True, area=False, markers=None, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', drill=None, link=None, legend=True, labels=False, zoom='auto', max_rows=200000, step=False, percent=False, section=None)` | 折线图 / 面积图 / 阶梯图。 |
 | `area_pct` | `area_pct(data, x, y, color=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)` | 百分比堆叠面积图：每个 x 归一化到 100%，看各 color 的占比变化。 |
-| `combo` | `combo(data, x, bar=None, line=None, *, agg='sum', title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=400, theme='light', zoom='auto', max_rows=200000)` | 柱线混合图（一根柱子 + 一条折线，双坐标轴）。 |
+| `combo` | `combo(data, x, bar=None, line=None, *, agg='sum', title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=400, theme='light', zoom='auto', link=None, max_rows=200000)` | 柱线混合图（一根柱子 + 一条折线，双坐标轴）。 |
 | `sparkline` | `sparkline(data, x, y, *, group, agg='sum', title=None, subtitle=None, fmt='compact', height=260, theme='light', max_rows=200000)` | 迷你走势（sparkline）：每个 group 一张无坐标轴小折线，最多 12 个。 |
 | `theme_river` | `theme_river(data, x, color, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=380, theme='light', legend=True, labels=False, zoom='auto', link=None, max_rows=200000)` | 主题河流图：各类目随时间的体量变化，像河流一样堆叠流动。 |
 | `gantt` | `gantt(data, task, start, end, *, color=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, theme='light', legend=None, labels=True, zoom=False, link=None, max_rows=200000)` | 甘特图：横向时间条，展示每个任务的起止时间。 |
@@ -386,6 +386,39 @@ eazy_data_viz.graph(df, source="渠道", target="产品")
 eazy_data_viz.trend(df, x="客户数", y="利润", color="产品")
 ```
 
+### 地图
+
+| 函数 | 签名 | 说明 |
+|---|---|---|
+| `geo_map` | `geo_map(data, region, value=None, *, map='china', agg='sum', fmt='compact', labels=True, min_value=None, max_value=None, name_map=None, zoom=None, palette=None, height=460, theme='light', title=None, subtitle=None, drill=None, link=None, legend=True, section=None)` | 区域填色地图：用颜色深浅表达一个指标在各省 / 各国 / 北京各区上的高低。 |
+| `beijing_map` | `beijing_map(data, region='区', value=None, **kwargs)` | 北京 16 个市辖区的区级填色地图。 |
+| `map_bubble` | `map_bubble(data, region, value=None, *, map='china', agg='sum', size=None, color=None, fmt='compact', min_size=4, max_size=28, name_map=None, zoom=None, palette=None, height=460, theme='light', title=None, subtitle=None, drill=None, link=None, legend=True, section=None)` | 气泡地图：在省份 / 国家中心点画气泡，气泡大小和颜色可以再编码两个指标。 |
+| `map_flow` | `map_flow(data, source, target, value=None, *, map='china', agg='sum', fmt='compact', name_map=None, zoom=None, palette=None, height=460, theme='light', title=None, subtitle=None, link=None, legend=True, section=None)` | 飞线地图：把一条数据当作「source → target」的流量，在地图上画动态飞线。 |
+
+**`geo_map`** — 区域填色地图：用颜色深浅表达一个指标在各省 / 各国 / 北京各区上的高低。
+
+```python
+eazy_data_viz.geo_map(df, region="省份", value="销售额")
+```
+
+**`beijing_map`** — 北京 16 个市辖区的区级填色地图。
+
+```python
+eazy_data_viz.beijing_map(pd.DataFrame({"区": ["朝阳区", "海淀区"], "销售额": [128, 142]}), region="区", value="销售额")
+```
+
+**`map_bubble`** — 气泡地图：在省份 / 国家中心点画气泡，气泡大小和颜色可以再编码两个指标。
+
+```python
+eazy_data_viz.map_bubble(df, region="城市", value="销售额")
+```
+
+**`map_flow`** — 飞线地图：把一条数据当作「source → target」的流量，在地图上画动态飞线。
+
+```python
+eazy_data_viz.map_flow(pd.DataFrame({"出发城市": ["北京市", "上海市", "广州市"], "到达城市": ["广州市", "成都市", "上海市"], "件数": [320, 280, 260]}), source="出发城市", target="到达城市", value="件数")
+```
+
 ### 明细与文本
 
 | 函数 | 签名 | 说明 |
@@ -410,32 +443,11 @@ eazy_data_viz.wordcloud(df, names="城市", values="销售额", top_n=20)
 | 函数 | 签名 | 说明 |
 |---|---|---|
 | `area` | `area(data, x, y, color=None, **kwargs)` | 面积图 = ``line(..., area=True)``。 |
-| `geo_map` | `geo_map(data, region, value=None, *, map='china', agg='sum', fmt='compact', labels=True, min_value=None, max_value=None, name_map=None, zoom=None, palette=None, height=460, theme='light', title=None, subtitle=None, drill=None, link=None, legend=True, section=None)` | 区域填色地图：用颜色深浅表达一个指标在各省 / 各国上的高低。 |
-| `map_bubble` | `map_bubble(data, region, value=None, *, map='china', agg='sum', size=None, color=None, fmt='compact', min_size=4, max_size=28, name_map=None, zoom=None, palette=None, height=460, theme='light', title=None, subtitle=None, drill=None, link=None, legend=True, section=None)` | 气泡地图：在省份 / 国家中心点画气泡，气泡大小和颜色可以再编码两个指标。 |
-| `map_flow` | `map_flow(data, source, target, value=None, *, map='china', agg='sum', fmt='compact', name_map=None, zoom=None, palette=None, height=460, theme='light', title=None, subtitle=None, link=None, legend=True, section=None)` | 飞线地图：把一条数据当作「source → target」的流量，在地图上画动态飞线。 |
 
 **`area`** — 面积图 = ``line(..., area=True)``。
 
 ```python
 eazy_data_viz.area(df, x="月份", y="销售额")
-```
-
-**`geo_map`** — 区域填色地图：用颜色深浅表达一个指标在各省 / 各国上的高低。
-
-```python
-eazy_data_viz.geo_map(df, region="省份", value="销售额")
-```
-
-**`map_bubble`** — 气泡地图：在省份 / 国家中心点画气泡，气泡大小和颜色可以再编码两个指标。
-
-```python
-eazy_data_viz.map_bubble(df, region="城市", value="销售额")
-```
-
-**`map_flow`** — 飞线地图：把一条数据当作「source → target」的流量，在地图上画动态飞线。
-
-```python
-eazy_data_viz.map_flow(pd.DataFrame({"出发城市": ["北京市", "上海市", "广州市"], "到达城市": ["广州市", "成都市", "上海市"], "件数": [320, 280, 260]}), source="出发城市", target="到达城市", value="件数")
 ```
 
 

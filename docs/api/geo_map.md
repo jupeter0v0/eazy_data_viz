@@ -24,7 +24,7 @@ eazy_data_viz.geo_map(
 | `data` | `pandas.DataFrame \| dict \| list \| Series` | `—` | 是 | 数据源 DataFrame |
 | `region` | `str` | `—` | 是 | 区域列：省份 / 城市 / 国家名 |
 | `value` | `str` | `None` | 否 | 填色数值列；省略表示统计记录数 |
-| `map` | `str` | `'china'` | 否 | 内置地图：`china` / `world` |
+| `map` | `str` | `'china'` | 否 | 内置地图：`china` / `world` / `beijing` |
 | `agg` | `str` | `'sum'` | 否 | 同一区域多行时的聚合方式 |
 | `fmt` | `str` | `'compact'` | 否 | 色阶刻度与 tooltip 数值格式 |
 | `labels` | `bool` | `True` | 否 | 是否在区域上显示名称 |
@@ -61,8 +61,8 @@ eazy_data_viz.geo_map(
 
 ### `map` — 使用哪张内置地图
 
-- **作用**：只有 `china`（34 个省级区域 + 南海诸岛占位）与 `world`（215 个国家/地区）两张。GeoJSON 随页面注入，`china` 约 0.57 MB、`world` 约 0.96 MB；选 `world` 时 `region` 必须是国家名，用省份名会全部匹配不到。
-- **取值建议 / 示例**：中国省级用默认值；国家列用 `map="world"`。`map="usa"` → `ValueError: map 只支持 "china"（中国）/ "world"（世界），收到 'usa'。`
+- **作用**：内置 `china`（34 个省级区域 + 南海诸岛占位）、`world`（215 个国家/地区）与 `beijing`（北京 16 个市辖区，区级）三张。GeoJSON 随页面注入，`china` 约 0.57 MB、`world` 约 0.96 MB、`beijing` 约 0.10 MB；选 `world` 时 `region` 必须是国家名，用省份名会全部匹配不到；选 `beijing` 时 `region` 传区名即可（`"朝阳"` / `"朝阳区"` 都能匹配）。
+- **取值建议 / 示例**：中国省级用默认值；国家列用 `map="world"`；北京区级用 `map="beijing"`（或直接用便捷函数 `edv.beijing_map(df, region="区", value="销售额")`）。`map="usa"` → `ValueError: map 只支持 "china"（中国）/ "world"（世界）/ "beijing"（北京），收到 'usa'。`
 
 ### `agg` — 聚合方式
 
@@ -152,13 +152,28 @@ eazy_data_viz.geo_map(
 | --- | --- | --- | --- | --- |
 | 中国 | `'china'` | 34 个省级区域（另有 1 个南海诸岛占位） | 约 0.57 MB | 省份、城市列 |
 | 世界 | `'world'` | 215 个国家/地区 | 约 0.96 MB | 国家列 |
+| 北京 | `'beijing'` | 16 个市辖区（区级） | 约 0.10 MB | 北京各区列 |
 
 ```python
 import eazy_data_viz as edv
 
-print(edv.maps.MAPS)                          # ('china', 'world')
+print(edv.maps.MAPS)                          # ('china', 'world', 'beijing')
 print(len(edv.maps.province_centers()))       # 34
 print(len(edv.maps.region_centers("world")))  # 215
+print(len(edv.maps.region_centers("beijing")))  # 16
+```
+
+### 北京区级地图
+
+```python
+bj = pd.DataFrame({
+    "区": ["东城区", "西城区", "朝阳区", "海淀区", "大兴区"],
+    "销售额": [52, 68, 128, 142, 63],
+})
+# 两种写法等价：
+chart = edv.beijing_map(bj, region="区", value="销售额")
+chart = edv.geo_map(bj, region="区", value="销售额", map="beijing")
+chart.save("beijing_map.html")
 ```
 
 ### 省级区域写法

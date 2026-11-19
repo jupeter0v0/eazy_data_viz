@@ -41,7 +41,7 @@
     "傣族", "哈尼族", "景颇族", "傈僳族", "拉祜族", "佤族", "纳西族",
     "朝鲜族", "满族", "水族", "仡佬族", "布依族", "黎族", "畲族",
     "仫佬族", "毛南族", "京族",
-    "省", "市", "地区", "盟", "林区", "矿区",
+    "省", "市", "地区", "盟", "林区", "矿区", "区", "县",
     "维吾尔", "壮族", "回族", "蒙古族"
   ];
 
@@ -542,7 +542,9 @@
   };
 
   function initialView(spec, mapName) {
-    var view = DEFAULT_VIEW[mapName] || DEFAULT_VIEW.china;
+    // 未知地图（例如北京区级 beijing）不强行套用中国视角，
+    // 交给 ECharts 按 GeoJSON 包围盒自动适配，避免地图跑到中国视角的中心之外。
+    var view = DEFAULT_VIEW[mapName] || {};
     var out = {};
     if (view.zoom) { out.zoom = view.zoom; }
     if (view.center) { out.center = view.center.slice(); }

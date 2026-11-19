@@ -23,7 +23,7 @@ eazy_data_viz.map_flow(
 | `source` | `str` | `—` | 是 | 起点区域列 |
 | `target` | `str` | `—` | 是 | 终点区域列 |
 | `value` | `str` | `None` | 否 | 流量数值列；省略表示统计记录数 |
-| `map` | `str` | `'china'` | 否 | 内置地图：`china` / `world` |
+| `map` | `str` | `'china'` | 否 | 内置地图：`china` / `world` / `beijing` |
 | `agg` | `str` | `'sum'` | 否 | 同一对起终点多行时的聚合方式 |
 | `fmt` | `str` | `'compact'` | 否 | tooltip 数值格式 |
 | `name_map` | `dict \| None` | `None` | 否 | 数据区域值 → 地图区域名的映射（起点、终点都生效） |
@@ -150,7 +150,7 @@ eazy_data_viz.map_flow(
 ```python
 import eazy_data_viz as edv
 
-print(edv.maps.MAPS)   # ('china', 'world')
+print(edv.maps.MAPS)   # ('china', 'world', 'beijing')
 print(len(edv.maps.region_centers("china")))  # 34
 ```
 
