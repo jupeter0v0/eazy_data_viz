@@ -226,8 +226,11 @@ def _require_cols(df, pairs):
             _frame.require_column(df, col, role)
 
 
-def _coerce_numeric(data, pairs):
+def _coerce_numeric(data, pairs, agg=None):
     """校验数值列；object 里近似全数字的列自动转成数值（返回可能复制过的 df）。"""
+    # agg="count" 统计的是行数，列是文本也合法，不需要（也不能）转成数值。
+    if agg == "count":
+        return data
     df = _frame.ensure_frame(data)
     copy = None
     for role, col in pairs:
@@ -395,7 +398,7 @@ def waterfall(
     if x is None:
         raise ValueError('waterfall 需要 x（类目列），例如 waterfall(df, x="月份", y="利润")。')
     if y is not None:
-        df = _coerce_numeric(df, [("y（数值）", y)])
+        df = _coerce_numeric(df, [("y（数值）", y)], agg=agg)
     spec, records, ref, info = _ext(
         "waterfall",
         df,
@@ -467,7 +470,7 @@ def bullet(
     if x is None:
         raise ValueError('bullet 需要 x（类目列），例如 bullet(df, x="部门", actual="完成额")。')
     _frame.require_column(df, x, "x（类目）")
-    df = _coerce_numeric(df, [("actual（实际值）", actual)])
+    df = _coerce_numeric(df, [("actual（实际值）", actual)], agg=agg)
     tcol = None
     if isinstance(target, (int, float, np.integer, np.floating)) and not isinstance(target, bool):
         if target_value is None:
@@ -475,7 +478,7 @@ def bullet(
     else:
         tcol = target
     if tcol is not None:
-        df = _coerce_numeric(df, [("target（目标值）", tcol)])
+        df = _coerce_numeric(df, [("target（目标值）", tcol)], agg=agg)
     spec, records, ref, info = _ext(
         "bullet",
         df,
@@ -543,7 +546,7 @@ def lollipop(
         raise ValueError('lollipop 需要 x（类目列），例如 lollipop(df, x="门店", y="销售额")。')
     _frame.require_column(df, x, "x（类目）")
     if y is not None:
-        df = _coerce_numeric(df, [("y（数值）", y)])
+        df = _coerce_numeric(df, [("y（数值）", y)], agg=agg)
     spec, records, ref, info = _ext(
         "lollipop",
         df,
@@ -613,7 +616,7 @@ def dumbbell(
     df = _frame.ensure_frame(data)
     if x is None:
         raise ValueError('dumbbell 需要 x（类目列），例如 dumbbell(df, x="门店", y1="去年", y2="今年")。')
-    df = _coerce_numeric(df, [("y1（第一个数值）", y1), ("y2（第二个数值）", y2)])
+    df = _coerce_numeric(df, [("y1（第一个数值）", y1), ("y2（第二个数值）", y2)], agg=agg)
     show_labels = isinstance(labels, bool) and labels
     if series_names is None and labels is not None and not isinstance(labels, bool):
         series_names = [str(v) for v in _as_list(labels)]
@@ -687,7 +690,7 @@ def pareto(
         raise ValueError('pareto 需要 x（类目列），例如 pareto(df, x="问题类型", y="数量")。')
     _frame.require_column(df, x, "x（类目）")
     if y is not None:
-        df = _coerce_numeric(df, [("y（数值）", y)])
+        df = _coerce_numeric(df, [("y（数值）", y)], agg=agg)
     try:
         _check_fmt(cum_fmt)
     except ValueError:
@@ -770,7 +773,7 @@ def slope(
     if color is None:
         raise ValueError("slope 需要 color（两期对比列，如年份/期别），也可以用 group= 传入。")
     _require_cols(df, [("x（类目）", x), ("color（期别）", color)])
-    df = _coerce_numeric(df, [("y（数值）", y)])
+    df = _coerce_numeric(df, [("y（数值）", y)], agg=agg)
     if period is not None:
         arms = [str(p) for p in _as_list(period)]
     else:
@@ -858,7 +861,7 @@ def bump(
     if x is None or y is None:
         raise ValueError('bump 需要 x（时间/类目）和 y（数值），例如 bump(df, x="月份", y="销售额", group="产品")。')
     _require_cols(df, [("x（时间/类目）", x), ("group（分组）", group)])
-    df = _coerce_numeric(df, [("y（数值）", y)])
+    df = _coerce_numeric(df, [("y（数值）", y)], agg=agg)
     spec, records, ref, info = _ext(
         "bump",
         df,
@@ -929,7 +932,7 @@ def radar(
         raise ValueError('radar 需要 x（指标项），例如 radar(df, x="能力项", y="得分", color="对象")。')
     _require_cols(df, [("x（指标项）", x), ("color（分组）", color)])
     if y is not None:
-        df = _coerce_numeric(df, [("y（数值）", y)])
+        df = _coerce_numeric(df, [("y（数值）", y)], agg=agg)
     spec, records, ref, info = _ext(
         "radar",
         df,
@@ -1001,7 +1004,7 @@ def rose(
         drill = [names] + [d for d in _as_list(drill) if d != names]
     _frame.require_column(df, names, "names（类目）")
     if values is not None:
-        df = _coerce_numeric(df, [("values（数值）", values)])
+        df = _coerce_numeric(df, [("values（数值）", values)], agg=agg)
     spec, records, ref, info = _ext(
         "rose",
         df,
@@ -1142,7 +1145,7 @@ def pictorial(
         raise ValueError('pictorial 需要 x（类目列），例如 pictorial(df, x="产品", y="销量")。')
     _frame.require_column(df, x, "x（类目）")
     if y is not None:
-        df = _coerce_numeric(df, [("y（数值）", y)])
+        df = _coerce_numeric(df, [("y（数值）", y)], agg=agg)
     spec, records, ref, info = _ext(
         "pictorial",
         df,
@@ -1213,7 +1216,7 @@ def target(
     if x is None:
         raise ValueError('target 需要 x（类目列），例如 target(df, x="月份", actual="销售额")。')
     _frame.require_column(df, x, "x（类目）")
-    df = _coerce_numeric(df, [("actual（实际值）", actual)])
+    df = _coerce_numeric(df, [("actual（实际值）", actual)], agg=agg)
     tcol = None
     if isinstance(target, (int, float, np.integer, np.floating)) and not isinstance(target, bool):
         if target_value is None:
@@ -1221,7 +1224,7 @@ def target(
     else:
         tcol = target
     if tcol is not None:
-        df = _coerce_numeric(df, [("target（目标值）", tcol)])
+        df = _coerce_numeric(df, [("target（目标值）", tcol)], agg=agg)
     spec, records, ref, info = _ext(
         "target",
         df,
@@ -1534,7 +1537,7 @@ def sparkline(
     if x is None or y is None:
         raise ValueError('sparkline 需要 x / y，例如 sparkline(df, x="日期", y="销售额", group="产品")。')
     _require_cols(df, [("x", x), ("group（分组）", group)])
-    df = _coerce_numeric(df, [("y（数值）", y)])
+    df = _coerce_numeric(df, [("y（数值）", y)], agg=agg)
     spec, records, ref, info = _ext(
         "sparkline",
         df,
@@ -1654,7 +1657,7 @@ def sunburst(
         raise ValueError('sunburst 需要 path（层级列名列表），例如 sunburst(df, ["大区", "品类"], value="销售额")。')
     _require_cols(df, [("path[%d]" % i, c) for i, c in enumerate(path)])
     if value is not None:
-        df = _coerce_numeric(df, [("value（数值）", value)])
+        df = _coerce_numeric(df, [("value（数值）", value)], agg=agg)
     spec, records, ref, info = _ext(
         "sunburst",
         df,
@@ -1719,7 +1722,7 @@ def tree(
         raise ValueError('tree 需要 path（层级列名列表），例如 tree(df, ["大区", "省份"], value="销售额")。')
     _require_cols(df, [("path[%d]" % i, c) for i, c in enumerate(path)])
     if value is not None:
-        df = _coerce_numeric(df, [("value（数值）", value)])
+        df = _coerce_numeric(df, [("value（数值）", value)], agg=agg)
     spec, records, ref, info = _ext(
         "tree",
         df,
@@ -1815,7 +1818,7 @@ def sankey(
         [("path[%d]（第 %d 级）" % (i, i + 1), d) for i, d in enumerate(dims)],
     )
     if value is not None:
-        df = _coerce_numeric(df, [("value（数值）", value)])
+        df = _coerce_numeric(df, [("value（数值）", value)], agg=agg)
     spec, records, ref, info = _ext(
         "sankey",
         df,
@@ -1880,7 +1883,7 @@ def graph(
         )
     _require_cols(df, [("source（来源）", source), ("target（去向）", target)])
     if value is not None:
-        df = _coerce_numeric(df, [("value（数值）", value)])
+        df = _coerce_numeric(df, [("value（数值）", value)], agg=agg)
     spec, records, ref, info = _ext(
         "graph",
         df,
@@ -1946,7 +1949,7 @@ def theme_river(
         )
     _require_cols(df, [("x（时间/类目）", x), ("color（分组）", color)])
     if value is not None:
-        df = _coerce_numeric(df, [("value（数值）", value)])
+        df = _coerce_numeric(df, [("value（数值）", value)], agg=agg)
     spec, records, ref, info = _ext(
         "theme_river",
         df,
@@ -2008,7 +2011,7 @@ def calendar(
         raise ValueError('calendar 需要 date（日期列），例如 calendar(df, date="日期", value="订单数")。')
     df = _coerce_time(df, [("date（日期）", date)])
     if value is not None:
-        df = _coerce_numeric(df, [("value（数值）", value)])
+        df = _coerce_numeric(df, [("value（数值）", value)], agg=agg)
     spec, records, ref, info = _ext(
         "calendar",
         df,
@@ -2228,7 +2231,7 @@ def pyramid(
         raise ValueError('pyramid 需要 names（类目列），例如 pyramid(df, names="层级", values="人数")。')
     _frame.require_column(df, names, "names（类目）")
     if values is not None:
-        df = _coerce_numeric(df, [("values（数值）", values)])
+        df = _coerce_numeric(df, [("values（数值）", values)], agg=agg)
     spec, records, ref, info = _ext(
         "pyramid",
         df,
@@ -2299,7 +2302,7 @@ def area_pct(
             'area_pct 需要 color（百分比的分组列），例如 area_pct(df, x="日期", y="销售额", color="产品")。'
         )
     _require_cols(df, [("x", x), ("color（分组）", color)])
-    df = _coerce_numeric(df, [("y（数值）", y)])
+    df = _coerce_numeric(df, [("y（数值）", y)], agg=agg)
     spec, records, ref, info = _ext(
         "area_pct",
         df,
@@ -2368,7 +2371,7 @@ def bar_pct(
             'bar_pct 需要 color（百分比的分组列），例如 bar_pct(df, x="月份", y="销售额", color="产品")。'
         )
     _require_cols(df, [("x", x), ("color（分组）", color)])
-    df = _coerce_numeric(df, [("y（数值）", y)])
+    df = _coerce_numeric(df, [("y（数值）", y)], agg=agg)
     spec, records, ref, info = _ext(
         "bar_pct",
         df,
@@ -2436,7 +2439,7 @@ def progress(
         )
     _frame.require_column(df, x, "x（类目）")
     if y is not None:
-        df = _coerce_numeric(df, [("y（数值）", y)])
+        df = _coerce_numeric(df, [("y（数值）", y)], agg=agg)
     spec, records, ref, info = _ext(
         "progress",
         df,
@@ -2498,7 +2501,7 @@ def tile(
         )
     _frame.require_column(df, names, "names（类目）")
     if values is not None:
-        df = _coerce_numeric(df, [("values（数值）", values)])
+        df = _coerce_numeric(df, [("values（数值）", values)], agg=agg)
     spec, records, ref, info = _ext(
         "tile",
         df,
@@ -2600,7 +2603,7 @@ def table(
     abs_height: bool = False,
     theme: str = "light",
     link: str | tuple | dict | None = None,
-    max_rows: int = 200,
+    max_rows: int | None = None,
     total: bool = False,
     index: str | None = False,
     bar: str | list[str] | None = None,
@@ -2623,7 +2626,8 @@ def table(
     汇总只发生在**显示层**：联动筛选后表格里显示的是「筛选后数据的汇总」，
     后台数据与其它图表的联动值不受影响。
 
-    为控制页面体积，最多嵌入 200 行、展示 ``limit`` 行（上限 200）。
+    展示 ``limit`` 行（上限 200）；嵌入多少行由 ``max_rows`` 决定——默认明细表嵌 200 行，
+    汇总表（``groupby``）嵌入全部行，因为汇总必须基于完整数据，否则数字会和 pandas 对不上。
 
     中国式报表参数（参考 FineReport 明细表 / 观远 BI 表格）
     ------------------------------------------------------
@@ -2667,7 +2671,8 @@ def table(
             )
         group = _parse_table_groupby(df, groupby)
         if group["value"] is not None:
-            df = _coerce_numeric(df, [("groupby.value（汇总数值）", group["value"])])
+            if group["agg"] != "count":
+                df = _coerce_numeric(df, [("groupby.value（汇总数值）", group["value"])])
         columns = list(group["columns"])
         if group["value"] is not None:
             columns.append(group["value"])
@@ -2684,7 +2689,12 @@ def table(
     if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
         raise ValueError("limit 需要是 >=1 的整数（最多显示多少行），收到 %r" % (limit,))
     show_limit = int(min(limit, 200))
-    embed_rows = int(min(int(max_rows), 200))
+    if max_rows is None:
+        # 汇总必须基于完整数据算，否则数字和 pandas 对不上；明细表默认只嵌 200 行。
+        max_rows = _frame.MAX_ROWS if group is not None else 200
+    if not isinstance(max_rows, int) or isinstance(max_rows, bool) or max_rows < 0:
+        raise ValueError("max_rows 需要是 >=0 的整数（或 None 表示自动），收到 %r" % (max_rows,))
+    embed_rows = int(min(int(max_rows), _frame.MAX_ROWS))
 
     # ---- 中国式报表参数校验（total / index / bar / stripe）----
     for _pname, _pval in (("total", total), ("index", index), ("stripe", stripe)):
@@ -2727,6 +2737,13 @@ def table(
         bar=(list(bar_cols) if bar_cols else None),
         stripe=stripe,
     )
+    if group is not None and info.get("n_total", 0) > 50000 and not info.get("truncated"):
+        est = info["n_total"] * max(1, len(records.get("cols") or [])) * 12 / 1000000.0
+        info.setdefault("warnings", []).append(
+            "汇总表需要完整数据才能算准，默认嵌入了全部 %d 行（约 %.1f MB），页面会比较大："
+            "数据稳定时可以先 df.groupby(...).sum() 预聚合，或传 max_rows=20000 限制嵌入行数"
+            "（注意此时汇总是按嵌入的行算的）。" % (info["n_total"], est)
+        )
     return Chart(spec, records, ref, info)
 
 
@@ -2830,7 +2847,7 @@ def wordcloud(
         )
     _frame.require_column(df, names, "names（词/类目）")
     if values is not None:
-        df = _coerce_numeric(df, [("values（数值）", values)])
+        df = _coerce_numeric(df, [("values（数值）", values)], agg=agg)
     spec, records, ref, info = _ext(
         "wordcloud",
         df,
@@ -2958,7 +2975,7 @@ def group_kpi(
                 )
             _frame.require_column(df, names, "names（分组）")
             if values is not None:
-                df = _coerce_numeric(df, [("values（数值）", values)])
+                df = _coerce_numeric(df, [("values（数值）", values)], agg=agg)
             raw_values = (
                 pd.to_numeric(df[values], errors="coerce").tolist()
                 if values is not None

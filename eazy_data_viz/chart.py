@@ -444,11 +444,14 @@ def _base_spec(
 
     # 按图表类型决定哪些角色是数值、哪些是维度：
     # 例如热力图的 y 是分类维度，散点图的 x 是数值，饼图的 value 是数值。
+    # agg="count" 数的是行数，measure 列是文本也合法（例如数「客户名称」有多少个），
+    # 所以这时不能把 measure 列强制转成数值。
+    count_mode = agg == "count"
     numeric_cols, dim_cols = [], []
     for rk, rv in roles.items():
         if rv is None:
             continue
-        if rk in _NUMERIC_ROLE_KEYS.get(kind, ()):
+        if rk in _NUMERIC_ROLE_KEYS.get(kind, ()) and not count_mode:
             numeric_cols.append(rv)
         else:
             dim_cols.append(rv)
@@ -912,10 +915,10 @@ def scatter(
         link=link,
         max_rows=max_rows,
     )
-    _ensure_numeric(records, x, "x")
-    _ensure_numeric(records, y, "y")
+    _ensure_numeric(records, x, "x", agg=agg)
+    _ensure_numeric(records, y, "y", agg=agg)
     if size is not None:
-        _ensure_numeric(records, size, "size")
+        _ensure_numeric(records, size, "size", agg=agg)
     return Chart(spec, records, ref, info)
 
 
@@ -1028,7 +1031,7 @@ def heatmap(
         link=link,
         max_rows=max_rows,
     )
-    _ensure_numeric(records, value, "value")
+    _ensure_numeric(records, value, "value", agg=agg)
     return Chart(spec, records, ref, info)
 
 
@@ -1193,7 +1196,7 @@ def treemap(
         link=None,
         max_rows=max_rows,
     )
-    _ensure_numeric(records, value, "value")
+    _ensure_numeric(records, value, "value", agg=agg)
     return Chart(spec, records, ref, info)
 
 
@@ -1387,7 +1390,8 @@ def kpi(
         if spark is not None:
             roles["spark_x"] = spark_x
             roles["spark_y"] = spark
-        numeric = [value] + ([spark] if spark is not None else [])
+        # agg="count" 时 value / spark 可以是任意类型（数行数），不再强制转数值。
+        numeric = [] if agg == "count" else ([value] + ([spark] if spark is not None else []))
         dims = [spark_x] if spark is not None else []
         records, ref, info = _frame.prepare(
             df, roles, numeric_roles=numeric, dimension_roles=dims,
@@ -1491,16 +1495,21 @@ def combo(
         link=link,
         max_rows=max_rows,
     )
-    _ensure_numeric(records, bar, "bar")
-    _ensure_numeric(records, line, "line")
+    _ensure_numeric(records, bar, "bar", agg=agg)
+    _ensure_numeric(records, line, "line", agg=agg)
     return Chart(spec, records, ref, info)
 
 
 # --------------------------------------------------------------------------
 # 小工具
 # --------------------------------------------------------------------------
-def _ensure_numeric(records, col, role):
-    """确认某列在记录里是数值型（否则给中文提示）。"""
+def _ensure_numeric(records, col, role, agg=None):
+    """确认某列在记录里是数值型（否则给中文提示）。
+
+    agg="count" 统计的是行数，列是文本也合法，这时直接跳过检查。
+    """
+    if agg == "count":
+        return
     kind = (records.get("kinds") or {}).get(str(col))
     if kind not in (None, _frame.KIND_NUM):
         sample = None

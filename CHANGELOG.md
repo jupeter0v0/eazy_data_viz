@@ -2,6 +2,22 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## 1.5.3 — 2026-11-21
+
+### 修复：`agg="count"` 不再要求 measure 列是数值
+- `kpi(df, value="客户名称", agg="count", spark="客户名称", spark_x="月")` 这类「数客户数」的写法，此前会抛
+  `TypeError: 列 '客户名称' 需要是数值类型`。现在 `agg="count"` 统计的是行数，`value` / `spark` 可以是文本列。
+- 同类问题一并修好：`bar` / `line` / `area` / `pie` / `funnel` / `sunburst` / `sankey` / `tree` / `treemap` /
+  `group_kpi` / `wordcloud` / `waterfall` / `pareto` 等 30 多个函数，以及 `table(groupby={"agg": "count"})`。
+- `sum` / `mean` / `max` / `min` / `median` 仍然要求数值列，报错文案不变（`TypeError: ... 需要是数值类型 ... 请先用 pd.to_numeric() 清洗`）。
+
+### 修复：汇总表（`groupby`）默认嵌入完整数据
+- `table` 的 `max_rows` 默认值改为 `None`（自动）：**明细表**仍嵌 200 行；**汇总表**嵌入全部行。
+  原因是汇总必须在完整数据上算才和 `df.groupby(...).agg(...)` 对得上——此前硬截断到 200 行，
+  大表上的 `sum` / `count` 会明显偏小（例如 480 行只按 200 行汇总）。
+- 汇总表超过 5 万行时在 `chart.warnings` 里提示页面体积，并建议先预聚合或显式 `max_rows=20000`。
+- `docs/api/table.md`、`docs/api/kpi.md` 同步更新。
+
 ## 1.5.2 — 2026-11-21
 
 这一版全是「数字对不上」类的修复，来自真实看板的反馈。

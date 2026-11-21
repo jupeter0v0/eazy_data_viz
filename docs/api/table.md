@@ -27,7 +27,7 @@ eazy_data_viz.table(
     height=400,
     theme='light',
     link=None,
-    max_rows=200,
+    max_rows=None,
     total=False,
     index=False,
     bar=None,
@@ -52,7 +52,7 @@ eazy_data_viz.table(
 | `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
 | `theme` | str | 'light' | 否 | 主题（浅色 / 深色） |
 | `link` | str 或 None | None | 否 | 联动分组名 |
-| `max_rows` | int | 200 | 否 | 嵌入前端的最大行数 |
+| `max_rows` | int 或 None | `None`（自动） | 否 | 嵌入前端的行数：明细表默认 200 行，汇总表默认全部行 |
 | `total` | `bool` | `False` | 否 | 表尾合计行 |
 | `index` | `bool` | `False` | 否 | 最左侧序号列 |
 | `bar` | `bool \| str \| list[str] \| None` | `None` | 否 | 单元格数据条 |
@@ -101,7 +101,7 @@ eazy_data_viz.table(
 ### `limit` — 最多显示的行数（`int`，默认 `100`）
 
 - **作用**：正整数，默认 100。Python 会把上限截到 200（`min(limit, 200)`），JS 端再截到 500；超过时表格底部提示“共 N 行，仅显示前 limit 行”。
-- **建议**：看板里 20~50 行最合适，`limit=100` 已经需要滚动。 要展示更多行请改用其它方式（导出 CSV），而不是把 `limit` 调到 1000。 `limit` 只影响显示，不影响数据嵌入：`max_rows` 才控制嵌入行数（默认 200）。
+- **建议**：看板里 20~50 行最合适，`limit=100` 已经需要滚动。 要展示更多行请改用其它方式（导出 CSV），而不是把 `limit` 调到 1000。 `limit` 只影响显示，不影响数据嵌入：`max_rows` 才控制嵌入行数（明细表默认 200 行，汇总表默认全部行）。
 - **示例**：`edv.table(df, columns=["大区", "销售额"], limit=30)`
 - **报错**：`limit=0`：`ValueError: limit 需要是 >=1 的整数（最多显示多少行），收到 0`
 
@@ -155,11 +155,11 @@ eazy_data_viz.table(
   1.4.0 起生效。
 - **报错**：无校验：传数字/对象会原样写入 spec，JS 端作为对象键使用，建议只传字符串。
 
-### `max_rows` — 嵌入前端的最大行数（`int`，默认 `200`）
+### `max_rows` — 嵌入前端的行数（`int` 或 `None`，默认 `None` = 自动）
 
-- **作用**：Python 侧只把前 `max_rows` 行（默认 20000）的数据嵌入 HTML，超过时按均匀间隔抽样，并把提示写入 `chart.warnings["warnings"]`。`table` 特殊：默认 200，且最终最多嵌入 200 行。抽样只发生在“嵌入”阶段，不影响函数内已经算好的统计（如相关系数、回归系数）。 本图实现：默认 200（不是 20000），且最终最多嵌入 200 行；`limit` 控制显示行数，`max_rows` 控制嵌入行数。
-- **建议**：前端交互图保持默认 20000 即可；超大表用 `table(max_rows=...)` 控制体积。 需要完整数据时导出 Excel/CSV，不要让 HTML 承担全量数据。 抽样后 tooltip 的明细行数会变少，但聚合图的总量不受影响。
-- **示例**：`edv.table(df, columns=["大区", "销售额"], limit=20, max_rows=500)`
+- **作用**：Python 侧把 `max_rows` 行数据嵌入 HTML，超过时按均匀间隔抽样，并把提示写入 `chart.warnings["warnings"]`。`table` 的默认值是 `None`（自动）：**明细表**（`columns=`）嵌 200 行，**汇总表**（`groupby=`）嵌全部行——因为汇总必须在完整数据上算，只嵌 200 行时 `sum` / `count` 的数字会和 pandas 对不上。`limit` 只控制显示行数，`max_rows` 控制嵌入行数。
+- **建议**：汇总表数据量很大（几十万行）时，先 `df.groupby(...).sum()` 预聚合再传 `table`，或显式传 `max_rows=20000`（注意此时汇总是按嵌入的行算的）。需要完整数据时导出 Excel/CSV，不要让 HTML 承担全量数据。
+- **示例**：`edv.table(df, columns=["大区", "销售额"], limit=20, max_rows=500)`；汇总表默认嵌全量：`edv.table(df, groupby={"columns": ["大区"], "value": "销售额"}, max_rows=20000)` 可限制为前 20000 行。
 - **报错**：无校验：传 `0` 或负数会得到空数据（图形空白），建议传正整数。
 
 ### `total` — 表尾合计行（`bool`，默认 `False`）
@@ -216,7 +216,7 @@ eazy_data_viz.table(
 | `roles` | 明细 `{"columns": [...], "value": None}`；汇总 `{"columns": [...], "value": "销售额"}`。 |
 | `groupby` | 汇总模式的三键字典；明细模式为 `None`。 |
 | `fmt` | 数值格式：`compact` 在表格里按千分位显示，`percent`/`currency` 按对应格式，`raw` 原样。 |
-| `max_rows` | 嵌入页面的最大行数（默认 200，且不会超过 200）。 |
+| `max_rows` | 嵌入页面的行数：`None`（默认）时明细表 200 行、汇总表全部行；传整数则按该行数。 |
 | `total` | 是否绘制表尾合计行。 |
 | `index` | 是否显示序号列。 |
 | `bar` | 数据条列名数组（`None` 表示不画）。 |
@@ -352,7 +352,7 @@ edv.dashboard(bar, summary, title="汇总表联动", cols=2).save("examples/outp
 
 ### Q2. 为什么只显示了 200 行，明明 `limit` 更大？
 
-两层限制：`limit` 被 Python 截到 ≤200，且嵌入行数由 `max_rows`（默认 200）决定。即使 `limit=999`，最多也是 200 行。
+两层限制：`limit` 被 Python 截到 ≤200，且嵌入行数由 `max_rows` 决定（明细表默认 200 行；汇总表默认全部行，因为它要算准）。即使 `limit=999`，最多也是 200 行。
 
 ### Q3. 时间列为什么只显示到分钟？
 

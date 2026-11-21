@@ -68,7 +68,7 @@ from .render import Dashboard, dashboard
 from .render import streamlit_show as _streamlit_show
 from .streamlit_v2 import is_available as streamlit_available
 
-__version__ = "1.5.2"
+__version__ = "1.5.3"
 
 __all__ = [
     "Chart",

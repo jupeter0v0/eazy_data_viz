@@ -72,16 +72,16 @@ eazy_data_viz.kpi(
 
 ### `value` — 要聚合的数值列（`str | float`，默认 `None`）
 
-- **作用**：从 DataFrame 取数时，按 agg 聚合该列得到卡片数值。 省略时仅当 DataFrame 恰好只有一个数值列才自动选用，否则报错要求显式传。 列不存在抛 KeyError；文本列会在 prepare 阶段转数值或报错。
+- **作用**：从 DataFrame 取数时，按 agg 聚合该列得到卡片数值。 省略时仅当 DataFrame 恰好只有一个数值列才自动选用，否则报错要求显式传。 列不存在抛 KeyError；`agg="count"` 时文本列合法（数行数），其它聚合会要求数值类型并给出中文提示。
 - **建议**：多指标页面每个 kpi 传不同 value；列名用反引号或原始中文列名。
 - **示例**：`value="销售额"`
 - **报错**：`value=None` 且多数值列 → `ValueError: kpi 需要指定 value 列，例如 kpi(df, value="销售额")。`；列名错 → `KeyError: "value列 'XX' 不存在。当前可用的列有：..."`
 
 ### `agg` — 聚合方式（`str`，默认 `'sum'`）
 
-- **作用**：同一筛选范围内把 value 聚合成一个数：sum 合计、mean 均值、count 计数、max/min/median 等。 count 会统计非空记录数；与 value 一起用时按 value 列的非空值计数。 联动筛选后，KPI 会按当前筛选范围用同一 agg 重算。
+- **作用**：同一筛选范围内把 value 聚合成一个数：sum 合计、mean 均值、count 计数、max/min/median 等。 `agg="count"` 统计记录数，此时 `value` / `spark` **可以是文本列**（例如 `kpi(df, value="客户名称", agg="count", label="客户数")`），不会要求数值类型。 联动筛选后，KPI 会按当前筛选范围用同一 agg 重算。
 - **建议**：金额/数量用 sum；比率/客单价用 mean；记录量用 count。
-- **示例**：`agg="mean"`
+- **示例**：`agg="mean"`；数客户数：`agg="count"` + `value="客户名称"`（文本列也可以）
 - **报错**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
 
 ### `label` — 指标名（显示在数值上方）（`str`，默认 `None`）

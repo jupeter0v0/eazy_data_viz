@@ -1,6 +1,6 @@
 # eazy_data_viz 组件库说明书（给 AI 用）
 
-> 版本 1.5.2 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
+> 版本 1.5.3 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
 
 ## 0. 一句话
 
@@ -423,7 +423,7 @@ eazy_data_viz.map_flow(pd.DataFrame({"出发城市": ["北京市", "上海市", 
 
 | 函数 | 签名 | 说明 |
 |---|---|---|
-| `table` | `table(data: 'pd.DataFrame', columns: 'str \| list[str] \| None' = None, *, groupby: 'dict \| None' = None, limit: 'int' = 100, title: 'str \| None' = None, subtitle: 'str \| None' = None, fmt: 'str' = 'compact', height: 'int' = 400, abs_height: 'bool' = False, theme: 'str' = 'light', link: 'str \| tuple \| dict \| None' = None, max_rows: 'int' = 200, total: 'bool' = False, index: 'str \| None' = False, bar: 'str \| list[str] \| None' = None, stripe: 'bool' = True) -> 'Chart'` | 表格（HTML 渲染）：明细表，或按 groupby 汇总后的汇总表。 |
+| `table` | `table(data: 'pd.DataFrame', columns: 'str \| list[str] \| None' = None, *, groupby: 'dict \| None' = None, limit: 'int' = 100, title: 'str \| None' = None, subtitle: 'str \| None' = None, fmt: 'str' = 'compact', height: 'int' = 400, abs_height: 'bool' = False, theme: 'str' = 'light', link: 'str \| tuple \| dict \| None' = None, max_rows: 'int \| None' = None, total: 'bool' = False, index: 'str \| None' = False, bar: 'str \| list[str] \| None' = None, stripe: 'bool' = True) -> 'Chart'` | 表格（HTML 渲染）：明细表，或按 groupby 汇总后的汇总表。 |
 | `wordcloud` | `wordcloud(data: 'pd.DataFrame', names: 'str \| None' = None, values: 'str \| None' = None, *, agg: 'str' = 'sum', sort: 'str \| None' = None, top_n: 'int \| None' = 30, title: 'str \| None' = None, subtitle: 'str \| None' = None, fmt: 'str' = 'compact', height: 'int' = 360, abs_height: 'bool' = False, theme: 'str' = 'light', link: 'str \| tuple \| dict \| None' = None, shape: 'str \| None' = None, max_rows: 'int' = 2000000) -> 'Chart'` | 词云（HTML/CSS 或 canvas 渲染）：每个类目一个词，字号随数值变化，最多 30 个。 |
 
 **`table`** — 表格（HTML 渲染）：明细表，或按 groupby 汇总后的汇总表。

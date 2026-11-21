@@ -333,7 +333,7 @@ def t_max_rows_default():
     for fn in (eazy_data_viz.bar, eazy_data_viz.line, eazy_data_viz.sankey, eazy_data_viz.sunburst):
         dflt = inspect.signature(fn).parameters["max_rows"].default
         assert dflt == 2000000, (fn.__name__, dflt)
-    assert inspect.signature(eazy_data_viz.table).parameters["max_rows"].default == 200
+    assert inspect.signature(eazy_data_viz.table).parameters["max_rows"].default is None
     df = _pd.DataFrame({"x": ["a"] * 45622, "y": list(range(45622))})
     ch = eazy_data_viz.bar(df, x="x", y="y")
     assert len(ch.data["rows"]) == 45622, len(ch.data["rows"])
@@ -628,6 +628,23 @@ def t_table_groupby():
     assert detail["groupby"] is None and detail["columns"] == ["日期", "大区", "销售额"]
     assert detail["title"] == "明细数据"
 
+    # 汇总必须基于完整数据（否则数字和 pandas 对不上）：默认嵌入全部行
+    # 明细表默认只嵌 200 行，控制页面体积
+    import pandas as _pd2
+    big = _pd2.DataFrame({
+        "大区": ["华东", "华北"] * 300,
+        "销售额": list(range(600)),
+    })
+    gsum = eazy_data_viz.table(big, groupby={"columns": ["大区"], "value": "销售额"})
+    assert gsum.data["n"] == 600, gsum.data["n"]
+    assert gsum.warnings.get("warnings") == [], gsum.warnings
+    dsum = eazy_data_viz.table(big, columns=["大区", "销售额"])
+    assert dsum.data["n"] == 200, dsum.data["n"]
+    # 显式 max_rows 仍然生效（此时汇总按嵌入的行算）
+    capped = eazy_data_viz.table(big, groupby={"columns": ["大区"], "value": "销售额"}, max_rows=100)
+    assert capped.data["n"] == 100, capped.data["n"]
+    assert any("max_rows" in w for w in capped.warnings.get("warnings", [])), capped.warnings
+
     for kwargs, msg in (
         (dict(columns=["大区"], groupby={"columns": ["大区"]}), "已由 groupby 取代"),
         (dict(groupby={"columns": ["大区"], "agg_func": "sum"}), "未知键"),
@@ -740,6 +757,59 @@ def t_link_modes():
             assert msg in str(exc), "期望含 %r，实际 %s" % (msg, exc)
         else:
             raise AssertionError("应当报错：%s" % msg)
+
+
+def t_count_text():
+    """agg="count" 统计的是行数，measure 列是文本也合法（1.5.3）。"""
+    import pandas as _pd3
+    df = _pd3.DataFrame({
+        "大区": ["华东", "华东", "华北", "华北", "华南"],
+        "年份": ["2025年", "2026年", "2025年", "2026年", "2025年"],
+        "客户名称": ["A Ltd", "B Ltd", "A Ltd", "C Ltd", "D Ltd"],
+        "金额": [10.5, 20.5, 30.5, 40.5, 50.5],
+    })
+    # 用户报错的原始写法：kpi + spark + count + 文本列
+    ch = eazy_data_viz.kpi(df, value="客户名称", label="客户数", spark="客户名称",
+                           spark_x="年份", agg="count")
+    assert ch.spec["agg"] == "count"
+    assert ch.spec["roles"]["value"] == "客户名称"
+    assert ch.data["kinds"]["客户名称"] != "num", ch.data["kinds"]
+    assert ch.data["n"] == 5, ch.data["n"]
+    assert ch.spec["spark"]["agg"] == "count", ch.spec["spark"]
+
+    # 其它图在 count 模式下也用文本列
+    for name, chart in (
+        ("bar", eazy_data_viz.bar(df, x="大区", y="客户名称", agg="count")),
+        ("pie", eazy_data_viz.pie(df, names="大区", values="客户名称", agg="count")),
+        ("sunburst", eazy_data_viz.sunburst(df, path=["大区"], value="客户名称", agg="count")),
+        ("sankey", eazy_data_viz.sankey(df, path=["大区", "年份"], value="客户名称", agg="count")),
+        ("tree", eazy_data_viz.tree(df, path=["大区"], value="客户名称", agg="count")),
+        ("treemap", eazy_data_viz.treemap(df, path="大区", value="客户名称", agg="count")),
+        ("group_kpi", eazy_data_viz.group_kpi(df, names="大区", values="客户名称", agg="count")),
+    ):
+        assert chart.spec["agg"] == "count", name
+        kinds = chart.data.get("kinds") or {}
+        assert kinds.get("客户名称", "cat") != "num", (name, kinds)
+
+    # 汇总表：count + 文本 value
+    tb = eazy_data_viz.table(df, groupby={"columns": ["大区"], "value": "客户名称", "agg": "count"})
+    assert tb.spec["groupby"]["agg"] == "count"
+    assert tb.spec["columns"] == ["大区", "客户名称"], tb.spec["columns"]
+
+    # 反向保证：sum/mean 仍然要求数值列，报错信息里带「数值」
+    for bad in (
+        lambda: eazy_data_viz.kpi(df, value="客户名称", agg="sum"),
+        lambda: eazy_data_viz.bar(df, x="大区", y="客户名称"),
+        lambda: eazy_data_viz.pie(df, names="大区", values="客户名称"),
+        lambda: eazy_data_viz.sunburst(df, path=["大区"], value="客户名称"),
+        lambda: eazy_data_viz.table(df, groupby={"columns": ["大区"], "value": "客户名称"}),
+    ):
+        try:
+            bad()
+        except TypeError as err:
+            assert "数值" in str(err), str(err)
+        else:
+            raise AssertionError("count 以外的聚合，文本 measure 列应该报 TypeError")
 
 
 def t_abs_height():
