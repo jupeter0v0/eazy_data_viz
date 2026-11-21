@@ -1,6 +1,6 @@
 {
  "name": "eazy_data_viz",
- "version": "1.5.0",
+ "version": "1.5.1",
  "summary": "pandas → 单文件 HTML 交互图表库（经营驾驶舱场景，Material Design 3，45 种图表，客户端下钻/联动，Streamlit 兼容）",
  "install": "pip install -e .   # 或构建 wheel: python -m pip wheel . --no-deps",
  "quickstart": [
@@ -164,7 +164,7 @@
    "charts": [
     {
      "name": "kpi",
-     "signature": "kpi(data=None, value=None, *, agg='sum', label=None, fmt=None, delta=None, delta_label=None, inverse=False, target=None, target_label=None, spark=None, spark_x=None, hint=None, unit=None, prefix=None, accent=0, height=150, abs_height=False, theme='light', title=None, subtitle=None, link=None, section=None)",
+     "signature": "kpi(data: 'pd.DataFrame' = None, value: 'str | None' = None, *, agg: 'str' = 'sum', label: 'str | None' = None, fmt: 'str' = None, delta: 'float | None' = None, delta_label: 'str | None' = None, inverse: 'bool' = False, target: 'str | None' = None, target_label: 'str | None' = None, spark: 'bool' = None, spark_x: 'str | None' = None, hint: 'str | None' = None, unit: 'str | None' = None, prefix: 'str | None' = None, accent: 'int' = 0, height: 'int' = 150, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str | None' = None, subtitle: 'str | None' = None, link: 'str | tuple | dict | None' = None, section: 'str | None' = None) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -311,7 +311,7 @@
     },
     {
      "name": "group_kpi",
-     "signature": "group_kpi(data=None, names=None, values=None, *, items=None, agg='sum', sort='desc', top_n=6, unit=None, delta=None, fmt='compact', title=None, subtitle=None, height=140, abs_height=False, theme='light')",
+     "signature": "group_kpi(data: 'pd.DataFrame' = None, names: 'str | None' = None, values: 'str | None' = None, *, items: 'list | None' = None, agg: 'str' = 'sum', sort: 'str | None' = 'desc', top_n: 'int | None' = 6, unit: 'str | None' = None, delta: 'float | None' = None, fmt: 'str' = 'compact', title: 'str | None' = None, subtitle: 'str | None' = None, height: 'int' = 140, abs_height: 'bool' = False, theme: 'str' = 'light') -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -410,7 +410,7 @@
     },
     {
      "name": "gauge",
-     "signature": "gauge(value, *, label=None, min=0, max=100, fmt='raw', unit=None, height=260, abs_height=False, theme='light', title=None, subtitle=None)",
+     "signature": "gauge(value: 'str | None', *, label: 'str | None' = None, min: 'float | None' = 0, max: 'float | None' = 100, fmt: 'str' = 'raw', unit: 'str | None' = None, height: 'int' = 260, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str | None' = None, subtitle: 'str | None' = None) -> 'Chart'",
      "params": [
       {
        "name": "value",
@@ -485,7 +485,7 @@
     },
     {
      "name": "ring_progress",
-     "signature": "ring_progress(percent, *, label=None, max=100, fmt=None, height=None, abs_height=False, theme='light', title=None)",
+     "signature": "ring_progress(percent: 'float', *, label: 'str | None' = None, max: 'float | None' = 100, fmt: 'str' = None, height: 'int' = None, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str | None' = None) -> 'Chart'",
      "params": [
       {
        "name": "percent",
@@ -542,7 +542,7 @@
     },
     {
      "name": "bullet",
-     "signature": "bullet(data, x, actual, target=None, *, target_value=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, abs_height=False, theme='light', legend=False, labels=False, zoom=False, drill=None, link=None, max_rows=200000)",
+     "signature": "bullet(data: 'pd.DataFrame', x: 'str | None', actual: 'str | None', target: 'str | None' = None, *, target_value: 'str | None' = None, agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = False, labels: 'bool' = False, zoom: 'bool | str' = False, drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -695,7 +695,7 @@
     },
     {
      "name": "target",
-     "signature": "target(data, x, actual, target=None, *, target_value=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, abs_height=False, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
+     "signature": "target(data: 'pd.DataFrame', x: 'str | None', actual: 'str | None', target: 'str | None' = None, *, target_value: 'str | None' = None, agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = True, labels: 'bool' = False, zoom: 'bool | str' = 'auto', drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -848,7 +848,7 @@
     },
     {
      "name": "progress",
-     "signature": "progress(data, x=None, y=None, *, max=None, agg='sum', sort='desc', top_n=10, title=None, subtitle=None, fmt='compact', height=340, abs_height=False, theme='light', link=None, max_rows=200000)",
+     "signature": "progress(data: 'pd.DataFrame', x: 'str | None' = None, y: 'str | None' = None, *, max: 'float | None' = None, agg: 'str' = 'sum', sort: 'str | None' = 'desc', top_n: 'int | None' = 10, title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 340, abs_height: 'bool' = False, theme: 'str' = 'light', link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -952,7 +952,7 @@
    "charts": [
     {
      "name": "line",
-     "signature": "line(data, x, y, color=None, *, agg='sum', smooth=True, area=False, markers=None, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, abs_height=False, theme='light', drill=None, link=None, legend=True, labels=False, zoom='auto', max_rows=200000, step=False, percent=False, section=None)",
+     "signature": "line(data: 'pd.DataFrame', x: 'str | None', y: 'str | None', color: 'str | None' = None, *, agg: 'str' = 'sum', smooth: 'bool' = True, area: 'bool' = False, markers: 'bool' = None, sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, legend: 'bool' = True, labels: 'bool' = False, zoom: 'bool | str' = 'auto', max_rows: 'int' = 200000, step: 'bool | str' = False, percent: 'float' = False, section: 'str | None' = None) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -1135,7 +1135,7 @@
     },
     {
      "name": "area_pct",
-     "signature": "area_pct(data, x, y, color=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, abs_height=False, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
+     "signature": "area_pct(data: 'pd.DataFrame', x: 'str | None', y: 'str | None', color: 'str | None' = None, *, agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = True, labels: 'bool' = False, zoom: 'bool | str' = 'auto', drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -1282,7 +1282,7 @@
     },
     {
      "name": "combo",
-     "signature": "combo(data, x, bar=None, line=None, *, agg='sum', title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=400, abs_height=False, theme='light', zoom='auto', link=None, max_rows=200000)",
+     "signature": "combo(data: 'pd.DataFrame', x: 'str | None', bar: 'str | list[str] | None' = None, line: 'str | list[str] | None' = None, *, agg: 'str' = 'sum', title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 400, abs_height: 'bool' = False, theme: 'str' = 'light', zoom: 'bool | str' = 'auto', link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -1387,7 +1387,7 @@
     },
     {
      "name": "sparkline",
-     "signature": "sparkline(data, x, y, *, group, agg='sum', title=None, subtitle=None, fmt='compact', height=260, abs_height=False, theme='light', max_rows=200000)",
+     "signature": "sparkline(data: 'pd.DataFrame', x: 'str | None', y: 'str | None', *, group: 'str | None', agg: 'str' = 'sum', title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 260, abs_height: 'bool' = False, theme: 'str' = 'light', max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -1468,7 +1468,7 @@
     },
     {
      "name": "theme_river",
-     "signature": "theme_river(data, x, color, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=380, abs_height=False, theme='light', legend=True, labels=False, zoom='auto', link=None, max_rows=200000)",
+     "signature": "theme_river(data: 'pd.DataFrame', x: 'str | None', color: 'str | None', value: 'str | None' = None, *, agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = True, labels: 'bool' = False, zoom: 'bool | str' = 'auto', link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -1585,7 +1585,7 @@
     },
     {
      "name": "gantt",
-     "signature": "gantt(data, task, start, end, *, color=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, abs_height=False, theme='light', legend=None, labels=True, zoom=False, link=None, max_rows=200000)",
+     "signature": "gantt(data: 'pd.DataFrame', task: 'str | None', start: 'str | None', end: 'str | None', *, color: 'str | None' = None, agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 420, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = None, labels: 'bool' = True, zoom: 'bool | str' = False, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -1708,7 +1708,7 @@
     },
     {
      "name": "candlestick",
-     "signature": "candlestick(data, date, open, high, low, close, *, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=420, abs_height=False, theme='light', legend=False, labels=False, zoom='auto', link=None, max_rows=200000)",
+     "signature": "candlestick(data: 'pd.DataFrame', date: 'str | None', open: 'str | None', high: 'str | None', low: 'str | None', close: 'str | None', *, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 420, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = False, labels: 'bool' = False, zoom: 'bool | str' = 'auto', link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -1843,7 +1843,7 @@
     },
     {
      "name": "calendar",
-     "signature": "calendar(data, date, value=None, *, agg='sum', sort='x', top_n=None, title=None, subtitle=None, fmt='compact', height=300, abs_height=False, theme='light', legend=False, labels=False, zoom=False, link=None, max_rows=200000)",
+     "signature": "calendar(data: 'pd.DataFrame', date: 'str | None', value: 'str | None' = None, *, agg: 'str' = 'sum', sort: 'str | None' = 'x', top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 300, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = False, labels: 'bool' = False, zoom: 'bool | str' = False, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -1959,7 +1959,7 @@
    "charts": [
     {
      "name": "bar",
-     "signature": "bar(data, x, y=None, color=None, *, agg='sum', stack=False, horizontal=False, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, abs_height=False, theme='light', drill=None, link=None, legend=True, labels=False, zoom='auto', max_rows=200000, percent=False, yoy=False, section=None)",
+     "signature": "bar(data: 'pd.DataFrame', x: 'str | None', y: 'str | None' = None, color: 'str | None' = None, *, agg: 'str' = 'sum', stack: 'bool' = False, horizontal: 'bool' = False, sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, legend: 'bool' = True, labels: 'bool' = False, zoom: 'bool | str' = 'auto', max_rows: 'int' = 200000, percent: 'float' = False, yoy: 'bool' = False, section: 'str | None' = None) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -2136,7 +2136,7 @@
     },
     {
      "name": "bar_pct",
-     "signature": "bar_pct(data, x, y, color=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, abs_height=False, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
+     "signature": "bar_pct(data: 'pd.DataFrame', x: 'str | None', y: 'str | None', color: 'str | None' = None, *, agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = True, labels: 'bool' = False, zoom: 'bool | str' = 'auto', drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -2283,7 +2283,7 @@
     },
     {
      "name": "waterfall",
-     "signature": "waterfall(data, x, y=None, *, agg='sum', total=None, sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, abs_height=False, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
+     "signature": "waterfall(data: 'pd.DataFrame', x: 'str | None', y: 'str | None' = None, *, agg: 'str' = 'sum', total: 'bool' = None, sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = False, labels: 'bool' = False, zoom: 'bool | str' = 'auto', drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -2430,7 +2430,7 @@
     },
     {
      "name": "pareto",
-     "signature": "pareto(data, x, y=None, *, agg='sum', top_n=None, cum_fmt='percent', sort=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, abs_height=False, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
+     "signature": "pareto(data: 'pd.DataFrame', x: 'str | None', y: 'str | None' = None, *, agg: 'str' = 'sum', top_n: 'int | None' = None, cum_fmt: 'str' = 'percent', sort: 'str | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 400, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = False, labels: 'bool' = False, zoom: 'bool | str' = 'auto', drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -2577,7 +2577,7 @@
     },
     {
      "name": "lollipop",
-     "signature": "lollipop(data, x, y=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, abs_height=False, theme='light', legend=False, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
+     "signature": "lollipop(data: 'pd.DataFrame', x: 'str | None', y: 'str | None' = None, *, agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = False, labels: 'bool' = False, zoom: 'bool | str' = 'auto', drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -2718,7 +2718,7 @@
     },
     {
      "name": "dumbbell",
-     "signature": "dumbbell(data, x, y1, y2, *, labels=None, series_names=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, abs_height=False, theme='light', legend=True, zoom='auto', drill=None, link=None, max_rows=200000)",
+     "signature": "dumbbell(data: 'pd.DataFrame', x: 'str | None', y1: 'str | None', y2: 'str | None', *, labels: 'bool' = None, series_names: 'list[str] | None' = None, agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = True, zoom: 'bool | str' = 'auto', drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -2871,7 +2871,7 @@
     },
     {
      "name": "slope",
-     "signature": "slope(data, x, y, color=None, *, group=None, period=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, abs_height=False, theme='light', legend=True, labels=False, zoom=False, drill=None, link=None, max_rows=200000)",
+     "signature": "slope(data: 'pd.DataFrame', x: 'str | None', y: 'str | None', color: 'str | None' = None, *, group: 'str | None' = None, period: 'str | None' = None, agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = True, labels: 'bool' = False, zoom: 'bool | str' = False, drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -3030,7 +3030,7 @@
     },
     {
      "name": "bump",
-     "signature": "bump(data, x, y, *, group, agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=420, abs_height=False, theme='light', legend=True, labels=False, zoom='auto', drill=None, link=None, max_rows=200000)",
+     "signature": "bump(data: 'pd.DataFrame', x: 'str | None', y: 'str | None', *, group: 'str | None', agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 420, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = True, labels: 'bool' = False, zoom: 'bool | str' = 'auto', drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -3177,7 +3177,7 @@
     },
     {
      "name": "pictorial",
-     "signature": "pictorial(data, x, y=None, *, symbol='circle', agg='sum', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, abs_height=False, theme='light', legend=False, labels=True, zoom='auto', drill=None, link=None, max_rows=200000)",
+     "signature": "pictorial(data: 'pd.DataFrame', x: 'str | None', y: 'str | None' = None, *, symbol: 'str | None' = 'circle', agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = False, labels: 'bool' = True, zoom: 'bool | str' = 'auto', drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -3324,7 +3324,7 @@
     },
     {
      "name": "pyramid",
-     "signature": "pyramid(data, names, values=None, *, agg='sum', sort='asc', top_n=None, title=None, subtitle=None, fmt='compact', height=380, abs_height=False, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)",
+     "signature": "pyramid(data: 'pd.DataFrame', names: 'str | None', values: 'str | None' = None, *, agg: 'str' = 'sum', sort: 'str | None' = 'asc', top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = False, labels: 'bool' = True, zoom: 'bool | str' = False, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -3440,7 +3440,7 @@
    "charts": [
     {
      "name": "pie",
-     "signature": "pie(data, names, values=None, *, donut=False, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, fmt='compact', height=360, abs_height=False, theme='light', labels=True, link=None, max_rows=200000)",
+     "signature": "pie(data: 'pd.DataFrame', names: 'str | None', values: 'str | None' = None, *, donut: 'bool' = False, agg: 'str' = 'sum', sort: 'str | None' = 'desc', top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 360, abs_height: 'bool' = False, theme: 'str' = 'light', labels: 'bool' = True, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -3545,7 +3545,7 @@
     },
     {
      "name": "rose",
-     "signature": "rose(data, names, values=None, *, donut=False, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, abs_height=False, theme='light', legend=True, labels=True, zoom=False, drill=None, link=None, max_rows=200000)",
+     "signature": "rose(data: 'pd.DataFrame', names: 'str | None', values: 'str | None' = None, *, donut: 'bool' = False, agg: 'str' = 'sum', sort: 'str | None' = 'desc', top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = True, labels: 'bool' = True, zoom: 'bool | str' = False, drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -3692,7 +3692,7 @@
     },
     {
      "name": "funnel",
-     "signature": "funnel(data, names, values=None, *, agg='sum', fmt='compact', height=380, abs_height=False, theme='light', title=None, subtitle=None, labels=True, link=None, max_rows=200000)",
+     "signature": "funnel(data: 'pd.DataFrame', names: 'str | None', values: 'str | None' = None, *, agg: 'str' = 'sum', fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str | None' = None, subtitle: 'str | None' = None, labels: 'bool' = True, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -3779,7 +3779,7 @@
     },
     {
      "name": "treemap",
-     "signature": "treemap(data, path, value, *, agg='sum', title=None, subtitle=None, fmt='compact', height=420, abs_height=False, theme='light', max_rows=200000)",
+     "signature": "treemap(data: 'pd.DataFrame', path: 'str | list[str] | None', value: 'str | None', *, agg: 'str' = 'sum', title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 420, abs_height: 'bool' = False, theme: 'str' = 'light', max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -3854,7 +3854,7 @@
     },
     {
      "name": "sunburst",
-     "signature": "sunburst(data, path, value=None, *, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=460, abs_height=False, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)",
+     "signature": "sunburst(data: 'pd.DataFrame', path: 'str | list[str] | None', value: 'str | None' = None, *, agg: 'str' = 'sum', sort: 'str | None' = 'desc', top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 460, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = False, labels: 'bool' = True, zoom: 'bool | str' = False, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -3977,7 +3977,7 @@
     },
     {
      "name": "tree",
-     "signature": "tree(data, path, value=None, *, agg='sum', sort='desc', top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=460, abs_height=False, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)",
+     "signature": "tree(data: 'pd.DataFrame', path: 'str | list[str] | None', value: 'str | None' = None, *, agg: 'str' = 'sum', sort: 'str | None' = 'desc', top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 460, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = False, labels: 'bool' = True, zoom: 'bool | str' = False, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -4100,7 +4100,7 @@
     },
     {
      "name": "tile",
-     "signature": "tile(data, names=None, values=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=360, abs_height=False, theme='light', link=None, max_rows=200000)",
+     "signature": "tile(data: 'pd.DataFrame', names: 'str | None' = None, values: 'str | None' = None, *, agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 360, abs_height: 'bool' = False, theme: 'str' = 'light', link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -4198,7 +4198,7 @@
    "charts": [
     {
      "name": "scatter",
-     "signature": "scatter(data, x, y, color=None, size=None, *, agg='sum', title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=380, abs_height=False, theme='light', link=None, legend=True, max_rows=200000)",
+     "signature": "scatter(data: 'pd.DataFrame', x: 'str | None', y: 'str | None', color: 'str | None' = None, size: 'str | None' = None, *, agg: 'str' = 'sum', title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', link: 'str | tuple | dict | None' = None, legend: 'bool' = True, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -4321,7 +4321,7 @@
     },
     {
      "name": "histogram",
-     "signature": "histogram(data, column=None, *, bins=20, title=None, subtitle=None, xtitle=None, ytitle='频数', fmt='compact', height=360, abs_height=False, theme='light', labels=False, max_rows=200000)",
+     "signature": "histogram(data: 'pd.DataFrame', column: 'str | None' = None, *, bins: 'int | None' = 20, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = '频数', fmt: 'str' = 'compact', height: 'int' = 360, abs_height: 'bool' = False, theme: 'str' = 'light', labels: 'bool' = False, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -4408,7 +4408,7 @@
     },
     {
      "name": "box",
-     "signature": "box(data, x=None, y=None, *, title=None, subtitle=None, ytitle=None, fmt='compact', height=380, abs_height=False, theme='light', max_rows=200000)",
+     "signature": "box(data: 'pd.DataFrame', x: 'str | None' = None, y: 'str | None' = None, *, title: 'str | None' = None, subtitle: 'str | None' = None, ytitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 380, abs_height: 'bool' = False, theme: 'str' = 'light', max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -4483,7 +4483,7 @@
     },
     {
      "name": "heatmap",
-     "signature": "heatmap(data, x, y, value, *, agg='sum', sort=None, title=None, subtitle=None, xtitle=None, ytitle=None, fmt='compact', height=400, abs_height=False, theme='light', labels=False, max_rows=200000, link=None)",
+     "signature": "heatmap(data: 'pd.DataFrame', x: 'str | None', y: 'str | None', value: 'str | None', *, agg: 'str' = 'sum', sort: 'str | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 400, abs_height: 'bool' = False, theme: 'str' = 'light', labels: 'bool' = False, max_rows: 'int' = 200000, link: 'str | tuple | dict | None' = None) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -4594,7 +4594,7 @@
     },
     {
      "name": "matrix",
-     "signature": "matrix(data, columns=None, *, max_cols=12, title=None, subtitle=None, fmt='compact', height=460, abs_height=False, theme='light')",
+     "signature": "matrix(data: 'pd.DataFrame', columns: 'str | list[str] | None' = None, *, max_cols: 'int' = 12, title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 460, abs_height: 'bool' = False, theme: 'str' = 'light') -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -4657,7 +4657,7 @@
     },
     {
      "name": "radar",
-     "signature": "radar(data, x, y=None, color=None, *, max=None, agg='mean', sort=None, top_n=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, abs_height=False, theme='light', legend=True, labels=False, zoom=False, drill=None, link=None, max_rows=200000)",
+     "signature": "radar(data: 'pd.DataFrame', x: 'str | None', y: 'str | None' = None, color: 'str | None' = None, *, max: 'float | None' = None, agg: 'str' = 'mean', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 400, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = True, labels: 'bool' = False, zoom: 'bool | str' = False, drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -4810,7 +4810,7 @@
     },
     {
      "name": "parallel",
-     "signature": "parallel(data, dims, *, color=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=440, abs_height=False, theme='light', legend=False, labels=False, zoom=False, link=None, max_rows=200000)",
+     "signature": "parallel(data: 'pd.DataFrame', dims: 'list[str] | None', *, color: 'str | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 440, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = False, labels: 'bool' = False, zoom: 'bool | str' = False, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -4927,7 +4927,7 @@
     },
     {
      "name": "quadrant",
-     "signature": "quadrant(data, x, y, size=None, color=None, *, quad_labels=None, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, abs_height=False, theme='light', legend=None, labels=False, zoom=False, link=None, max_rows=200000)",
+     "signature": "quadrant(data: 'pd.DataFrame', x: 'str | None', y: 'str | None', size: 'str | None' = None, color: 'str | None' = None, *, quad_labels: 'list[str] | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 400, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = None, labels: 'bool' = False, zoom: 'bool | str' = False, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -5062,7 +5062,7 @@
     },
     {
      "name": "sankey",
-     "signature": "sankey(data, source=None, target=None, value=None, *, path=None, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, abs_height=False, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)",
+     "signature": "sankey(data: 'pd.DataFrame', source: 'str | None' = None, target: 'str | None' = None, value: 'str | None' = None, *, path: 'str | list[str] | None' = None, agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 420, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = False, labels: 'bool' = True, zoom: 'bool | str' = False, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -5185,7 +5185,7 @@
     },
     {
      "name": "graph",
-     "signature": "graph(data, source, target, value=None, *, agg='sum', sort=None, top_n=None, title=None, subtitle=None, fmt='compact', height=420, abs_height=False, theme='light', legend=False, labels=True, zoom=False, link=None, max_rows=200000)",
+     "signature": "graph(data: 'pd.DataFrame', source: 'str | None', target: 'str | None', value: 'str | None' = None, *, agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = None, title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 420, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = False, labels: 'bool' = True, zoom: 'bool | str' = False, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -5302,7 +5302,7 @@
     },
     {
      "name": "trend",
-     "signature": "trend(data, x, y, color=None, *, title=None, subtitle=None, xtitle=None, ytitle=None, xlim=None, ylim=None, fmt='compact', height=400, abs_height=False, theme='light', legend=None, labels=False, zoom=False, link=None, max_rows=200000)",
+     "signature": "trend(data: 'pd.DataFrame', x: 'str | None', y: 'str | None', color: 'str | None' = None, *, title: 'str | None' = None, subtitle: 'str | None' = None, xtitle: 'str | None' = None, ytitle: 'str | None' = None, xlim: 'tuple | None' = None, ylim: 'tuple | None' = None, fmt: 'str' = 'compact', height: 'int' = 400, abs_height: 'bool' = False, theme: 'str' = 'light', legend: 'bool' = None, labels: 'bool' = False, zoom: 'bool | str' = False, link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -5430,7 +5430,7 @@
    "charts": [
     {
      "name": "geo_map",
-     "signature": "geo_map(data, region, value=None, *, map='china', agg='sum', fmt='compact', labels=True, min_value=None, max_value=None, name_map=None, zoom=None, palette=None, height=460, abs_height=False, theme='light', title=None, subtitle=None, drill=None, link=None, legend=True, section=None)",
+     "signature": "geo_map(data: 'pd.DataFrame', region: 'str | None', value: 'str | None' = None, *, map: 'str | None' = 'china', agg: 'str' = 'sum', fmt: 'str' = 'compact', labels: 'bool' = True, min_value: 'float | None' = None, max_value: 'float | None' = None, name_map: 'dict | None' = None, zoom: 'bool | str' = None, palette: 'str | None' = None, height: 'int' = 460, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str | None' = None, subtitle: 'str | None' = None, drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, legend: 'bool' = True, section: 'str | None' = None) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -5565,7 +5565,7 @@
     },
     {
      "name": "beijing_map",
-     "signature": "beijing_map(data, region='区', value=None, **kwargs)",
+     "signature": "beijing_map(data: 'pd.DataFrame', region: 'str | None' = '区', value: 'str | None' = None, **kwargs) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -5598,7 +5598,7 @@
     },
     {
      "name": "map_bubble",
-     "signature": "map_bubble(data, region, value=None, *, map='china', agg='sum', size=None, color=None, fmt='compact', min_size=4, max_size=28, name_map=None, zoom=None, palette=None, height=460, abs_height=False, theme='light', title=None, subtitle=None, drill=None, link=None, legend=True, section=None)",
+     "signature": "map_bubble(data: 'pd.DataFrame', region: 'str | None', value: 'str | None' = None, *, map: 'str | None' = 'china', agg: 'str' = 'sum', size: 'str | None' = None, color: 'str | None' = None, fmt: 'str' = 'compact', min_size: 'int' = 4, max_size: 'int' = 28, name_map: 'dict | None' = None, zoom: 'bool | str' = None, palette: 'str | None' = None, height: 'int' = 460, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str | None' = None, subtitle: 'str | None' = None, drill: 'list[str] | None' = None, link: 'str | tuple | dict | None' = None, legend: 'bool' = True, section: 'str | None' = None) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -5739,7 +5739,7 @@
     },
     {
      "name": "map_flow",
-     "signature": "map_flow(data, source, target, value=None, *, map='china', agg='sum', fmt='compact', name_map=None, zoom=None, palette=None, height=460, abs_height=False, theme='light', title=None, subtitle=None, link=None, legend=True, section=None)",
+     "signature": "map_flow(data: 'pd.DataFrame', source: 'str | None', target: 'str | None', value: 'str | None' = None, *, map: 'str | None' = 'china', agg: 'str' = 'sum', fmt: 'str' = 'compact', name_map: 'dict | None' = None, zoom: 'bool | str' = None, palette: 'str | None' = None, height: 'int' = 460, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str | None' = None, subtitle: 'str | None' = None, link: 'str | tuple | dict | None' = None, legend: 'bool' = True, section: 'str | None' = None) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -5861,7 +5861,7 @@
    "charts": [
     {
      "name": "table",
-     "signature": "table(data, columns=None, *, groupby=None, limit=100, title=None, subtitle=None, fmt='compact', height=400, abs_height=False, theme='light', link=None, max_rows=200, total=False, index=False, bar=None, stripe=True)",
+     "signature": "table(data: 'pd.DataFrame', columns: 'str | list[str] | None' = None, *, groupby: 'dict | None' = None, limit: 'int' = 100, title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 400, abs_height: 'bool' = False, theme: 'str' = 'light', link: 'str | tuple | dict | None' = None, max_rows: 'int' = 200, total: 'bool' = False, index: 'str | None' = False, bar: 'str | list[str] | None' = None, stripe: 'bool' = True) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -5966,7 +5966,7 @@
     },
     {
      "name": "wordcloud",
-     "signature": "wordcloud(data, names=None, values=None, *, agg='sum', sort=None, top_n=30, title=None, subtitle=None, fmt='compact', height=360, abs_height=False, theme='light', link=None, max_rows=200000)",
+     "signature": "wordcloud(data: 'pd.DataFrame', names: 'str | None' = None, values: 'str | None' = None, *, agg: 'str' = 'sum', sort: 'str | None' = None, top_n: 'int | None' = 30, title: 'str | None' = None, subtitle: 'str | None' = None, fmt: 'str' = 'compact', height: 'int' = 360, abs_height: 'bool' = False, theme: 'str' = 'light', link: 'str | tuple | dict | None' = None, shape: 'str | None' = None, max_rows: 'int' = 200000) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -6047,14 +6047,20 @@
        "required": false
       },
       {
+       "name": "shape",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
        "name": "max_rows",
        "kind": "keyword_only",
        "default": 200000,
        "required": false
       }
      ],
-     "summary": "词云（HTML/CSS 渲染）：每个类目一个词，字号随数值变化，最多 30 个。",
-     "doc": "词云（HTML/CSS 渲染）：每个类目一个词，字号随数值变化，最多 30 个。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.wordcloud(df, names=\"关键词\", values=\"提及次数\")\n\n    通用参数（所有图表函数都支持）\n    ------------------------------\n    title, subtitle : str\n        标题 / 副标题，默认自动生成。\n    xtitle, ytitle : str\n        坐标轴名称，默认用列名；传 \"\" 隐藏。\n    xlim, ylim : (min, max)\n        坐标轴范围，例如 ylim=(0, 100000)。\n    fmt : str\n        数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\n    height : int\n        图高（像素），默认 380。\n    theme : str\n        \"light\"（默认）或 \"dark\"。\n    agg : str\n        聚合方式：sum(默认) / mean / count / max / min / median。\n    sort : str\n        类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\n    top_n : int\n        只保留前 N 个类目，其余合并为\"其他\"。\n    legend : bool\n        是否显示图例（有 color 时默认显示）。\n    labels : bool\n        是否在图形上直接标数值。\n    zoom : \"auto\" | True | False\n        数据缩放条：auto 表示类目较多时自动出现。\n    drill : list[str]\n        下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\n    link : str | tuple | dict\n        联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\n        联动方向有三种写法：\n\n        * 双向（默认）：``link=\"g1\"``，点哪张图都过滤另一张；\n        * 单向出：``link=(\"g1\", \"out\")``，只有这张图能发起联动；\n        * 单向进：``link=(\"g1\", \"in\")``，这张图只接收别人的过滤，自己点了不联动。\n\n        等价的字典写法：``link={\"group\": \"g1\", \"direction\": \"out\"}``。\n        方向别名：both/双向、out/单向出/发起、in/单向进/接收。\n    max_rows : int\n        单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
+     "summary": "词云（HTML/CSS 或 canvas 渲染）：每个类目一个词，字号随数值变化，最多 30 个。",
+     "doc": "词云（HTML/CSS 或 canvas 渲染）：每个类目一个词，字号随数值变化，最多 30 个。\n\n示例\n----\n>>> eazy_data_viz.charts_extra.wordcloud(df, names=\"关键词\", values=\"提及次数\")\n\n``shape`` 可以给内置形状（circle / cardioid / diamond / triangle / square /\nstar / pentagon / heart），也可以给一张本地图片的路径（png / jpg / webp / gif /\nbmp / svg，≤ 2 MB）：词会按这张图的轮廓排布。::\n\n    px.wordcloud(df, names=\"关键词\", values=\"次数\", shape=\"star\")\n    px.wordcloud(df, names=\"关键词\", values=\"次数\", shape=\"assets/logo.png\")\n\n    通用参数（所有图表函数都支持）\n    ------------------------------\n    title, subtitle : str\n        标题 / 副标题，默认自动生成。\n    xtitle, ytitle : str\n        坐标轴名称，默认用列名；传 \"\" 隐藏。\n    xlim, ylim : (min, max)\n        坐标轴范围，例如 ylim=(0, 100000)。\n    fmt : str\n        数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。\n    height : int\n        图高（像素），默认 380。\n    theme : str\n        \"light\"（默认）或 \"dark\"。\n    agg : str\n        聚合方式：sum(默认) / mean / count / max / min / median。\n    sort : str\n        类目排序：\"desc\"(默认) / \"asc\" / \"none\"(保持数据顺序)。\n    top_n : int\n        只保留前 N 个类目，其余合并为\"其他\"。\n    legend : bool\n        是否显示图例（有 color 时默认显示）。\n    labels : bool\n        是否在图形上直接标数值。\n    zoom : \"auto\" | True | False\n        数据缩放条：auto 表示类目较多时自动出现。\n    drill : list[str]\n        下钻维度，例如 drill=[\"大区\", \"省份\", \"城市\"]，点击图形逐级下钻。\n    link : str | tuple | dict\n        联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。\n        联动方向有三种写法：\n\n        * 双向（默认）：``link=\"g1\"``，点哪张图都过滤另一张；\n        * 单向出：``link=(\"g1\", \"out\")``，只有这张图能发起联动；\n        * 单向进：``link=(\"g1\", \"in\")``，这张图只接收别人的过滤，自己点了不联动。\n\n        等价的字典写法：``link={\"group\": \"g1\", \"direction\": \"out\"}``。\n        方向别名：both/双向、out/单向出/发起、in/单向进/接收。\n    max_rows : int\n        单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。",
      "example": "eazy_data_viz.wordcloud(df, names=\"城市\", values=\"销售额\", top_n=20)"
     }
    ]
@@ -6064,7 +6070,7 @@
    "charts": [
     {
      "name": "area",
-     "signature": "area(data, x, y, color=None, **kwargs)",
+     "signature": "area(data: 'pd.DataFrame', x: 'str | None', y: 'str | None', color: 'str | None' = None, **kwargs) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -6107,7 +6113,7 @@
  "helpers": {
   "show": {
    "name": "show",
-   "signature": "show(*charts, cols=2, title=None, desc=None, theme=None, palette=None, layout=None, direction=None, grid=None)",
+   "signature": "show(*charts: 'object', cols: 'int' = 2, title: 'str | None' = None, desc: 'str | None' = None, theme: 'str | None' = None, palette: 'str | None' = None, layout: 'list | None' = None, direction: 'str | None' = None, grid: 'tuple | int | str | None' = None) -> 'None'",
    "params": [
     {
      "name": "charts",
@@ -6170,7 +6176,7 @@
   },
   "dashboard": {
    "name": "dashboard",
-   "signature": "dashboard(nums=None, *charts, **kwargs)",
+   "signature": "dashboard(nums: 'object' = None, *charts: 'object', **kwargs: 'object') -> \"'Dashboard'\"",
    "params": [
     {
      "name": "nums",
@@ -6197,7 +6203,7 @@
   },
   "Chart": {
    "name": "Chart",
-   "signature": "Chart(spec, data, ref, warnings=None)",
+   "signature": "Chart(spec: 'dict', data: 'dict', ref: 'str | None', warnings: 'dict | None' = None) -> 'None'",
    "params": [
     {
      "name": "spec",
@@ -6230,7 +6236,7 @@
   },
   "Dashboard": {
    "name": "Dashboard",
-   "signature": "Dashboard(charts, cols=2, title=None, desc=None, theme=None, inline=True, palette=None, layout=None, direction=None, grid=None)",
+   "signature": "Dashboard(charts: 'list', cols: 'int' = 2, title: 'str | None' = None, desc: 'str | None' = None, theme: 'str | None' = None, inline: 'bool' = True, palette: 'str | None' = None, layout: 'list | None' = None, direction: 'str | None' = None, grid: 'tuple | int | str | None' = None) -> 'None'",
    "params": [
     {
      "name": "charts",
@@ -6299,7 +6305,7 @@
   },
   "sample_df": {
    "name": "sample_df",
-   "signature": "sample_df(rows=1500, seed=42)",
+   "signature": "sample_df(rows: 'int' = 1500, seed: 'int' = 42) -> \"'pd.DataFrame'\"",
    "params": [
     {
      "name": "rows",
@@ -6320,7 +6326,7 @@
   },
   "help": {
    "name": "help",
-   "signature": "help()",
+   "signature": "help() -> 'None'",
    "params": [],
    "summary": "打印速查表。",
    "doc": "打印速查表。",
@@ -6328,7 +6334,7 @@
   },
   "gallery": {
    "name": "gallery",
-   "signature": "gallery(open_browser=True)",
+   "signature": "gallery(open_browser: 'bool' = True) -> 'str'",
    "params": [
     {
      "name": "open_browser",
@@ -6343,7 +6349,7 @@
   },
   "set_palette": {
    "name": "set_palette",
-   "signature": "set_palette(name)",
+   "signature": "set_palette(name: 'str') -> 'str'",
    "params": [
     {
      "name": "name",
@@ -6358,7 +6364,7 @@
   },
   "palettes": {
    "name": "palettes",
-   "signature": "palettes(verbose=True)",
+   "signature": "palettes(verbose: 'bool' = True) -> 'list'",
    "params": [
     {
      "name": "verbose",
@@ -6373,7 +6379,7 @@
   },
   "streamlit_dashboard": {
    "name": "streamlit_dashboard",
-   "signature": "streamlit_dashboard(charts, *, cols=2, title=None, desc=None, theme=None, palette=None, height=None, key=None, on_select=None, layout=None, direction=None, grid=None)",
+   "signature": "streamlit_dashboard(charts: 'list', *, cols: 'int' = 2, title: 'str | None' = None, desc: 'str | None' = None, theme: 'str | None' = None, palette: 'str | None' = None, height: 'int | None' = None, key: 'str | None' = None, on_select: 'object' = None, layout: 'list | None' = None, direction: 'str | None' = None, grid: 'tuple | int | str | None' = None) -> 'str'",
    "params": [
     {
      "name": "charts",

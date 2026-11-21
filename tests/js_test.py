@@ -40,7 +40,7 @@ TEST_JS = r"""
   try {
 
   // ---------------- 纯逻辑 ----------------
-  ok('charts-count', EazyViz.charts.length === 20, EazyViz.charts.length);
+  ok('charts-count', EazyViz.charts.length === 22, EazyViz.charts.length);
   ok('dataStore', Object.keys(EazyViz.dataStore).length >= 1);
   ok('fmt-compact', core0.fmtValue(12345678, 'compact') === '1235万', core0.fmtValue(12345678, 'compact'));
   ok('fmt-percent', core0.fmtValue(12.5, 'percent') === '12.5%', core0.fmtValue(12.5, 'percent'));
@@ -162,9 +162,9 @@ TEST_JS = r"""
       return;
     }
     // 表格/瓦片等 HTML 图没有 ECharts option，单独断言它们渲染出了内容
-    if (c.spec.type === 'table') {
-      ok('table-html-' + c.index, c.el.querySelectorAll('tbody tr').length > 0,
-         c.el.querySelectorAll('tbody tr').length);
+    if (EazyViz.core.htmlBuilders[c.spec.type]) {
+      var nChild = c.el.children.length;
+      ok('html-' + c.spec.type + '-' + c.index, nChild > 0, nChild);
       return;
     }
     var opt = core0.buildOption(c.spec, c.data, c.state, c.theme);
@@ -345,6 +345,40 @@ TEST_JS = r"""
     })());
   });
 
+  // ---------------- 词云形状（canvas 引擎） ----------------
+  steps.push(function () {
+    var cw = EazyViz.charts[20], cc = EazyViz.charts[21];
+    ok('wc-shape-spec', !!(cw.spec.shape && cw.spec.shape.type === 'builtin'
+       && cw.spec.shape.name === 'star'), JSON.stringify(cw.spec.shape));
+    ok('wc-css-spec', !EazyViz.charts[21].spec.shape);
+    var cv = document.querySelectorAll('canvas.eazy-wc-canvas');
+    ok('wc-canvas-count', cv.length === 1, cv.length);
+    var c0cv = cv[0];
+    if (c0cv) {
+      var boxes = c0cv.__wcBoxes || [];
+      ok('wc-word-count', boxes.length >= 9, boxes.length);
+      ok('wc-placed-attr', (c0cv.getAttribute('data-wc') || '').indexOf('/') > 0, c0cv.getAttribute('data-wc'));
+      var overlap = false;
+      for (var a = 0; a < boxes.length; a++) {
+        for (var b = a + 1; b < boxes.length; b++) {
+          var A = boxes[a], B = boxes[b];
+          if (A.x < B.x + B.w && B.x < A.x + A.w && A.y < B.y + B.h && B.y < A.y + A.h) overlap = true;
+        }
+      }
+      ok('wc-no-overlap', !overlap);
+      var inside = 0;
+      for (var q = 0; q < boxes.length; q++) {
+        var bx = boxes[q];
+        if (bx.x >= -2 && bx.y >= -2 && bx.x + bx.w <= c0cv.clientWidth + 2
+            && bx.y + bx.h <= c0cv.clientHeight + 2) inside += 1;
+      }
+      ok('wc-inside', inside === boxes.length, inside + '/' + boxes.length);
+    }
+    var wcOld = (cc.el.querySelectorAll('.eazy-wc-word') || []).length;
+    ok('wc-css-mode', wcOld >= 10 && !cc.el.querySelector('canvas.eazy-wc-canvas'), wcOld);
+    ok('wc-hook', typeof EazyViz.htmlHooks === 'object' && typeof EazyViz.htmlHooks.wordcloud === 'function');
+  });
+
   var i = 0;
   function next() {
     if (i < steps.length) {
@@ -404,6 +438,10 @@ def build_page():
         eazy_data_viz.table(df, columns=["大区", "产品", "销售额"], limit=5, index=True,
                             total=True, bar="销售额", link="g1", height=360,
                             title="明细联动表"),
+        eazy_data_viz.wordcloud(df, names="城市", values="销售额", top_n=20,
+                                shape="star", height=300, title="词云形状"),
+        eazy_data_viz.wordcloud(df, names="城市", values="销售额", top_n=20,
+                                height=300, title="词云旧版"),
     ]
     # 中文单位：链式 unit() 只写进 spec，不影响页面里的图表数量
     _u1 = eazy_data_viz.bar(df, x="大区", y="销售额").unit("万")

@@ -45,7 +45,7 @@ _asset_cache = {}
 # --------------------------------------------------------------------------
 # 运行环境探测
 # --------------------------------------------------------------------------
-def is_streamlit():
+def is_streamlit() -> bool:
     """当前是否跑在 Streamlit 的脚本上下文里。"""
     try:
         from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -65,7 +65,7 @@ def is_streamlit():
         return False
 
 
-def in_notebook():
+def in_notebook() -> bool:
     """当前是否在 Jupyter / IPython Notebook 里。"""
     try:
         from IPython import get_ipython
@@ -260,8 +260,10 @@ def _grid_markup(specs, layout, cols):
     return "\n".join(out)
 
 
-def page_height(charts, cols=None, has_header=False, has_filters=False,
-                layout=None, direction=None, grid=None):
+def page_height(charts: list, cols: int | None = None, has_header: bool = False,
+                has_filters: bool = False, layout: list | None = None,
+                direction: str | None = None,
+                grid: tuple | int | str | None = None) -> int:
     """估算页面总高度，供 ``st.components.v1.html`` 使用。"""
     specs = [c.spec for c in charts]
     n = len(specs)
@@ -519,6 +521,8 @@ html[data-theme=dark] .eazy-kpi-delta.eazy-down{background:rgba(242,139,130,.14)
   height:100%;padding:6px 4px;overflow:hidden}
 .eazy-wc-word{font-weight:500;line-height:1.15;transition:transform .15s;cursor:default}
 .eazy-wc-word:hover{transform:scale(1.06)}
+.eazy-wc-wrap{position:relative;width:100%;height:100%;overflow:hidden}
+.eazy-wc-canvas{display:block;width:100%;height:100%}
 
 /* ---------- 响应式：窄屏自适应 ----------
    同一份页面要塞进手机、窄侧栏、半屏窗口：栅格自动降列、字号收紧、顶栏换行。
@@ -698,8 +702,12 @@ def _card_html(spec, index, style=None, extra_height=0, box_height=None, fill=Fa
 _LAST_STREAMLIT_ERROR = None
 
 
-def streamlit_show(charts, cols=2, title=None, desc=None, theme=None, palette=None,
-                   key=None, on_select=None, layout=None, direction=None, grid=None):
+def streamlit_show(charts: list, cols: int = 2, title: str | None = None,
+                   desc: str | None = None, theme: str | None = None,
+                   palette: str | None = None, key: str | None = None,
+                   on_select: object = None, layout: list | None = None,
+                   direction: str | None = None,
+                   grid: tuple | int | str | None = None) -> str:
     """在 Streamlit 页面里渲染一张或多张图，返回实际使用的模式（``"v2"`` / ``"v1"``）。
 
     优先使用 ``st.components.v2``（无 iframe、高度按内容自适应、图表点击可回传
@@ -777,8 +785,11 @@ def _assign_ids(specs):
         s["id"] = "eazy-%s-%d" % (tag, i)
 
 
-def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None,
-               palette=None, layout=None, direction=None, grid=None):
+def build_page(charts: list, inline: bool = True, title: str | None = None,
+               cols: int | None = None, theme: str | None = None,
+               desc: str | None = None, palette: str | None = None,
+               layout: list | None = None, direction: str | None = None,
+               grid: tuple | int | str | None = None) -> str:
     """把一组 Chart 组装成一个完整 HTML 文档字符串。
 
     ``palette`` 指定页面默认配色（google / antd / tableau / carbon / echarts /
@@ -898,8 +909,11 @@ def _scope_css(css):
     return out
 
 
-def build_fragment(charts, title=None, desc=None, cols=None, theme=None, palette=None,
-                   layout=None, direction=None, grid=None):
+def build_fragment(charts: list, title: str | None = None, desc: str | None = None,
+                   cols: int | None = None, theme: str | None = None,
+                   palette: str | None = None, layout: list | None = None,
+                   direction: str | None = None,
+                   grid: tuple | int | str | None = None) -> dict:
     """组装 components.v2 组件所需的三部分：HTML 片段、CSS、data。
 
     返回值是 dict：
@@ -969,8 +983,11 @@ def build_fragment(charts, title=None, desc=None, cols=None, theme=None, palette
 class Dashboard:
     """多图看板：把多张图放进同一个 HTML 文档，联动/下钻才能跨图生效。"""
 
-    def __init__(self, charts, cols=2, title=None, desc=None, theme=None, inline=True,
-                 palette=None, layout=None, direction=None, grid=None):
+    def __init__(self, charts: list, cols: int = 2, title: str | None = None,
+                 desc: str | None = None, theme: str | None = None,
+                 inline: bool = True, palette: str | None = None,
+                 layout: list | None = None, direction: str | None = None,
+                 grid: tuple | int | str | None = None) -> None:
         charts = list(charts)
         if not charts:
             raise ValueError("dashboard 至少需要一张图。")
@@ -986,7 +1003,7 @@ class Dashboard:
         self.grid = grid
 
     # ---- 展示 -----------------------------------------------------------
-    def to_html(self, inline=None):
+    def to_html(self, inline: bool | None = None) -> str:
         return build_page(
             self.charts,
             inline=self.inline if inline is None else inline,
@@ -1000,7 +1017,7 @@ class Dashboard:
             grid=self.grid,
         )
 
-    def save(self, path, inline=None):
+    def save(self, path: str, inline: bool | None = None) -> str:
         inline = self.inline if inline is None else inline
         path = os.path.abspath(path)
         d = os.path.dirname(path)
@@ -1012,7 +1029,7 @@ class Dashboard:
             _copy_assets(os.path.dirname(path))
         return path
 
-    def show(self, open_browser=None):
+    def show(self, open_browser: bool | None = None) -> object:
         if is_streamlit():
             streamlit_show(
                 self.charts,
@@ -1081,7 +1098,7 @@ def _copy_assets(target_dir):
     return dest
 
 
-def dashboard(nums=None, *charts, **kwargs):
+def dashboard(nums: object = None, *charts: object, **kwargs: object) -> "Dashboard":
     """创建一个多图看板。
 
     >>> eazy_data_viz.dashboard(c1, c2, c3, cols=2, title="销售看板").show()

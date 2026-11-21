@@ -2,6 +2,40 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## 1.5.1 — 2026-11-21
+
+### 修复：汇总表（`table(groupby=...)`）不能联动
+
+1.5.0 的汇总表只渲染了数字，单元格上没有挂联动的钩子，点了没反应。
+
+- 分组列单元格现在和明细表一样带 `data-eazy-cell` / `data-eazy-val`，点一次发联动、再点取消；
+- 命中当前联动时整行高亮（`eazy-row-hit`），汇总值按过滤后的数据重算，但底层 `data.rows` 不变。
+
+### 修复：旭日图「放大」与「联动」冲突
+
+点节点后只联动、不放大：联动会重画图表，而重画会把 ECharts 的视图根（`rootToNode` 放大的状态）重置回根。
+
+- 点击时记下**名字路径**（`c.zoomPath`），重画后按路径在树里找回节点，再 `dispatchAction({type:'sunburstRootToNode', targetNode: 节点对象})`；
+- 名字路径在重画前后稳定（用节点 id 会变），因此放大状态可以跨联动保留；
+- 「重置联动」同时把旭日图退回根层；
+- 没有放大请求的重画（换筛选条件、切主题、重置）会显式把视图根退到整棵树，不会卡在某个圈里。
+
+### 新增：词云形状 `wordcloud(shape=...)`
+
+`shape` 支持 8 种内置形状（`circle` / `cardioid` / `diamond` / `triangle` / `square` / `star` / `pentagon` / `heart`）
+或一张本地图片（`.png` / `.jpg` / `.jpeg` / `.webp` / `.gif` / `.bmp` / `.svg`，≤ 2 MB，会内联成 data URI）：
+
+- 传了 `shape` 才切到 `<canvas>` 引擎：形状掩膜 + 阿基米德螺旋装箱 + 词框互不重叠，字号按词频开方分配；
+- 不传 `shape` 仍是原来那套纯 HTML/CSS 排版，行为与 1.5.0 完全一致；
+- 形状会以 10% 透明度铺一层底影，词铺不满的尖角也能看出形状；
+- 图片按「非白色像素」判定形状，白底 PNG/JPG 直接可用。
+
+### 新增：公开 API 类型注解
+
+`chart.py` / `charts_extra.py` / `maps.py` / `render.py` / `__init__.py` 的公开函数与 `Chart` / `Dashboard` 方法
+都补上了参数与返回值注解（`data: pd.DataFrame`、`height: int`、`link: str | tuple | dict | None` …），
+IDE 悬浮和自动补全不再显示 `Unknown`。
+
 ## 1.5.0 — 2026-11-21
 
 ### 看板自由排列：`layout` / `direction` / `grid`

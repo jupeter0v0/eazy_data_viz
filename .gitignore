@@ -24,3 +24,11 @@ Thumbs.db
 # 测试用 Chrome profile
 /eazy_js_test_profile/
 eazy_js_test_profile/
+
+# 测试运行时在仓库根留下的临时目录（Chrome profile / 截图 / 词云草稿）
+/eazy_*_test/
+/eazy_measure*/
+/eazy_map_dash_*/
+/eazy_map_save_*/
+/eazy_wc_*/
+wc_dbg*/

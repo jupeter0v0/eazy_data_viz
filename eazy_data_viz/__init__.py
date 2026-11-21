@@ -68,7 +68,7 @@ from .render import Dashboard, dashboard
 from .render import streamlit_show as _streamlit_show
 from .streamlit_v2 import is_available as streamlit_available
 
-__version__ = "1.5.0"
+__version__ = "1.5.1"
 
 __all__ = [
     "Chart",
@@ -152,8 +152,11 @@ __all__ = [
 # --------------------------------------------------------------------------
 # 一个函数显示多张图
 # --------------------------------------------------------------------------
-def show(*charts, cols=2, title=None, desc=None, theme=None, palette=None,
-         layout=None, direction=None, grid=None):
+def show(*charts: object, cols: int = 2, title: str | None = None,
+         desc: str | None = None, theme: str | None = None,
+         palette: str | None = None, layout: list | None = None,
+         direction: str | None = None,
+         grid: tuple | int | str | None = None) -> None:
     """显示一张或多张图。
 
     >>> eazy_data_viz.show(c1, c2, cols=2, title="经营看板", palette="antd")
@@ -183,9 +186,13 @@ def show(*charts, cols=2, title=None, desc=None, theme=None, palette=None,
 # --------------------------------------------------------------------------
 # Streamlit（components v2：无 iframe、高度自适应、点击回传 Python）
 # --------------------------------------------------------------------------
-def streamlit_dashboard(charts, *, cols=2, title=None, desc=None, theme=None,
-                        palette=None, height=None, key=None, on_select=None,
-                        layout=None, direction=None, grid=None):
+def streamlit_dashboard(charts: list, *, cols: int = 2, title: str | None = None,
+                        desc: str | None = None, theme: str | None = None,
+                        palette: str | None = None, height: int | None = None,
+                        key: str | None = None, on_select: object = None,
+                        layout: list | None = None,
+                        direction: str | None = None,
+                        grid: tuple | int | str | None = None) -> str:
     """在 Streamlit 页面里用 ``st.components.v2`` 渲染一张看板。
 
     相比 ``dashboard(...).show()``（内部也会优先走 v2），这个函数把
@@ -248,7 +255,7 @@ def streamlit_dashboard(charts, *, cols=2, title=None, desc=None, theme=None,
 # --------------------------------------------------------------------------
 # 配色库
 # --------------------------------------------------------------------------
-def set_palette(name):
+def set_palette(name: str) -> str:
     """设置全局默认配色库（影响之后创建的图）。
 
     可用：google（默认，Google 品牌色）/ antd（Ant Design）/ tableau /
@@ -261,7 +268,7 @@ def set_palette(name):
     return palette.set_default(name)
 
 
-def palettes(verbose=True):
+def palettes(verbose: bool = True) -> list:
     """列出所有配色库；返回名字列表。"""
     usable = palette.names()
     if verbose:
@@ -277,7 +284,7 @@ def palettes(verbose=True):
 # --------------------------------------------------------------------------
 # 示例数据（开箱即用，方便用户先跑通再换自己的数据）
 # --------------------------------------------------------------------------
-def sample_df(rows=1500, seed=42):
+def sample_df(rows: int = 1500, seed: int = 42) -> "pd.DataFrame":
     """生成一份示例销售数据（日期 / 月份 / 大区 / 省份 / 城市 / 产品 / 渠道 / 销售额 ...）。
 
     数据按"日期 × 大区"的网格构造：趋势 + 季节性 + 周末效应 + 大区/产品/渠道差异 +
@@ -346,7 +353,7 @@ def sample_df(rows=1500, seed=42):
 # --------------------------------------------------------------------------
 # 说明 / gallery
 # --------------------------------------------------------------------------
-def help():  # noqa: A001 - 故意覆盖内建名，eazy_data_viz.help() 更自然
+def help() -> None:  # noqa: A001 - 故意覆盖内建名，eazy_data_viz.help() 更自然
     """打印速查表。"""
     text = """
 eazy_data_viz · pandas 交互式图表库（经营驾驶舱版）  v%s
@@ -462,7 +469,7 @@ KPI 卡片（驾驶舱指标头）
     return text
 
 
-def gallery(open_browser=True):
+def gallery(open_browser: bool = True) -> str:
     """打开自带 gallery。
 
     * 在 Streamlit 里运行时：只打印说明；

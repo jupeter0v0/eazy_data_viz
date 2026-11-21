@@ -24,7 +24,9 @@
 """
 from __future__ import annotations
 
+import base64
 import math
+import os
 
 import numpy as np
 import pandas as pd
@@ -357,31 +359,31 @@ def _num_or_none(value):
 # 3.1 waterfall 瀑布图
 # ==========================================================================
 def waterfall(
-    data,
-    x,
-    y=None,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None = None,
     *,
-    agg="sum",
-    total=None,
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    legend=False,
-    labels=False,
-    zoom="auto",
-    drill=None,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    total: bool = None,
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = False,
+    labels: bool = False,
+    zoom: bool | str = "auto",
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """瀑布图：各分项正负增量逐段累加，直观看到「从哪来、累计到多少」。
 
     示例
@@ -426,32 +428,32 @@ def waterfall(
 # 3.2 bullet 子弹图
 # ==========================================================================
 def bullet(
-    data,
-    x,
-    actual,
-    target=None,
+    data: pd.DataFrame,
+    x: str | None,
+    actual: str | None,
+    target: str | None = None,
     *,
-    target_value=None,
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    legend=False,
-    labels=False,
-    zoom=False,
-    drill=None,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    target_value: str | None = None,
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = False,
+    labels: bool = False,
+    zoom: bool | str = False,
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """子弹图：每类一个实际值，对比目标值（横向，目标用刻度线表示）。
 
     ``target`` 可以是列名；传常数（如 ``target=100``）或 ``target_value=100``
@@ -506,30 +508,30 @@ def bullet(
 # 3.3 lollipop 棒棒糖图
 # ==========================================================================
 def lollipop(
-    data,
-    x,
-    y=None,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None = None,
     *,
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    legend=False,
-    labels=False,
-    zoom="auto",
-    drill=None,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = False,
+    labels: bool = False,
+    zoom: bool | str = "auto",
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """棒棒糖图：细柱 + 顶端圆点，比柱状图更清爽的排行榜。
 
     示例
@@ -573,32 +575,32 @@ def lollipop(
 # 3.4 dumbbell 哑铃图
 # ==========================================================================
 def dumbbell(
-    data,
-    x,
-    y1,
-    y2,
+    data: pd.DataFrame,
+    x: str | None,
+    y1: str | None,
+    y2: str | None,
     *,
-    labels=None,
-    series_names=None,
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    legend=True,
-    zoom="auto",
-    drill=None,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    labels: bool = None,
+    series_names: list[str] | None = None,
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = True,
+    zoom: bool | str = "auto",
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """哑铃图：同一类目两个数值（如两期、两组）之间的差距对比。
 
     ``labels`` 传 ``["期初", "期末"]`` 之类可覆盖两个系列名（传 bool 则控制数值标签）。
@@ -649,31 +651,31 @@ def dumbbell(
 # 3.5 pareto 帕累托图
 # ==========================================================================
 def pareto(
-    data,
-    x,
-    y=None,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None = None,
     *,
-    agg="sum",
-    top_n=None,
-    cum_fmt="percent",
-    sort=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=400,
-    abs_height=False,
-    theme="light",
-    legend=False,
-    labels=False,
-    zoom="auto",
-    drill=None,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    top_n: int | None = None,
+    cum_fmt: str = "percent",
+    sort: str | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 400,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = False,
+    labels: bool = False,
+    zoom: bool | str = "auto",
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """帕累托图：按数值降序的柱 + 累计占比折线（右轴 0~100%）。
 
     示例
@@ -722,33 +724,33 @@ def pareto(
 # 3.6 slope 斜率图
 # ==========================================================================
 def slope(
-    data,
-    x,
-    y,
-    color=None,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None,
+    color: str | None = None,
     *,
-    group=None,
-    period=None,
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    legend=True,
-    labels=False,
-    zoom=False,
-    drill=None,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    group: str | None = None,
+    period: str | None = None,
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = True,
+    labels: bool = False,
+    zoom: bool | str = False,
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """斜率图：同一类目在两个「期」之间的变化（两点连线，斜率即变化）。
 
     ``color`` 是期别列，正常情况下应恰好 2 个取值（如 "去年" / "今年"）；
@@ -821,31 +823,31 @@ def slope(
 # 3.7 bump 排名变化图
 # ==========================================================================
 def bump(
-    data,
-    x,
-    y,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None,
     *,
-    group,
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=420,
-    abs_height=False,
-    theme="light",
-    legend=True,
-    labels=False,
-    zoom="auto",
-    drill=None,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    group: str | None,
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 420,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = True,
+    labels: bool = False,
+    zoom: bool | str = "auto",
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """排名变化图（bump chart）：每个 group 一条折线，y 轴是排名。
 
     示例
@@ -888,32 +890,32 @@ def bump(
 # 3.8 radar 雷达图
 # ==========================================================================
 def radar(
-    data,
-    x,
-    y=None,
-    color=None,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None = None,
+    color: str | None = None,
     *,
-    max=None,
-    agg="mean",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=400,
-    abs_height=False,
-    theme="light",
-    legend=True,
-    labels=False,
-    zoom=False,
-    drill=None,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    max: float | None = None,
+    agg: str = "mean",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 400,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = True,
+    labels: bool = False,
+    zoom: bool | str = False,
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """雷达图：每个 color 组一条闭合折线，指标是 x 的各个类目。
 
     ``max`` 不传时由前端按各指标最大值上浮 10% 自动确定。
@@ -960,31 +962,31 @@ def radar(
 # 3.9 rose 南丁格尔玫瑰图
 # ==========================================================================
 def rose(
-    data,
-    names,
-    values=None,
+    data: pd.DataFrame,
+    names: str | None,
+    values: str | None = None,
     *,
-    donut=False,
-    agg="sum",
-    sort="desc",
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    legend=True,
-    labels=True,
-    zoom=False,
-    drill=None,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    donut: bool = False,
+    agg: str = "sum",
+    sort: str | None = "desc",
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = True,
+    labels: bool = True,
+    zoom: bool | str = False,
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """南丁格尔玫瑰图：用半径表达数值的饼图。
 
     示例
@@ -1032,26 +1034,26 @@ def rose(
 # 3.10 parallel 平行坐标
 # ==========================================================================
 def parallel(
-    data,
-    dims,
+    data: pd.DataFrame,
+    dims: list[str] | None,
     *,
-    color=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=440,
-    abs_height=False,
-    theme="light",
-    legend=False,
-    labels=False,
-    zoom=False,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    color: str | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 440,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = False,
+    labels: bool = False,
+    zoom: bool | str = False,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """平行坐标：每一行是一条折线，每个维度一根纵轴，用来看多维分布/聚类。
 
     ``dims`` 是数值列名列表（至少 1 个，通常 3~8 个）。
@@ -1099,31 +1101,31 @@ def parallel(
 # 3.11 pictorial 象形柱图
 # ==========================================================================
 def pictorial(
-    data,
-    x,
-    y=None,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None = None,
     *,
-    symbol="circle",
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    legend=False,
-    labels=True,
-    zoom="auto",
-    drill=None,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    symbol: str | None = "circle",
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = False,
+    labels: bool = True,
+    zoom: bool | str = "auto",
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """象形柱图：用重复的小图形（circle / rect / roundRect / diamond / triangle）堆出柱子。
 
     示例
@@ -1173,32 +1175,32 @@ def pictorial(
 # 3.12 target 目标对比图
 # ==========================================================================
 def target(
-    data,
-    x,
-    actual,
-    target=None,
+    data: pd.DataFrame,
+    x: str | None,
+    actual: str | None,
+    target: str | None = None,
     *,
-    target_value=None,
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    legend=True,
-    labels=False,
-    zoom="auto",
-    drill=None,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    target_value: str | None = None,
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = True,
+    labels: bool = False,
+    zoom: bool | str = "auto",
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """目标对比图：实际值柱子 + 目标值折线（虚线）。
 
     ``target`` 传列名时逐项对齐目标；传常数或 ``target_value=`` 时全体共用一个目标。
@@ -1252,27 +1254,27 @@ def target(
 # 3.13 trend 趋势散点
 # ==========================================================================
 def trend(
-    data,
-    x,
-    y,
-    color=None,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None,
+    color: str | None = None,
     *,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=400,
-    abs_height=False,
-    theme="light",
-    legend=None,
-    labels=False,
-    zoom=False,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 400,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = None,
+    labels: bool = False,
+    zoom: bool | str = False,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """趋势散点图：散点 + 最小二乘回归线，图例/副标题带 R²。
 
     x / y 必须是数值列；回归系数在 Python 侧用 numpy 算好写进 ``spec.fit``。
@@ -1343,29 +1345,29 @@ def trend(
 # 3.14 quadrant 四象限散点
 # ==========================================================================
 def quadrant(
-    data,
-    x,
-    y,
-    size=None,
-    color=None,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None,
+    size: str | None = None,
+    color: str | None = None,
     *,
-    quad_labels=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=400,
-    abs_height=False,
-    theme="light",
-    legend=None,
-    labels=False,
-    zoom=False,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    quad_labels: list[str] | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 400,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = None,
+    labels: bool = False,
+    zoom: bool | str = False,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """四象限散点图：用 x / y 的中位数把平面切成四块，看对象落在哪个象限。
 
     示例
@@ -1438,17 +1440,17 @@ def quadrant(
 # 3.15 matrix 相关系数矩阵
 # ==========================================================================
 def matrix(
-    data,
-    columns=None,
+    data: pd.DataFrame,
+    columns: str | list[str] | None = None,
     *,
-    max_cols=12,
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=460,
-    abs_height=False,
-    theme="light",
-):
+    max_cols: int = 12,
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 460,
+    abs_height: bool = False,
+    theme: str = "light",
+) -> Chart:
     """相关系数矩阵（Pearson）：热力图 + 格子里两位小数的 r 值。
 
     不接联动 / 过滤——相关系数已在 Python 侧算好放进 ``spec.values``。
@@ -1508,20 +1510,20 @@ def matrix(
 # 3.16 sparkline 迷你走势
 # ==========================================================================
 def sparkline(
-    data,
-    x,
-    y,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None,
     *,
-    group,
-    agg="sum",
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=260,
-    abs_height=False,
-    theme="light",
-    max_rows=_frame.MAX_ROWS,
-):
+    group: str | None,
+    agg: str = "sum",
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 260,
+    abs_height: bool = False,
+    theme: str = "light",
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """迷你走势（sparkline）：每个 group 一张无坐标轴小折线，最多 12 个。
 
     示例
@@ -1564,16 +1566,16 @@ def sparkline(
 # 3.17 ring_progress 环形进度
 # ==========================================================================
 def ring_progress(
-    percent,
+    percent: float,
     *,
-    label=None,
-    max=100,
-    fmt=None,
-    height=None,
-    abs_height=False,
-    theme="light",
-    title=None,
-):
+    label: str | None = None,
+    max: float | None = 100,
+    fmt: str = None,
+    height: int = None,
+    abs_height: bool = False,
+    theme: str = "light",
+    title: str | None = None,
+) -> Chart:
     """环形进度：一个百分比/完成值画成圆环，中心显示数值（不接 DataFrame）。
 
     示例
@@ -1617,27 +1619,27 @@ def ring_progress(
 # 3.18 sunburst 旭日图
 # ==========================================================================
 def sunburst(
-    data,
-    path,
-    value=None,
+    data: pd.DataFrame,
+    path: str | list[str] | None,
+    value: str | None = None,
     *,
-    agg="sum",
-    sort="desc",
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    fmt="compact",
-    height=460,
-    abs_height=False,
-    theme="light",
-    legend=False,
-    labels=True,
-    zoom=False,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    sort: str | None = "desc",
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 460,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = False,
+    labels: bool = True,
+    zoom: bool | str = False,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """旭日图：多层级构成的同心圆环。
 
     ``path`` 是层级列名列表，例如 ``["大区", "省份", "城市"]``。
@@ -1684,27 +1686,27 @@ def sunburst(
 # 3.19 tree 树图
 # ==========================================================================
 def tree(
-    data,
-    path,
-    value=None,
+    data: pd.DataFrame,
+    path: str | list[str] | None,
+    value: str | None = None,
     *,
-    agg="sum",
-    sort="desc",
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    fmt="compact",
-    height=460,
-    abs_height=False,
-    theme="light",
-    legend=False,
-    labels=True,
-    zoom=False,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    sort: str | None = "desc",
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 460,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = False,
+    labels: bool = True,
+    zoom: bool | str = False,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """树图：从左到右的层级结构（树状），节点大小可反映数值。
 
     示例
@@ -1749,27 +1751,27 @@ def tree(
 # 3.20 sankey 桑基图
 # ==========================================================================
 def sankey(
-    data,
-    source=None,
-    target=None,
-    value=None,
+    data: pd.DataFrame,
+    source: str | None = None,
+    target: str | None = None,
+    value: str | None = None,
     *,
-    path=None,
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=420,
-    abs_height=False,
-    theme="light",
-    legend=False,
-    labels=True,
-    zoom=False,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    path: str | list[str] | None = None,
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 420,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = False,
+    labels: bool = True,
+    zoom: bool | str = False,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """桑基图：展示流量在多层「来源 → 去向」之间的流转及大小。
 
     两种写法（二选一）：
@@ -1845,26 +1847,26 @@ def sankey(
 # 3.21 graph 关系图
 # ==========================================================================
 def graph(
-    data,
-    source,
-    target,
-    value=None,
+    data: pd.DataFrame,
+    source: str | None,
+    target: str | None,
+    value: str | None = None,
     *,
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=420,
-    abs_height=False,
-    theme="light",
-    legend=False,
-    labels=True,
-    zoom=False,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 420,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = False,
+    labels: bool = True,
+    zoom: bool | str = False,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """关系图：力导向网络图，节点大小/边宽反映数值。
 
     示例
@@ -1910,26 +1912,26 @@ def graph(
 # 3.22 theme_river 主题河流图
 # ==========================================================================
 def theme_river(
-    data,
-    x,
-    color,
-    value=None,
+    data: pd.DataFrame,
+    x: str | None,
+    color: str | None,
+    value: str | None = None,
     *,
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    legend=True,
-    labels=False,
-    zoom="auto",
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = True,
+    labels: bool = False,
+    zoom: bool | str = "auto",
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """主题河流图：各类目随时间的体量变化，像河流一样堆叠流动。
 
     示例
@@ -1976,25 +1978,25 @@ def theme_river(
 # 3.23 calendar 日历热力图
 # ==========================================================================
 def calendar(
-    data,
-    date,
-    value=None,
+    data: pd.DataFrame,
+    date: str | None,
+    value: str | None = None,
     *,
-    agg="sum",
-    sort="x",
-    top_n=None,
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=300,
-    abs_height=False,
-    theme="light",
-    legend=False,
-    labels=False,
-    zoom=False,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    sort: str | None = "x",
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 300,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = False,
+    labels: bool = False,
+    zoom: bool | str = False,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """日历热力图：按天显示数值深浅（日期列会在 Python 侧转成 YYYY-MM-DD）。
 
     示例
@@ -2038,27 +2040,27 @@ def calendar(
 # 3.24 gantt 甘特图
 # ==========================================================================
 def gantt(
-    data,
-    task,
-    start,
-    end,
+    data: pd.DataFrame,
+    task: str | None,
+    start: str | None,
+    end: str | None,
     *,
-    color=None,
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=420,
-    abs_height=False,
-    theme="light",
-    legend=None,
-    labels=True,
-    zoom=False,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    color: str | None = None,
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 420,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = None,
+    labels: bool = True,
+    zoom: bool | str = False,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """甘特图：横向时间条，展示每个任务的起止时间。
 
     示例
@@ -2116,29 +2118,29 @@ def gantt(
 # 3.25 candlestick K 线图
 # ==========================================================================
 def candlestick(
-    data,
-    date,
-    open,
-    high,
-    low,
-    close,
+    data: pd.DataFrame,
+    date: str | None,
+    open: str | None,
+    high: str | None,
+    low: str | None,
+    close: str | None,
     *,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=420,
-    abs_height=False,
-    theme="light",
-    legend=False,
-    labels=False,
-    zoom="auto",
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 420,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = False,
+    labels: bool = False,
+    zoom: bool | str = "auto",
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """K 线图（红涨绿跌）：需要日期 + 开 / 高 / 低 / 收 四列。
 
     Python 侧按日期升序整理记录（``records 已按日期升序``），其余交给前端。
@@ -2196,25 +2198,25 @@ def candlestick(
 # 3.26 pyramid 金字塔图
 # ==========================================================================
 def pyramid(
-    data,
-    names,
-    values=None,
+    data: pd.DataFrame,
+    names: str | None,
+    values: str | None = None,
     *,
-    agg="sum",
-    sort="asc",
-    top_n=None,
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    legend=False,
-    labels=True,
-    zoom=False,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    sort: str | None = "asc",
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = False,
+    labels: bool = True,
+    zoom: bool | str = False,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """金字塔图：漏斗图上下翻转（下宽上窄），常用于层级/转化结构。
 
     示例
@@ -2258,31 +2260,31 @@ def pyramid(
 # 3.27 area_pct / bar_pct 百分比堆叠
 # ==========================================================================
 def area_pct(
-    data,
-    x,
-    y,
-    color=None,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None,
+    color: str | None = None,
     *,
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    legend=True,
-    labels=False,
-    zoom="auto",
-    drill=None,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = True,
+    labels: bool = False,
+    zoom: bool | str = "auto",
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """百分比堆叠面积图：每个 x 归一化到 100%，看各 color 的占比变化。
 
     示例
@@ -2327,31 +2329,31 @@ def area_pct(
 
 
 def bar_pct(
-    data,
-    x,
-    y,
-    color=None,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None,
+    color: str | None = None,
     *,
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    legend=True,
-    labels=False,
-    zoom="auto",
-    drill=None,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    legend: bool = True,
+    labels: bool = False,
+    zoom: bool | str = "auto",
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """百分比堆叠柱图：每个 x 归一化到 100%，看各 color 的占比。
 
     示例
@@ -2399,23 +2401,23 @@ def bar_pct(
 # 驾驶舱补充：progress / tile / table / wordcloud / group_kpi
 # ==========================================================================
 def progress(
-    data,
-    x=None,
-    y=None,
+    data: pd.DataFrame,
+    x: str | None = None,
+    y: str | None = None,
     *,
-    max=None,
-    agg="sum",
-    sort="desc",
-    top_n=10,
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=340,
-    abs_height=False,
-    theme="light",
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    max: float | None = None,
+    agg: str = "sum",
+    sort: str | None = "desc",
+    top_n: int | None = 10,
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 340,
+    abs_height: bool = False,
+    theme: str = "light",
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """进度条列表（HTML 渲染）：每类一条「名称 + 数值 + 进度条」。
 
     ``max`` 是进度条的满量程；不传时由前端取最大值。
@@ -2464,22 +2466,22 @@ def progress(
 
 
 def tile(
-    data,
-    names=None,
-    values=None,
+    data: pd.DataFrame,
+    names: str | None = None,
+    values: str | None = None,
     *,
-    agg="sum",
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=360,
-    abs_height=False,
-    theme="light",
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 360,
+    abs_height: bool = False,
+    theme: str = "light",
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """瓦片图（HTML 渲染）：每个类目一个方块，颜色深浅表示数值大小。
 
     示例
@@ -2586,24 +2588,24 @@ def _parse_table_groupby(df, groupby):
 
 
 def table(
-    data,
-    columns=None,
+    data: pd.DataFrame,
+    columns: str | list[str] | None = None,
     *,
-    groupby=None,
-    limit=100,
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=400,
-    abs_height=False,
-    theme="light",
-    link=None,
-    max_rows=200,
-    total=False,
-    index=False,
-    bar=None,
-    stripe=True,
-):
+    groupby: dict | None = None,
+    limit: int = 100,
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 400,
+    abs_height: bool = False,
+    theme: str = "light",
+    link: str | tuple | dict | None = None,
+    max_rows: int = 200,
+    total: bool = False,
+    index: str | None = False,
+    bar: str | list[str] | None = None,
+    stripe: bool = True,
+) -> Chart:
     """表格（HTML 渲染）：明细表，或按 groupby 汇总后的汇总表。
 
     两种用法：
@@ -2728,30 +2730,97 @@ def table(
     return Chart(spec, records, ref, info)
 
 
+# 词云内置形状（前端 canvas 里按这些名字画掩膜）
+_WC_SHAPES = (
+    "circle", "cardioid", "diamond", "triangle",
+    "square", "star", "pentagon", "heart",
+)
+_WC_IMAGE_EXT = {
+    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".webp": "image/webp", ".gif": "image/gif", ".bmp": "image/bmp",
+    ".svg": "image/svg+xml",
+}
+_WC_MAX_SHAPE_BYTES = 2 * 1024 * 1024
+
+
+def _parse_cloud_shape(shape):
+    """把 shape 归一化成前端能用的字典：内置形状只存名字，图片转成 data URI。"""
+    if shape is None:
+        return None
+    if not isinstance(shape, str):
+        raise ValueError(
+            "wordcloud 的 shape 需要是内置形状名或图片路径，收到 %r。内置形状：%s。"
+            % (shape, "、".join(_WC_SHAPES))
+        )
+    key = shape.strip()
+    if not key:
+        raise ValueError('wordcloud 的 shape 不能是空字符串：内置形状 %s，或本地图片路径。'
+                         % "、".join(_WC_SHAPES))
+    if key.lower() in _WC_SHAPES:
+        return {"type": "builtin", "name": key.lower()}
+    path = os.path.abspath(os.path.expanduser(key))
+    if not os.path.isfile(path):
+        raise ValueError(
+            "wordcloud 的 shape=%r 既不是内置形状（%s），也不是存在的图片文件。"
+            % (shape, "、".join(_WC_SHAPES))
+        )
+    ext = os.path.splitext(path)[1].lower()
+    if ext not in _WC_IMAGE_EXT:
+        raise ValueError(
+            "wordcloud 的 shape 图片只支持 %s，收到 %s。"
+            % ("、".join(sorted(_WC_IMAGE_EXT)), ext or "(无扩展名)")
+        )
+    size = os.path.getsize(path)
+    if size > _WC_MAX_SHAPE_BYTES:
+        raise ValueError(
+            "wordcloud 的 shape 图片不能超过 2 MB（当前 %.1f MB）：图片会整段内联进 HTML。"
+            % (size / 1048576.0,)
+        )
+    with open(path, "rb") as fh:
+        raw = fh.read()
+    mime = _WC_IMAGE_EXT[ext]
+    b64 = base64.b64encode(raw).decode("ascii")
+    return {
+        "type": "image",
+        "mime": mime,
+        "name": os.path.basename(path),
+        "src": "data:%s;base64,%s" % (mime, b64),
+    }
+
+
 def wordcloud(
-    data,
-    names=None,
-    values=None,
+    data: pd.DataFrame,
+    names: str | None = None,
+    values: str | None = None,
     *,
-    agg="sum",
-    sort=None,
-    top_n=30,
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=360,
-    abs_height=False,
-    theme="light",
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
-    """词云（HTML/CSS 渲染）：每个类目一个词，字号随数值变化，最多 30 个。
+    agg: str = "sum",
+    sort: str | None = None,
+    top_n: int | None = 30,
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 360,
+    abs_height: bool = False,
+    theme: str = "light",
+    link: str | tuple | dict | None = None,
+    shape: str | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
+    """词云（HTML/CSS 或 canvas 渲染）：每个类目一个词，字号随数值变化，最多 30 个。
 
     示例
     ----
     >>> eazy_data_viz.charts_extra.wordcloud(df, names="关键词", values="提及次数")
+
+    ``shape`` 可以给内置形状（circle / cardioid / diamond / triangle / square /
+    star / pentagon / heart），也可以给一张本地图片的路径（png / jpg / webp / gif /
+    bmp / svg，≤ 2 MB）：词会按这张图的轮廓排布。::
+
+        px.wordcloud(df, names="关键词", values="次数", shape="star")
+        px.wordcloud(df, names="关键词", values="次数", shape="assets/logo.png")
     """
     df = _frame.ensure_frame(data)
+    shape_spec = _parse_cloud_shape(shape)
     if names is None:
         names = _pick_dim(df)
     if names is None:
@@ -2785,28 +2854,29 @@ def wordcloud(
         drill=None,
         link=link,
         max_rows=max_rows,
+        shape=shape_spec,
     )
     return Chart(spec, records, ref, info)
 
 
 def group_kpi(
-    data=None,
-    names=None,
-    values=None,
+    data: pd.DataFrame = None,
+    names: str | None = None,
+    values: str | None = None,
     *,
-    items=None,
-    agg="sum",
-    sort="desc",
-    top_n=6,
-    unit=None,
-    delta=None,
-    fmt="compact",
-    title=None,
-    subtitle=None,
-    height=140,
-    abs_height=False,
-    theme="light",
-):
+    items: list | None = None,
+    agg: str = "sum",
+    sort: str | None = "desc",
+    top_n: int | None = 6,
+    unit: str | None = None,
+    delta: float | None = None,
+    fmt: str = "compact",
+    title: str | None = None,
+    subtitle: str | None = None,
+    height: int = 140,
+    abs_height: bool = False,
+    theme: str = "light",
+) -> Chart:
     """KPI 卡片组（HTML 渲染）：一排指标卡片。
 
     三种用法：

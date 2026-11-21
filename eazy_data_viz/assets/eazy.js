@@ -1960,6 +1960,9 @@
         return htmlBuilder(spec, c.data, c.state, c.theme);
       });
       renderToolbar(c);
+      // HTML 类图（词云 canvas 等）在 innerHTML 落盘之后可能还要画一笔
+      var htmlHook = EazyViz.htmlHooks && EazyViz.htmlHooks[spec.type];
+      if (htmlHook) { try { htmlHook(c); } catch (htmlErr) { /* 画不出来不影响其它图 */ } }
       fitTexts(c.el);
       return;
     }
@@ -1978,9 +1981,66 @@
       return;
     }
     c.ec.setOption(opt, true);
+    // 旭日图点节点会 rootToNode 放大；但联动一触发就会重画（setOption notMerge），
+    // 放大状态会跟着丢。这里在重画之后把用户点开的那一层重新落回去，做到「放大 + 联动」同时生效。
+    if (spec.type === 'sunburst') {
+      if (c.zoomPath && c.zoomPath.length) applyZoomRoot(c);
+      else resetZoomRoot(c);
+    }
     renderToolbar(c);
     c._w = c.el.clientWidth;
     c._narrow = activeWidth > 0 && activeWidth < 480;
+  }
+
+  // 在当前（可能已被筛选过的）树里按名字路径找节点：节点 id 会随视图根变化，
+  // 只有「名字路径」在重画前后稳定。
+  function findNodeByPath(root, path) {
+    var node = root;
+    for (var i = 0; i < path.length; i++) {
+      var kids = (node && node.children) || [];
+      var hit = null;
+      for (var k = 0; k < kids.length; k++) {
+        if (String(kids[k].name) === String(path[i])) { hit = kids[k]; break; }
+      }
+      if (!hit) return null;
+      node = hit;
+    }
+    return node;
+  }
+
+  // 旭日图的视图根是存在 series model 上的：重画时若保留着上一次的放大状态，
+  // 一键重置 / 换筛选条件后用户就永远停在那一层，所以没有 zoomPath 时显式退回整棵树。
+  function resetZoomRoot(c) {
+    if (!c || !c.ec || !c.spec || c.spec.type !== 'sunburst') return;
+    function go() {
+      try {
+        var sm = c.ec.getModel().getSeriesByIndex(0);
+        var root = sm.getData().tree.root;
+        if (sm.getViewRoot() !== root) sm.resetViewRoot(root);
+      } catch (e) { /* 没有 model 时忽略 */ }
+    }
+    go();
+    setTimeout(go, 16);
+  }
+
+  // 旭日图把视图根节点切到 zoomPath 指向的节点；找不到（被联动筛掉了）就停在当前根。
+  function applyZoomRoot(c) {
+    var path = c.zoomPath;
+    if (!path || !path.length || !c.ec) return;
+    function go() {
+      if (!c.ec || c.spec.type !== 'sunburst') return;
+      try {
+        var series = c.ec.getModel().getSeriesByIndex(0);
+        var root = series.getData().tree.root;
+        var node = findNodeByPath(root, path);
+        if (node && node !== root) {
+          c.ec.dispatchAction({ type: 'sunburstRootToNode', targetNode: node });
+        }
+      } catch (e) { /* 节点已不存在时忽略 */ }
+    }
+    go();
+    // 数据刚换过时第一帧可能还没建好节点，再补一次（幂等）
+    setTimeout(go, 16);
   }
 
   // 点击的图形到底代表「哪一列 = 哪个值」。
@@ -2031,6 +2091,18 @@
     if (!xdim || p.name === null || p.name === undefined) return;
     var value = info ? info.value : String(p.name);
     if (value === '其他') return;
+
+    // 旭日图：记住用户点开的那一层（用名字路径，重画后节点 id 会变），联动重画后再落回去
+    if (spec.type === 'sunburst') {
+      var zp = [], tp = p.treePathInfo || [];
+      for (var ti = 1; ti < tp.length; ti++) {
+        if (tp[ti] && tp[ti].name !== undefined && tp[ti].name !== null && tp[ti].name !== '') {
+          zp.push(String(tp[ti].name));
+        }
+      }
+      if (!zp.length && p.name !== undefined && p.name !== null) zp = [String(p.name)];
+      c.zoomPath = zp;
+    }
 
     var drilled = false;
     if (spec.drill && c.state.drill.length < spec.drill.length) {
@@ -2410,6 +2482,7 @@
     EazyViz.links = {};
     for (var i = 0; i < EazyViz.charts.length; i++) {
       var c = EazyViz.charts[i];
+      c.zoomPath = null;   // 一键重置：旭日图也回到根，别停在某个圈里
       syncFilters(c);
       renderChart(c);
     }

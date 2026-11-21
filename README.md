@@ -455,8 +455,11 @@ tools/
   build_gallery.py       # 生成 gallery.html（64 卡片 / 45 类型 / 8 分区，自动录制代码）
   gen_ai_doc.py          # 生成 docs/AI_GUIDE.md + docs/eazy_catalog.json
 tests/
-  test_eazy.py           # Python 测试（28 项）
-  js_test.py             # 前端测试（59 项，headless Chrome 内断言）
+  test_eazy.py           # Python 测试（42 项）
+  test_maps.py           # 地图测试（33 项）
+  js_test.py             # 前端测试（136 项，headless Chrome 内断言）
+  js_test_15.py          # 1.5 新增能力的前端测试（112 项）
+  e2e_test.py            # 端到端：浏览器里模拟点击，走一遍 show / dashboard 联动
 examples/                # 可直接运行的示例（驾驶舱 / KPI / 配色 / 下钻联动 / Streamlit）
   streamlit_sales_demo/  # 销售经营分析看板（含 prepare_data.py 主键→中文名转换）
 docs/
@@ -474,11 +477,14 @@ setup.py / pyproject.toml / MANIFEST.in
 ## 14. 测试
 
 ```bash
-python tests/test_eazy.py     # Python：14 种基础图 + 参数校验 + drill/link + 看板
+python tests/test_eazy.py     # Python：基础图 + 参数校验 + 自由排列 + groupby + 同比 + 联动方向
+python tests/test_maps.py     # Python：地图（GeoJSON / 省市区匹配 / 联动）
 python tests/js_test.py       # 前端：聚合 / option / 下钻 / 联动 / 配色 / 卡片代码区（headless Chrome）
+python tests/js_test_15.py    # 前端：1.5 新增（多级桑基 / 汇总表 / 同比 / 联动方向 / 词云 shape / 旭日放大）
+python tests/e2e_test.py      # 端到端：模拟真人点击，验证 show / dashboard 的联动链路
 ```
 
-当前状态：`PASS 28` / `ALL OK`，前端 `JS PASS 59, FAIL 0`。
+当前状态：`PASS 42` + 地图 `PASS 33`；前端 `JS PASS 136`、`JS PASS 112`；端到端 `E2E PASS 41`，全部 0 失败。
 
 ---
 

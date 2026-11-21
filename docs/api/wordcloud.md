@@ -2,7 +2,7 @@
 
 词云把类目名按数值大小映射成不同字号，铺排成一团文本云：字越大，值越高。它牺牲精确比较，换取“一眼抓住重点词”的视觉冲击，适合放在汇报首页或看板角落。
 
-与 ECharts 无关：词云是纯 HTML/CSS 渲染，字号按 `13 + 17 * 归一化值` 计算，颜色从调色板循环取。
+默认是纯 HTML/CSS 渲染（传了 `shape` 才切到 canvas，见下文 `shape`），字号按 `13 + 17 * 归一化值` 计算，颜色从调色板循环取。
 
 - **适合**：类目 10~30 个、只想表达“谁更重要”，且这些名字本身就是可读的中文词。
 - **不适合**：需要精确比较、类目超过 40 个、或名称很长时不要用；改用 `bar` 或 `table`。
@@ -24,8 +24,10 @@ eazy_data_viz.wordcloud(
     subtitle=None,
     fmt='compact',
     height=360,
+    abs_height=False,
     theme='light',
     link=None,
+    shape=None,
     max_rows=200000,
 ) -> Chart
 ```
@@ -47,6 +49,7 @@ eazy_data_viz.wordcloud(
 | `fmt` | str | 'compact' | 否 | 数值格式（tooltip / 标签） |
 | `height` | int | 360 | 否 | 画布高度（像素） |
 | `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
+| `shape` | str 或 None | None | 否 | 词云形状：内置形状名（circle / cardioid / diamond / triangle / square / star / pentagon / heart）或本地图片路径 |
 | `theme` | str | 'light' | 否 | 主题（浅色 / 深色） |
 | `link` | str 或 None | None | 否 | 联动分组名 |
 | `max_rows` | int | 200000 | 否 | 嵌入前端的最大行数 |
@@ -122,6 +125,15 @@ eazy_data_viz.wordcloud(
 - **建议**：普通看板 320~460；层级图/关系图建议 ≥420。 多张图并排时高度取一致，视觉更整齐。 `height` 小于 120 会直接报错，不要用它做“隐藏图”。
 - **示例**：`edv.wordcloud(df, names="产品", values="销售额", height=520)`
 - **报错**：`height=100`：`ValueError: height 至少 120（像素），收到 100`；`height="400"`：同样报错（必须是 `int/float`）。
+
+### `shape` — 词云形状（内置形状名或图片路径）（`str | None`，默认 `None`）
+
+- **作用**：不传时是原来的 CSS 词云（铺满卡片、轻量）；传了之后改用 canvas 渲染，词会按形状的轮廓螺旋排布，看上去就像「这些词组成了这个形状」。
+- **取值**：内置形状 `circle`、`cardioid`、`diamond`、`triangle`、`square`、`star`、`pentagon`、`heart`（会自动拉伸铺满卡片）；或者一张本地图片的路径（`png` / `jpg` / `jpeg` / `webp` / `gif` / `bmp` / `svg`，≤ 2 MB）——图片会转成 data URI 内联进 HTML，所以别放太大的图。
+- **预览**：形状区域会铺一层 7% 透明度的淡淡底影，词铺不满的尖角也能看出轮廓。
+- **建议**：词数 25~60 个时效果最好（`top_n` 调大些）；词太少（< 8 个）或名称太长会显得空。窄卡片里建议 `height=320` 以上，形状才展开得开。
+- **报错**：`ValueError: wordcloud 的 shape='nope' 既不是内置形状（circle、cardioid、diamond、triangle、square、star、pentagon、heart），也不是存在的图片文件。` / `ValueError: wordcloud 的 shape 图片只支持 .bmp、.gif、.jpeg、.jpg、.png、.svg、.webp，收到 .tiff。` / `ValueError: wordcloud 的 shape 图片不能超过 2 MB（当前 3.4 MB）：图片会整段内联进 HTML。`
+- **示例**：`shape="star"`、`shape="heart"`、`shape="assets/logo.png"`
 
 ### `abs_height` — 绝对高度：`height` 就是整个组件外框（`bool`，默认 `False`）
 
@@ -236,6 +248,21 @@ edv.dashboard(cal, wc, title="日历 → 词云", cols=2).save("examples/output/
 **输出**：日历图点击无法传值（calendar 不支持作为联动源），所以实际不会过滤；但词云可以接收来自其它 ECharts 图表的联动过滤，过滤后字号按剩余数据重算。
 
 > 以上示例对应的可运行脚本见 `examples/charts/wordcloud.py`，运行 `PYTHONPATH=. python examples/charts/wordcloud.py` 会一次性生成全部 HTML。
+
+### 示例 6：按形状排（1.5 新参数）
+
+```python
+import eazy_data_viz as edv
+import eazy_data_viz.charts_extra as px
+
+df = edv.sample_df()
+px.wordcloud(df, names="产品", values="销售额", shape="star", height=340, top_n=30)
+
+# 用一张本地图片当轮廓（logo、素材图都行，≤ 2 MB）
+px.wordcloud(df, names="产品", values="销售额", shape="assets/logo.png", height=340)
+```
+
+不传 `shape` 时行为完全不变（CSS 排版），所以老代码不用动。
 
 ## 常见问题 / 注意事项
 

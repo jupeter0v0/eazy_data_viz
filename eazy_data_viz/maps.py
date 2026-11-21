@@ -371,7 +371,7 @@ def _region_centers(map_name="china"):
     return dict(out)
 
 
-def normalize_region(name):
+def normalize_region(name: str | None) -> str:
     """把区域名归一化成「短名」，用于跨数据源匹配地图区域。
 
     规则（与 ``assets/eazy_map.js`` 的 ``normalizeRegion`` 完全一致）：
@@ -413,7 +413,7 @@ def normalize_region(name):
     return s
 
 
-def province_centers():
+def province_centers() -> dict:
     """返回中国省级行政区的中心点坐标：``{短名: [经度, 纬度]}``。
 
     中心点优先取 GeoJSON 里的 ``properties.center/centroid``，没有时用多边形
@@ -435,7 +435,7 @@ def province_centers():
     return out
 
 
-def region_centers(map_name="china"):
+def region_centers(map_name: str | None="china") -> dict:
     """返回指定地图的 ``{区域全名: [经度, 纬度]}``（质心，自动从 GeoJSON 计算）。
 
     一般不需要直接调用：``map_bubble`` / ``map_flow`` 在前端会自动算质心。
@@ -523,7 +523,7 @@ def _map_spec(
 _REGION_KEYS_CACHE = {}
 
 
-def known_region_keys(map_name="china"):
+def known_region_keys(map_name: str | None="china") -> set:
     """内置地图能识别的区域名（已 :func:`normalize_region` 归一化）。
 
     中国地图同时包含省级与城市级名称（城市来自 ``china_cities.json``）；
@@ -607,29 +607,29 @@ def _coerce_numeric(df, cols):
 
 
 def geo_map(
-    data,
-    region,
-    value=None,
+    data: pd.DataFrame,
+    region: str | None,
+    value: str | None = None,
     *,
-    map="china",
-    agg="sum",
-    fmt="compact",
-    labels=True,
-    min_value=None,
-    max_value=None,
-    name_map=None,
-    zoom=None,
-    palette=None,
-    height=460,
-    abs_height=False,
-    theme="light",
-    title=None,
-    subtitle=None,
-    drill=None,
-    link=None,
-    legend=True,
-    section=None,
-):
+    map: str | None = "china",
+    agg: str = "sum",
+    fmt: str = "compact",
+    labels: bool = True,
+    min_value: float | None = None,
+    max_value: float | None = None,
+    name_map: dict | None = None,
+    zoom: bool | str = None,
+    palette: str | None = None,
+    height: int = 460,
+    abs_height: bool = False,
+    theme: str = "light",
+    title: str | None = None,
+    subtitle: str | None = None,
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    legend: bool = True,
+    section: str | None = None,
+) -> Chart:
     """区域填色地图：用颜色深浅表达一个指标在各省 / 各国 / 北京各区上的高低。
 
     ``region`` 列可以是短名（``"广东"``）也可以是全名（``"广东省"``），
@@ -702,7 +702,12 @@ def geo_map(
 # ==========================================================================
 # 1.1 beijing_map —— 北京区级填色地图（geo_map 的便捷封装）
 # ==========================================================================
-def beijing_map(data, region="区", value=None, **kwargs):
+def beijing_map(
+    data: pd.DataFrame,
+    region: str | None = "区",
+    value: str | None = None,
+    **kwargs,
+) -> Chart:
     """北京 16 个市辖区的区级填色地图。
 
     等价于 ``geo_map(data, region, value, map="beijing", ...)``，只是把
@@ -722,30 +727,30 @@ def beijing_map(data, region="区", value=None, **kwargs):
 # 2. map_bubble —— 气泡地图
 # ==========================================================================
 def map_bubble(
-    data,
-    region,
-    value=None,
+    data: pd.DataFrame,
+    region: str | None,
+    value: str | None = None,
     *,
-    map="china",
-    agg="sum",
-    size=None,
-    color=None,
-    fmt="compact",
-    min_size=4,
-    max_size=28,
-    name_map=None,
-    zoom=None,
-    palette=None,
-    height=460,
-    abs_height=False,
-    theme="light",
-    title=None,
-    subtitle=None,
-    drill=None,
-    link=None,
-    legend=True,
-    section=None,
-):
+    map: str | None = "china",
+    agg: str = "sum",
+    size: str | None = None,
+    color: str | None = None,
+    fmt: str = "compact",
+    min_size: int = 4,
+    max_size: int = 28,
+    name_map: dict | None = None,
+    zoom: bool | str = None,
+    palette: str | None = None,
+    height: int = 460,
+    abs_height: bool = False,
+    theme: str = "light",
+    title: str | None = None,
+    subtitle: str | None = None,
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    legend: bool = True,
+    section: str | None = None,
+) -> Chart:
     """气泡地图：在省份 / 国家中心点画气泡，气泡大小和颜色可以再编码两个指标。
 
     * ``value``：默认控制气泡大小（没有 ``size`` 时），同时用于 tooltip；
@@ -825,26 +830,26 @@ def map_bubble(
 # 3. map_flow —— 飞线地图
 # ==========================================================================
 def map_flow(
-    data,
-    source,
-    target,
-    value=None,
+    data: pd.DataFrame,
+    source: str | None,
+    target: str | None,
+    value: str | None = None,
     *,
-    map="china",
-    agg="sum",
-    fmt="compact",
-    name_map=None,
-    zoom=None,
-    palette=None,
-    height=460,
-    abs_height=False,
-    theme="light",
-    title=None,
-    subtitle=None,
-    link=None,
-    legend=True,
-    section=None,
-):
+    map: str | None = "china",
+    agg: str = "sum",
+    fmt: str = "compact",
+    name_map: dict | None = None,
+    zoom: bool | str = None,
+    palette: str | None = None,
+    height: int = 460,
+    abs_height: bool = False,
+    theme: str = "light",
+    title: str | None = None,
+    subtitle: str | None = None,
+    link: str | tuple | dict | None = None,
+    legend: bool = True,
+    section: str | None = None,
+) -> Chart:
     """飞线地图：把一条数据当作「source → target」的流量，在地图上画动态飞线。
 
     线宽和颜色都随数值变化（值越大线越粗、颜色越靠「高热」端）。

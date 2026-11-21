@@ -169,12 +169,16 @@
 
   // 汇总表：按 groupby.columns 分组，对 groupby.value 做 groupby.agg 聚合。
   // 聚合只发生在渲染层（rows 已经过联动筛选），不改变 dataStore 里的原始数据。
-  function buildGroupedTable(spec, rows, kinds) {
+  // 联动和明细表完全一致：分组列可点（发 link），别的图筛它时行不变、只高亮命中的分组。
+  function buildGroupedTable(spec, rows, kinds, state) {
     var g = spec.groupby || {};
     var dims = g.columns || [];
     var measure = g.value || null;
     var how = g.agg || (measure ? 'sum' : 'count');
     var limit = Math.min(spec.limit || 100, 500);
+    var clickable = !!spec.link;
+    var link = (spec.link && state && state.link && state.link.sourceId === spec.id)
+      ? state.link : null;
     var groups = U.groupBy(rows, dims, measure, how);
     groups.sort(function (a, b) {
       var av = a.value, bv = b.value;
@@ -193,17 +197,33 @@
     html += '</tr></thead><tbody>';
     for (var i = 0; i < groups.length && i < limit; i++) {
       var grp = groups[i];
-      html += '<tr>';
+      var rowHit = false;
+      if (link) {
+        for (var ld = 0; ld < dims.length; ld++) {
+          if (String(link.dim) === String(dims[ld]) &&
+              U.catName(grp.keys[ld]) === String(link.value)) { rowHit = true; break; }
+        }
+      }
+      html += '<tr' + (rowHit ? ' class="eazy-row-hit"' : '') + '>';
       for (var d = 0; d < dims.length; d++) {
         var kind = kinds[dims[d]];
         var cell = grp.keys[d];
-        if (kind === 'time') cell = String(cell).slice(0, 16);
-        else cell = U.esc(U.catName(cell));
-        html += '<td>' + cell + '</td>';
+        var cls = '', attrs = '';
+        // 分组列就是维度列：可点，点了按「列 = 分组值」联动同组图表（再点取消）
+        if (clickable && kind !== 'num' && kind !== 'time' && !isBlank(cell)) {
+          var catv = U.catName(cell);
+          cls = ' class="eazy-cell-link"';
+          attrs = ' data-eazy-cell="' + U.esc(dims[d]) + '" data-eazy-val="' + U.esc(catv) + '"' +
+            ' title="按「' + U.esc(dims[d]) + ' = ' + U.esc(catv) + '」联动同组图表（再点一次取消）"';
+        }
+        var text = (kind === 'time')
+          ? U.esc(String(U.catName(cell)).slice(0, 16))
+          : U.esc(U.catName(cell));
+        html += '<td' + cls + attrs + '>' + text + '</td>';
       }
       var val = grp.value;
-      var text = (val === null || val === undefined) ? '—' : U.fmtValue(val, numFmt);
-      html += '<td class="num">' + text + '</td>';
+      var text2 = (val === null || val === undefined) ? '—' : U.fmtValue(val, numFmt);
+      html += '<td class="num">' + text2 + '</td>';
       html += '</tr>';
     }
     html += '</tbody></table></div>';
@@ -226,7 +246,7 @@
     var cols = spec.columns || [];
     if (spec.groupby) {
       if (!rows.length) return '<div class="eazy-empty">当前条件下没有数据</div>';
-      return buildGroupedTable(spec, rows, data.kinds || {});
+      return buildGroupedTable(spec, rows, data.kinds || {}, state);
     }
     if (!rows.length || !cols.length) return '<div class="eazy-empty">当前条件下没有数据</div>';
     var limit = Math.min(spec.limit || 100, 500);
@@ -332,20 +352,31 @@
   };
 
   // ------------------------------------------------------------------
-  // wordcloud 词云（纯 CSS 排版）
+  // wordcloud 词云
+  //   不传 shape：原来的 CSS flex 排版（轻、快、老页面保持不变）
+  //   传了 shape：canvas + 形状掩膜 + 螺旋装箱，词按图片/内置形状的轮廓排布
   // ------------------------------------------------------------------
-  H['wordcloud'] = function (spec, data, state, theme) {
+  function wcItems(spec, data, state) {
     var rows = U.filteredRows(spec, data, state);
     var ndim = spec.roles.names || spec.roles.x;
-    if (!ndim || !rows.length) return '<div class="eazy-empty">当前条件下没有数据</div>';
+    if (!ndim || !rows.length) return null;
     var groups = U.groupBy(rows, [ndim], spec.roles.value || spec.roles.y, spec.agg || 'sum');
     var items = [];
     for (var i = 0; i < groups.length; i++) {
       if (groups[i].value > 0) items.push({ name: groups[i].keys[0], value: groups[i].value });
     }
     items.sort(function (a, b) { return b.value - a.value; });
-    items = items.slice(0, spec.topN || 30);
-    if (!items.length) return '<div class="eazy-empty">当前条件下没有数据</div>';
+    return items.slice(0, spec.topN || 30);
+  }
+
+  H['wordcloud'] = function (spec, data, state, theme) {
+    var items = wcItems(spec, data, state);
+    if (!items || !items.length) return '<div class="eazy-empty">当前条件下没有数据</div>';
+    if (spec.shape) {
+      var h = parseInt(spec.height, 10) || 360;
+      return '<div class="eazy-wc-wrap" style="height:' + h + 'px">' +
+        '<canvas class="eazy-wc-canvas"></canvas></div>';
+    }
     var maxV = items[0].value, minV = items[items.length - 1].value;
     var span = (maxV - minV) || 1;
     var html = '<div class="eazy-wc">';
@@ -357,6 +388,262 @@
         ';opacity:' + (0.72 + t * 0.28).toFixed(2) + '">' + U.esc(items[j].name) + '</span>';
     }
     return html + '</div>';
+  };
+
+  // 按形状名画一条闭合路径：统一在「单位圆」坐标系里画，再按画布宽高拉伸，
+  // 这样 circle 会变成椭圆、star 会铺满整张卡片 —— 词云要的是铺满，不是留白。
+  function wcShapePath(ctx, name, W, H) {
+    var hw = W / 2, hh = H / 2, i, a, rr, px, py;
+    ctx.save();
+    ctx.translate(hw, hh);
+    ctx.scale(hw * 0.99, hh * 0.99);
+    ctx.beginPath();
+    if (name === 'square') {
+      ctx.rect(-1, -1, 2, 2);
+    } else if (name === 'diamond') {
+      ctx.moveTo(0, -1); ctx.lineTo(1, 0); ctx.lineTo(0, 1); ctx.lineTo(-1, 0); ctx.closePath();
+    } else if (name === 'triangle') {
+      ctx.moveTo(0, -1); ctx.lineTo(0.96, 0.72); ctx.lineTo(-0.96, 0.72); ctx.closePath();
+    } else if (name === 'star') {
+      for (i = 0; i < 10; i++) {
+        a = -Math.PI / 2 + i * Math.PI / 5;
+        rr = (i % 2 === 0) ? 1 : 0.45;
+        px = Math.cos(a) * rr; py = Math.sin(a) * rr;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+    } else if (name === 'pentagon') {
+      for (i = 0; i < 5; i++) {
+        a = -Math.PI / 2 + i * Math.PI * 2 / 5;
+        px = Math.cos(a); py = Math.sin(a);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+    } else if (name === 'heart') {
+      ctx.moveTo(0, 0.95);
+      ctx.bezierCurveTo(-1.45, -0.05, -0.6, -1.15, 0, -0.4);
+      ctx.bezierCurveTo(0.6, -1.15, 1.45, -0.05, 0, 0.95);
+      ctx.closePath();
+    } else if (name === 'cardioid') {
+      for (i = 0; i <= 240; i++) {
+        a = i / 240 * Math.PI * 2;
+        rr = 0.62 * (1 - Math.cos(a));
+        px = Math.sin(a) * rr;
+        py = 0.25 - Math.cos(a) * rr;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+    } else {
+      ctx.arc(0, 0, 1, 0, Math.PI * 2);
+    }
+    ctx.restore();
+  }
+
+  // 建掩膜：内置形状直接描路径；图片按 alpha（有透明通道）或亮度（白底图）判定
+  function wcBuildMask(shape, W, H, done) {
+    var MW = 260, MH = Math.max(80, Math.round(MW * H / W));
+    var mc = document.createElement('canvas');
+    mc.width = MW; mc.height = MH;
+    var mctx = mc.getContext('2d');
+    var isImage = shape && shape.type === 'image' && shape.src;
+    function finish(imgEl) {
+      var data = mctx.getImageData(0, 0, MW, MH).data;
+      done(function inside(px, py) {
+        var x = px | 0, y = py | 0;
+        if (x < 0 || y < 0 || x >= MW || y >= MH) return false;
+        var i = (y * MW + x) * 4;
+        if (data[i + 3] < 128) return false;
+        if (!isImage) return true;
+        return (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) < 246;
+      }, MW, MH, imgEl);
+    }
+    if (isImage) {
+      var img = new Image();
+      img.onload = function () {
+        var s = Math.min(MW / img.width, MH / img.height) * 0.98;
+        mctx.clearRect(0, 0, MW, MH);
+        mctx.drawImage(img, (MW - img.width * s) / 2, (MH - img.height * s) / 2,
+          img.width * s, img.height * s);
+        finish(img);
+      };
+      img.onerror = function () { mctx.clearRect(0, 0, MW, MH); finish(null); };
+      img.src = shape.src;
+      return;
+    }
+    mctx.fillStyle = '#fff';
+    wcShapePath(mctx, (shape && shape.name) || 'circle', MW, MH);
+    mctx.fill();
+    finish();
+  }
+
+  function wcFont(size, weight) {
+    return (weight || 600) + ' ' + size + 'px "Inter", "Noto Sans SC", "PingFang SC", ' +
+      'system-ui, -apple-system, "Segoe UI", sans-serif';
+  }
+
+  // 螺旋装箱：从中心往外找第一个「完全落在形状内、且不和已放文字重叠」的位置
+  function wcDraw(cv, items, shape, theme) {
+    var W = Math.max(120, cv.clientWidth || (cv.parentNode && cv.parentNode.clientWidth) || 600);
+    var H = Math.max(80, cv.clientHeight || (cv.parentNode && cv.parentNode.clientHeight) || 360);
+    var dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(W * dpr);
+    cv.height = Math.round(H * dpr);
+    cv.style.width = W + 'px';
+    cv.style.height = H + 'px';
+    var ctx = cv.getContext('2d');
+    cv.__wcBoxes = [];   // 自检脚本读它查重叠，重画时清空
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (!ctx.measureText) return;
+
+    wcBuildMask(shape, W, H, function (inside, MW, MH, imgEl) {
+      // 淡淡地铺一层形状底影：词铺不满的尖角/镂空也能看出形状
+      ctx.save();
+      ctx.globalAlpha = 0.1;
+      ctx.fillStyle = theme.line || theme.axis || theme.text;
+      if (imgEl) {
+        var sc = Math.min(W / imgEl.width, H / imgEl.height) * 0.98;
+        var iw = imgEl.width * sc, ih = imgEl.height * sc;
+        ctx.drawImage(imgEl, (W - iw) / 2, (H - ih) / 2, iw, ih);
+      } else {
+        wcShapePath(ctx, (shape && shape.name) || 'circle', W, H);
+        ctx.fill();
+      }
+      ctx.restore();
+      var cell = 2, GW = Math.ceil(MW / cell), GH = Math.ceil(MH / cell);
+      var taken = new Uint8Array(GW * GH);
+      var insideCells = 0, gx, gy;
+      for (gy = 0; gy < GH; gy++) {
+        for (gx = 0; gx < GW; gx++) {
+          if (inside(gx * cell + 1, gy * cell + 1)) { insideCells += 1; }
+        }
+      }
+      if (!insideCells) return;
+      // 形状体积 → 每个词的面积份额：让所有词合起来大约铺满形状的 62%
+      var cellCss = (W / MW) * cell;
+      var budget = insideCells * cellCss * cellCss * 0.45;
+      var maxV = items[0].value || 1;
+      var weights = [], wsum = 0, i;
+      for (i = 0; i < items.length; i++) {
+        var wgt = Math.pow(Math.max(items[i].value, maxV * 0.01) / maxV, 0.45);
+        weights.push(wgt);
+        wsum += wgt;
+      }
+      var maxSize = Math.min(H * 0.22, W * 0.17);
+      var minSize = Math.max(8, Math.min(14, maxSize * 0.22));
+
+      function sizeOf(idx, shrink) {
+        var len = Math.max(1, String(items[idx].name).length);
+        var area = budget * weights[idx] / Math.max(0.0001, wsum);
+        // 文字面积 ≈ 0.58 × 字号² × 字数（汉字近似方块，英文更窄，取折中）
+        var size = Math.sqrt(area / (0.58 * len));
+        // 第一轮保可读性（不低于 minSize）；重试轮允许更小，避免「词被丢掉」
+        var floor2 = (shrink === undefined || shrink >= 0.6) ? minSize : Math.max(7, minSize * 0.55);
+        return Math.max(floor2, Math.min(maxSize, size * (shrink || 1)));
+      }
+
+      var placed = 0, doneIdx = {};
+      function tryPlace(idx, shrink) {
+        var nm = String(items[idx].name);
+        if (!nm) return false;
+        return wcPlace(ctx, nm, sizeOf(idx, shrink), taken, inside, cell, GW, GH, MW, MH, W, H,
+          theme.palette[idx % theme.palette.length], idx);
+      }
+      // 第一轮：按面积份额一次到位；放不下就缩到 0.62 再试
+      for (i = 0; i < items.length; i++) {
+        if (tryPlace(i, 1) || tryPlace(i, 0.62)) { placed += 1; doneIdx[i] = 1; }
+      }
+      // 第二轮：还没进形状的，缩到 0.42 / 0.3 再抢一次空位
+      for (i = 0; i < items.length; i++) {
+        if (doneIdx[i]) continue;
+        if (tryPlace(i, 0.42) || tryPlace(i, 0.3)) { placed += 1; doneIdx[i] = 1; }
+      }
+      // 第三轮：词多、形状小的时候再降两档，让每个词都能露脸（不再丢词）
+      for (i = 0; i < items.length; i++) {
+        if (doneIdx[i]) continue;
+        if (tryPlace(i, 0.24) || tryPlace(i, 0.18) || tryPlace(i, 0.14)) {
+          placed += 1; doneIdx[i] = 1;
+        }
+      }
+      cv.__wcPlaced = placed;
+      cv.__wcItems = items.length;
+      cv.setAttribute('data-wc', items.length + '/' + placed);
+      // 一个词都放不下时兜底：把最大的词硬画在中心
+      if (!placed) {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = theme.text;
+        ctx.font = wcFont(Math.max(12, minSize), 600);
+        ctx.fillText(String(items[0].name), W / 2, H / 2);
+      }
+    });
+  }
+
+  function wcPlace(ctx, name, size, taken, inside, cell, GW, GH, MW, MH, W, H, color, order) {
+    var hCss = size * 1.3;
+    ctx.font = wcFont(size, 600);
+    var wRaw = ctx.measureText(name).width;
+    var variants = [
+      { rot: 0, w: wRaw, h: hCss },
+      { rot: -Math.PI / 2, w: hCss, h: wRaw }
+    ];
+    for (var v = 0; v < variants.length; v++) {
+      var box = variants[v];
+      // 每边多留若干格当行距：字越大留得越宽，避免笔画视觉上贴在一起
+      var pad = size >= 26 ? 3 : (size >= 12 ? 2 : 1);
+      var cw = Math.max(1, Math.ceil(box.w * MW / W / cell)) + pad;
+      var ch = Math.max(1, Math.ceil(box.h * MH / H / cell)) + pad;
+      var cxg = Math.floor(GW / 2), cyg = Math.floor(GH / 2);
+      var maxR = Math.sqrt(GW * GW + GH * GH);
+      for (var step = 0; step < 9000; step++) {
+        var r = step * 0.9;
+        if (r > maxR) break;
+        var a = step * 0.35 + (order % 7) * 0.6;
+        var gx = Math.round(cxg + Math.cos(a) * r * 1.18 - cw / 2);
+        var gy = Math.round(cyg + Math.sin(a) * r - ch / 2);
+        if (gx < 0 || gy < 0 || gx + cw > GW || gy + ch > GH) continue;
+        var fits = true;
+        for (var yy = gy; yy < gy + ch && fits; yy++) {
+          for (var xx = gx; xx < gx + cw; xx++) {
+            var gi = yy * GW + xx;
+            if (taken[gi]) { fits = false; break; }
+            if (!inside(xx * cell + 1, yy * cell + 1)) { fits = false; break; }
+          }
+        }
+        if (!fits) continue;
+        for (var y2 = gy; y2 < gy + ch; y2++) {
+          for (var x2 = gx; x2 < gx + cw; x2++) taken[y2 * GW + x2] = 1;
+        }
+        var px = (gx + cw / 2) * cell, py = (gy + ch / 2) * cell;
+        ctx.save();
+        ctx.translate(px * W / MW, py * H / MH);
+        ctx.rotate(box.rot);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.92;
+        ctx.font = wcFont(size, 600);
+        ctx.fillText(name, 0, 0);
+        ctx.restore();
+        // 调试/自检用：记下每个词的实际外框（自检脚本会读这个数组查重叠）
+        var reg = ctx.canvas.__wcBoxes || (ctx.canvas.__wcBoxes = []);
+        reg.push({ name: name, x: px * W / MW - box.w / 2, y: py * H / MH - box.h / 2,
+                   w: box.w, h: box.h, rot: box.rot });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  var WC_HOOKS = (EazyViz.htmlHooks = EazyViz.htmlHooks || {});
+  WC_HOOKS['wordcloud'] = function (c) {
+    var spec = c.spec;
+    if (!spec.shape) return;
+    var cv = c.el.querySelector('canvas.eazy-wc-canvas');
+    if (!cv) return;
+    var items = wcItems(spec, c.data, c.state);
+    if (!items || !items.length) return;
+    wcDraw(cv, items, spec.shape, c.theme);
   };
 
   // ------------------------------------------------------------------

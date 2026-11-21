@@ -107,20 +107,21 @@ def _check_lim(lim, name):
 class Chart:
     """一张图。由 ``eazy_data_viz.bar / line / pie ...`` 返回，通常不需要直接构造。"""
 
-    def __init__(self, spec, data, ref, warnings=None):
+    def __init__(self, spec: dict, data: dict, ref: str | None,
+                 warnings: dict | None = None) -> None:
         self.spec = spec
         self.data = data
         self.data_ref = ref
         self.warnings = warnings or {}
 
     # ---- 展示 -----------------------------------------------------------
-    def to_html(self, inline=True):
+    def to_html(self, inline: bool = True) -> str:
         """返回一张完整的独立 HTML 页面（可直接写文件 / 放进 iframe / 发邮件）。"""
         from .render import build_page
 
         return build_page([self], inline=inline)
 
-    def palette(self, name):
+    def palette(self, name: str | None) -> "Chart":
         """单独给这一张图指定配色（覆盖页面默认），返回自身，方便链式调用。
 
         可用配色见 ``eazy_data_viz.palettes()``：google / antd / tableau / carbon /
@@ -131,7 +132,7 @@ class Chart:
         self.spec["palette"] = _palette.check(name)
         return self
 
-    def unit(self, unit):
+    def unit(self, unit: str | None) -> "Chart":
         """给整张图统一一个数值单位（对齐帆软 / 观远等中文 BI 的观感）。
 
         支持中文单位：``"千"`` / ``"万"`` / ``"百万"`` / ``"亿"``，
@@ -170,7 +171,7 @@ class Chart:
         self.spec["unit"] = int(num)
         return self
 
-    def save(self, path, inline=True):
+    def save(self, path: str, inline: bool = True) -> str:
         """保存为 HTML 文件，返回绝对路径。"""
         html = self.to_html(inline=inline)
         path = os.path.abspath(path)
@@ -181,7 +182,7 @@ class Chart:
             f.write(html)
         return path
 
-    def show(self, open_browser=None):
+    def show(self, open_browser: bool | None = None) -> object:
         """在 Streamlit / Jupyter / 普通脚本里都能正确显示。
 
         * Streamlit：优先 ``st.components.v2``（无 iframe、高度自适应），
@@ -526,36 +527,36 @@ _COMMON_DOC = """
 # 各图表构造函数
 # --------------------------------------------------------------------------
 def bar(
-    data,
-    x,
-    y=None,
-    color=None,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None = None,
+    color: str | None = None,
     *,
-    agg="sum",
-    stack=False,
-    horizontal=False,
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    drill=None,
-    link=None,
-    legend=True,
-    labels=False,
-    zoom="auto",
-    max_rows=_frame.MAX_ROWS,
-    percent=False,
-    yoy=False,
-    section=None,
-):
+    agg: str = "sum",
+    stack: bool = False,
+    horizontal: bool = False,
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    legend: bool = True,
+    labels: bool = False,
+    zoom: bool | str = "auto",
+    max_rows: int = _frame.MAX_ROWS,
+    percent: float = False,
+    yoy: bool = False,
+    section: str | None = None,
+) -> Chart:
     """柱状图 / 条形图（支持分组、堆叠、百分比、同比、下钻、联动）。
 
     参数
@@ -641,37 +642,37 @@ def bar(
 
 
 def line(
-    data,
-    x,
-    y,
-    color=None,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None,
+    color: str | None = None,
     *,
-    agg="sum",
-    smooth=True,
-    area=False,
-    markers=None,
-    sort=None,
-    top_n=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    drill=None,
-    link=None,
-    legend=True,
-    labels=False,
-    zoom="auto",
-    max_rows=_frame.MAX_ROWS,
-    step=False,
-    percent=False,
-    section=None,
-):
+    agg: str = "sum",
+    smooth: bool = True,
+    area: bool = False,
+    markers: bool = None,
+    sort: str | None = None,
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    drill: list[str] | None = None,
+    link: str | tuple | dict | None = None,
+    legend: bool = True,
+    labels: bool = False,
+    zoom: bool | str = "auto",
+    max_rows: int = _frame.MAX_ROWS,
+    step: bool | str = False,
+    percent: float = False,
+    section: str | None = None,
+) -> Chart:
     """折线图 / 面积图 / 阶梯图。
 
     示例
@@ -711,31 +712,37 @@ def line(
     return Chart(spec, records, ref, info)
 
 
-def area(data, x, y, color=None, **kwargs):
+def area(
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None,
+    color: str | None = None,
+    **kwargs,
+) -> Chart:
     """面积图 = ``line(..., area=True)``。"""
     kwargs["area"] = True
     return line(data, x, y, color, **kwargs)
 
 
 def pie(
-    data,
-    names,
-    values=None,
+    data: pd.DataFrame,
+    names: str | None,
+    values: str | None = None,
     *,
-    donut=False,
-    agg="sum",
-    sort="desc",
-    top_n=None,
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=360,
-    abs_height=False,
-    theme="light",
-    labels=True,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    donut: bool = False,
+    agg: str = "sum",
+    sort: str | None = "desc",
+    top_n: int | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 360,
+    abs_height: bool = False,
+    theme: str = "light",
+    labels: bool = True,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """饼图 / 环图。
 
     参数
@@ -778,27 +785,27 @@ def pie(
 
 
 def scatter(
-    data,
-    x,
-    y,
-    color=None,
-    size=None,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None,
+    color: str | None = None,
+    size: str | None = None,
     *,
-    agg="sum",
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    xlim=None,
-    ylim=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    link=None,
-    legend=True,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    link: str | tuple | dict | None = None,
+    legend: bool = True,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """散点图（x / y 都必须是数值列，可选气泡大小）。
 
     示例
@@ -837,21 +844,21 @@ def scatter(
 
 
 def histogram(
-    data,
-    column=None,
+    data: pd.DataFrame,
+    column: str | None = None,
     *,
-    bins=20,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle="频数",
-    fmt="compact",
-    height=360,
-    abs_height=False,
-    theme="light",
-    labels=False,
-    max_rows=_frame.MAX_ROWS,
-):
+    bins: int | None = 20,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = "频数",
+    fmt: str = "compact",
+    height: int = 360,
+    abs_height: bool = False,
+    theme: str = "light",
+    labels: bool = False,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """直方图（数值分布）。
 
     column 不传时，自动取 DataFrame 里唯一的数值列。
@@ -895,25 +902,25 @@ def histogram(
 
 
 def heatmap(
-    data,
-    x,
-    y,
-    value,
+    data: pd.DataFrame,
+    x: str | None,
+    y: str | None,
+    value: str | None,
     *,
-    agg="sum",
-    sort=None,
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    fmt="compact",
-    height=400,
-    abs_height=False,
-    theme="light",
-    labels=False,
-    max_rows=_frame.MAX_ROWS,
-    link=None,
-):
+    agg: str = "sum",
+    sort: str | None = None,
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 400,
+    abs_height: bool = False,
+    theme: str = "light",
+    labels: bool = False,
+    max_rows: int = _frame.MAX_ROWS,
+    link: str | tuple | dict | None = None,
+) -> Chart:
     """热力图（x × y 的数值矩阵）。
 
     示例
@@ -950,19 +957,19 @@ def heatmap(
 
 
 def box(
-    data,
-    x=None,
-    y=None,
+    data: pd.DataFrame,
+    x: str | None = None,
+    y: str | None = None,
     *,
-    title=None,
-    subtitle=None,
-    ytitle=None,
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    max_rows=_frame.MAX_ROWS,
-):
+    title: str | None = None,
+    subtitle: str | None = None,
+    ytitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """箱线图（按类目展示数值分布）。
 
     x 不传则只有一个箱子。
@@ -1009,21 +1016,21 @@ def box(
 
 
 def funnel(
-    data,
-    names,
-    values=None,
+    data: pd.DataFrame,
+    names: str | None,
+    values: str | None = None,
     *,
-    agg="sum",
-    fmt="compact",
-    height=380,
-    abs_height=False,
-    theme="light",
-    title=None,
-    subtitle=None,
-    labels=True,
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    fmt: str = "compact",
+    height: int = 380,
+    abs_height: bool = False,
+    theme: str = "light",
+    title: str | None = None,
+    subtitle: str | None = None,
+    labels: bool = True,
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """漏斗图（转化/流程）。
 
     示例
@@ -1058,19 +1065,19 @@ def funnel(
 
 
 def treemap(
-    data,
-    path,
-    value,
+    data: pd.DataFrame,
+    path: str | list[str] | None,
+    value: str | None,
     *,
-    agg="sum",
-    title=None,
-    subtitle=None,
-    fmt="compact",
-    height=420,
-    abs_height=False,
-    theme="light",
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    title: str | None = None,
+    subtitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 420,
+    abs_height: bool = False,
+    theme: str = "light",
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """矩形树图（多层级构成）。
 
     参数
@@ -1115,19 +1122,19 @@ def treemap(
 
 
 def gauge(
-    value,
+    value: str | None,
     *,
-    label=None,
-    min=0,
-    max=100,
-    fmt="raw",
-    unit=None,
-    height=260,
-    abs_height=False,
-    theme="light",
-    title=None,
-    subtitle=None,
-):
+    label: str | None = None,
+    min: float | None = 0,
+    max: float | None = 100,
+    fmt: str = "raw",
+    unit: str | None = None,
+    height: int = 260,
+    abs_height: bool = False,
+    theme: str = "light",
+    title: str | None = None,
+    subtitle: str | None = None,
+) -> Chart:
     """仪表盘（单个数值）。
 
     示例
@@ -1176,31 +1183,31 @@ def gauge(
 
 
 def kpi(
-    data=None,
-    value=None,
+    data: pd.DataFrame = None,
+    value: str | None = None,
     *,
-    agg="sum",
-    label=None,
-    fmt=None,
-    delta=None,
-    delta_label=None,
-    inverse=False,
-    target=None,
-    target_label=None,
-    spark=None,
-    spark_x=None,
-    hint=None,
-    unit=None,
-    prefix=None,
-    accent=0,
-    height=150,
-    abs_height=False,
-    theme="light",
-    title=None,
-    subtitle=None,
-    link=None,
-    section=None,
-):
+    agg: str = "sum",
+    label: str | None = None,
+    fmt: str = None,
+    delta: float | None = None,
+    delta_label: str | None = None,
+    inverse: bool = False,
+    target: str | None = None,
+    target_label: str | None = None,
+    spark: bool = None,
+    spark_x: str | None = None,
+    hint: str | None = None,
+    unit: str | None = None,
+    prefix: str | None = None,
+    accent: int = 0,
+    height: int = 150,
+    abs_height: bool = False,
+    theme: str = "light",
+    title: str | None = None,
+    subtitle: str | None = None,
+    link: str | tuple | dict | None = None,
+    section: str | None = None,
+) -> Chart:
     """KPI 数字卡片（驾驶舱指标头，可跟随联动筛选自动重算）。
 
     三种用法
@@ -1357,24 +1364,24 @@ def kpi(
 
 
 def combo(
-    data,
-    x,
-    bar=None,
-    line=None,
+    data: pd.DataFrame,
+    x: str | None,
+    bar: str | list[str] | None = None,
+    line: str | list[str] | None = None,
     *,
-    agg="sum",
-    title=None,
-    subtitle=None,
-    xtitle=None,
-    ytitle=None,
-    fmt="compact",
-    height=400,
-    abs_height=False,
-    theme="light",
-    zoom="auto",
-    link=None,
-    max_rows=_frame.MAX_ROWS,
-):
+    agg: str = "sum",
+    title: str | None = None,
+    subtitle: str | None = None,
+    xtitle: str | None = None,
+    ytitle: str | None = None,
+    fmt: str = "compact",
+    height: int = 400,
+    abs_height: bool = False,
+    theme: str = "light",
+    zoom: bool | str = "auto",
+    link: str | tuple | dict | None = None,
+    max_rows: int = _frame.MAX_ROWS,
+) -> Chart:
     """柱线混合图（一根柱子 + 一条折线，双坐标轴）。
 
     ``zoom="auto"`` 在类目很多时自动开启缩放；``zoom=True`` 强制开启。

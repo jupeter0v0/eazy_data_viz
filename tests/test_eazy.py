@@ -740,6 +740,80 @@ def t_abs_height():
     assert "eazy-card-fill" in flow_html
 
 
+def t_wordcloud_shape():
+    """词云形状：内置形状名 / 本地图片 → spec.shape；非法输入报中文错误。"""
+    import base64
+    import io as _io
+    import tempfile
+
+    import pandas as _pd
+    df = _pd.DataFrame({"关键词": ["华东", "华南", "华北"], "次数": [120, 80, 40]})
+
+    c = eazy_data_viz.wordcloud(df, names="关键词", values="次数", shape="heart")
+    assert c.spec["shape"] == {"type": "builtin", "name": "heart"}, c.spec["shape"]
+    c = eazy_data_viz.wordcloud(df, names="关键词", values="次数", shape="star")
+    assert c.spec["shape"]["name"] == "star", c.spec["shape"]
+    c = eazy_data_viz.wordcloud(df, names="关键词", values="次数")
+    assert c.spec.get("shape") is None, c.spec.get("shape")
+
+    tmp = tempfile.mkdtemp(prefix="eazy_wc_")
+    img = os.path.join(tmp, "shape.png")
+    _io.open(img, "wb").write(base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="))
+    c = eazy_data_viz.wordcloud(df, names="关键词", values="次数", shape=img)
+    sh = c.spec["shape"]
+    assert sh["type"] == "image", sh
+    assert sh["src"].startswith("data:image/png;base64,"), sh["src"][:40]
+    assert sh["name"] == "shape.png", sh
+
+    for bad in ("nope", "", 5):
+        try:
+            eazy_data_viz.wordcloud(df, names="关键词", values="次数", shape=bad)
+        except ValueError as exc:
+            assert "shape" in str(exc), str(exc)
+        else:
+            raise AssertionError("shape=%r 应当报错" % (bad,))
+
+    bad_ext = os.path.join(tmp, "shape.tiff")
+    _io.open(bad_ext, "wb").write(b"x")
+    try:
+        eazy_data_viz.wordcloud(df, names="关键词", values="次数", shape=bad_ext)
+    except ValueError as exc:
+        assert "只支持" in str(exc), str(exc)
+    else:
+        raise AssertionError("不支持的图片扩展名应当报错")
+
+    big = os.path.join(tmp, "big.png")
+    _io.open(big, "wb").write(b"x" * (3 * 1024 * 1024))
+    try:
+        eazy_data_viz.wordcloud(df, names="关键词", values="次数", shape=big)
+    except ValueError as exc:
+        assert "2 MB" in str(exc), str(exc)
+    else:
+        raise AssertionError("超过 2MB 的图片应当报错")
+
+
+def t_type_hints():
+    """公开 API 全带类型注解（IDE 悬浮不再显示 Unknown）。"""
+    import ast as _ast
+    import inspect as _inspect
+
+    import io as _io2
+    from eazy_data_viz import chart as _chart, charts_extra as _extra, maps as _maps
+    missing = []
+    for mod in (_chart, _extra, _maps):
+        src = _io2.open(_inspect.getsourcefile(mod), encoding="utf-8").read()
+        for node in _ast.parse(src).body:
+            if not isinstance(node, _ast.FunctionDef) or node.name.startswith("_"):
+                continue
+            args = node.args.args + node.args.kwonlyargs
+            if any(a.annotation is None for a in args) or node.returns is None:
+                missing.append("%s.%s" % (mod.__name__.rsplit(".", 1)[-1], node.name))
+    assert not missing, "缺类型注解: %s" % ", ".join(missing[:8])
+    sig = str(_inspect.signature(eazy_data_viz.table))
+    assert "pd.DataFrame" in sig and "groupby" in sig, sig
+
+
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):
     check(name, fn)
 

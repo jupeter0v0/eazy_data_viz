@@ -233,6 +233,31 @@ TEST_JS = r"""
     ok('sunburst15-small-hidden', hidden > 0, 'hidden=' + hidden);
   });
 
+  // 旭日点击：放大与联动要同时生效（重画后视图根落回所点的节点），重置联动再回根
+  steps.push(function () {
+    var rows = core0.rowsOf(cu.data);
+    var top = String(rows[0]['大区']);
+    cu.__zoomTop = top;
+    core0.onChartClick(cu, {
+      componentType: 'series', name: top,
+      treePathInfo: [{ name: 'root' }, { name: top }],
+      data: { name: top, nodeDim: '大区', nodeValue: top, nodeLayer: 0 }
+    });
+    ok('sunburst15-zoom-path', Array.isArray(cu.zoomPath) && cu.zoomPath[0] === top,
+       JSON.stringify(cu.zoomPath));
+  });
+
+  steps.push(function () {
+    var vr = cu.ec.getModel().getSeriesByIndex(0).getViewRoot();
+    ok('sunburst15-zoom-applied', String(vr && vr.name) === cu.__zoomTop, String(vr && vr.name));
+    EazyViz.core.clearAllLinks();
+  });
+
+  steps.push(function () {
+    var vr2 = cu.ec.getModel().getSeriesByIndex(0).getViewRoot();
+    ok('sunburst15-zoom-reset', String(vr2 && vr2.name) !== cu.__zoomTop, String(vr2 && vr2.name));
+  });
+
   steps.push(function () {
     var theme = core0.util.themeFor('light', null);
     var clean = EazyViz.htmlBuilders['table'](ct.spec, ct.data, { filters: {}, drill: [] }, theme);
