@@ -156,6 +156,7 @@ edv.map_flow(flow, source="起点区", target="终点区", value="件数", map="
 | `zoom` | 是否允许鼠标缩放 / 平移 | `None` | `True` / `False` |
 | `palette` | 配色方案 | `None` | `google` / `antd` / `tableau` / `carbon` / `echarts` / `morandi` / `tailwind` |
 | `height` | 画布高度（≥120） | `460` | `420`～`520` |
+| `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
 | `theme` | 主题 | `'light'` | `light` / `dark` |
 | `title` / `subtitle` | 标题 / 副标题 | 自动 | 任意字符串 |
 | `drill` | 点击区域后聚焦该区域 | `None` | `"区"` |

@@ -1,6 +1,6 @@
 # API 索引
 
-50 个图表函数 + `Chart` 对象 + `dashboard()`。每页固定包含：函数签名、参数总览、逐参数详解、完整示例、常见问题、相关图表。本页只讲**跨函数的公共约定**，单个参数的细节请点进对应函数页。
+53 个图表函数 + `Chart` 对象 + `dashboard()`。每页固定包含：函数签名、参数总览、逐参数详解、完整示例、常见问题、相关图表。本页只讲**跨函数的公共约定**，单个参数的细节请点进对应函数页。
 
 签名与默认值的权威来源（文档与代码不一致时以它们为准）：
 
@@ -48,13 +48,15 @@ chart.palette("tableau").save("examples/output/api-chart.html")
 | `sort` | 排序：`desc` / `asc` / `none` / `x`；不传时按图表类型自动（时间轴 `x`、`bar` 降序） | `None`（自动） |
 | `top_n` | 只保留前 N 项，其余合并为「其他」（「其他」不可点击下钻） | `None` |
 | `height` | 图表高度（像素），最小 120 | `380`（各图不同：KPI 150、gauge 260、calendar 300、pie/histogram 360、heatmap/combo/table 400、treemap 420、gantt/candlestick 420、sunburst/tree 460、地图 460） |
+| `abs_height` | `True` 时 `height` 变成**整个组件外框**的高度（含标题、副标题、联动工具条），正文自适应剩余空间——同一行里标题长短不一时框底能对齐 | `False`（`height` 只算正文） |
+| `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
 | `theme` | `light` / `dark`。看板内以第一张图的主题为准，页面右上角可运行时切换 | `"light"` |
 | `legend` | 是否显示图例；图例可点选过滤系列 | `True`（部分图为 `False`，如 `waterfall`、`bullet`） |
 | `labels` | 是否在图形上直接显示数值标签 | `False`（`pie`/`funnel`/`gantt`/`geo_map` 等默认 `True`） |
 | `zoom` | 数据缩放条：`"auto"`（类目/数据点多时出现）/ `True` / `False` | `"auto"`（部分图为 `False`） |
 | `palette` | 单图配色库名，覆盖页面默认配色（地图函数暴露此参数） | `None`（跟随页面） |
 | `drill` | 下钻层级列名列表，如 `drill=["大区", "省份", "城市"]`；点击图形逐级下钻，面包屑返回 | `None` |
-| `link` | 联动组名：同一页内相同 `link` 的图互相筛选；要求组内使用同名维度列；KPI 传 `link` 后数字随筛选重算 | `None` |
+| `link` | 联动组名与方向：`"g1"`（双向）/ `("g1", "out")`（单向出）/ `("g1", "in")`（单向进）/ `{"group": "g1", "direction": "out"}`；同一页内相同组名的图互相筛选，要求组内使用同名维度列 | `None` |
 | `section` | 看板分区标题：`dashboard()` 在连续图表前插入分区，用于把页面切成几段 | `None` |
 | `max_rows` | 嵌入数据前最多保留多少行；超过时按行位置**均匀采样**（`np.linspace`），`None` 表示不采样；`table` 默认 200 | `200000` |
 

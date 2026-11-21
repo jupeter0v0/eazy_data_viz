@@ -20,3 +20,7 @@ tmp_testjs.js
 .idea/
 .DS_Store
 Thumbs.db
+
+# 测试用 Chrome profile
+/eazy_js_test_profile/
+eazy_js_test_profile/

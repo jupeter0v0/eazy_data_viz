@@ -68,7 +68,7 @@ from .render import Dashboard, dashboard
 from .render import streamlit_show as _streamlit_show
 from .streamlit_v2 import is_available as streamlit_available
 
-__version__ = "1.4.1"
+__version__ = "1.5.0"
 
 __all__ = [
     "Chart",
@@ -152,10 +152,18 @@ __all__ = [
 # --------------------------------------------------------------------------
 # 一个函数显示多张图
 # --------------------------------------------------------------------------
-def show(*charts, cols=2, title=None, desc=None, theme=None, palette=None):
+def show(*charts, cols=2, title=None, desc=None, theme=None, palette=None,
+         layout=None, direction=None, grid=None):
     """显示一张或多张图。
 
     >>> eazy_data_viz.show(c1, c2, cols=2, title="经营看板", palette="antd")
+
+    1.5 起支持自由排列：
+
+    >>> eazy_data_viz.show(c1, c2, c3, c4, layout=[1, 3], direction="h")
+    >>> eazy_data_viz.show(a, b, c, grid=(3, 3), layout=[[2, 2], [1, 1], [1, 1]])
+
+    详见 :func:`eazy_data_viz.layout.parse_layout`。
     """
     items = []
     for c in charts:
@@ -163,11 +171,11 @@ def show(*charts, cols=2, title=None, desc=None, theme=None, palette=None):
             items.extend(c)
         else:
             items.append(c)
-    if len(items) == 1:
+    if len(items) == 1 and layout is None and grid is None:
         items[0].show()
         return items[0]
     d = Dashboard(items, cols=cols, title=title, desc=desc, theme=theme,
-                  palette=palette)
+                  palette=palette, layout=layout, direction=direction, grid=grid)
     d.show()
     return d
 
@@ -176,7 +184,8 @@ def show(*charts, cols=2, title=None, desc=None, theme=None, palette=None):
 # Streamlit（components v2：无 iframe、高度自适应、点击回传 Python）
 # --------------------------------------------------------------------------
 def streamlit_dashboard(charts, *, cols=2, title=None, desc=None, theme=None,
-                        palette=None, height=None, key=None, on_select=None):
+                        palette=None, height=None, key=None, on_select=None,
+                        layout=None, direction=None, grid=None):
     """在 Streamlit 页面里用 ``st.components.v2`` 渲染一张看板。
 
     相比 ``dashboard(...).show()``（内部也会优先走 v2），这个函数把
@@ -230,6 +239,9 @@ def streamlit_dashboard(charts, *, cols=2, title=None, desc=None, theme=None,
         height=height,
         key=key,
         on_select=on_select,
+        layout=layout,
+        direction=direction,
+        grid=grid,
     )
 
 
@@ -344,7 +356,7 @@ eazy_data_viz · pandas 交互式图表库（经营驾驶舱版）  v%s
     df = eazy_data_viz.sample_df()
     eazy_data_viz.bar(df, x="月份", y="销售额", color="产品", title="月度销售").show()
 
-45 种图表，全部 = 函数名，参数只有「数据 + 列名 + 少量开关」
+49 种图表，全部 = 函数名，参数只有「数据 + 列名 + 少量开关」
 注意：Python 里直接 `import eazy_data_viz`，下面写成 ``eazy_data_viz.xxx`` 只是为了标注模块。
 --------------------------------------------------------------------------------
 【基础 14】bar / line / area / pie / scatter / histogram / heatmap / box /
@@ -379,7 +391,8 @@ eazy_data_viz · pandas 交互式图表库（经营驾驶舱版）  v%s
     eazy_data_viz.bullet   (df, x="部门", actual="完成", target="目标")
     eazy_data_viz.dumbbell (df, x="省份", y1="去年", y2="今年")
     eazy_data_viz.pareto   (df, x="产品", y="销售额")
-    eazy_data_viz.sankey   (df, source="渠道", target="产品", value="销售额")
+    eazy_data_viz.sankey   (df, path=["大区", "渠道", "产品"], value="销售额")
+                            # 两级旧写法仍可用：source="渠道", target="产品"
     eazy_data_viz.candlestick(df, date="日期", open="开", high="高", low="低", close="收")
     eazy_data_viz.geo_map  (df, region="省份", value="销售额")
     eazy_data_viz.map_bubble(df, region="省份", value="销售额")
@@ -387,6 +400,22 @@ eazy_data_viz · pandas 交互式图表库（经营驾驶舱版）  v%s
     eazy_data_viz.gantt    (df, task="任务", start="开始", end="结束", color="负责人")
     eazy_data_viz.ring_progress(72.5, label="完成率")
     eazy_data_viz.group_kpi(df, items=[{"label": "总销售额", "value": 1630000, "fmt": "compact"}])
+
+1.5 新增（自由排列 / 联动方向 / 汇总表 / 多级桑基 / 同比）
+--------------------------------------------------------------------------------
+    # 自由排列 A：direction="h" 按列数、direction="v" 按行数，layout 是每列/每行的图表数
+    eazy_data_viz.show(c1, c2, c3, c4, layout=[1, 3], direction="h")
+    # 自由排列 B：先申请网格，再给每张图占位 [行, 列]，按从左到右从上到下找空位
+    eazy_data_viz.dashboard(c1, c2, layout=[[2, 2], [1, 1]], grid=(3, 3))
+    # 联动方向：双向（默认）/ 单向出（只推不接）/ 单向进（只接不推）
+    eazy_data_viz.bar (df, x="大区", y="销售额", link=("销售", "out"))
+    eazy_data_viz.line(df, x="月份", y="销售额", link=("销售", "in"))
+    # 汇总表：聚合只在显示层做，联动过滤时重算，不改后台明细数据
+    eazy_data_viz.table(df, groupby={"columns": ["大区"], "value": "销售额", "agg": "sum"})
+    # 多级桑基：path 相邻两级自动成边
+    eazy_data_viz.sankey(df, path=["大区", "渠道", "产品"], value="销售额")
+    # 同比：color 恰好两个取值时，值大的对比值小的（2026 vs 2025），柱顶标注增长率
+    eazy_data_viz.bar(df, x="月份", y="销售额", color="年份", yoy=True)
 
 KPI 卡片（驾驶舱指标头）
     eazy_data_viz.kpi(df, value="销售额", label="全年销售额", delta=0.128, delta_label="同比",
@@ -406,14 +435,16 @@ KPI 卡片（驾驶舱指标头）
 
 公用参数（几乎所有图都支持）
     title / subtitle / xtitle / ytitle / xlim / ylim / fmt / theme("light"/"dark")
-    height / section（看板分区标题）/ legend / labels / max_rows
-    palette（单图配色）/ drill（下钻层级）/ link（联动组名）
+    height / abs_height（height 当整个组件外框，框与框能对齐）/ section（看板分区标题）
+    legend / labels / max_rows
+    palette（单图配色）/ drill（下钻层级）/ link（联动组名，或 ("组名", "out"/"in") 指定方向）
 
 交互能力（全部前端完成，不触发 Python 重算）
 --------------------------------------------
 * 图例点选过滤、悬浮 tooltip、数据缩放条、右上角工具箱（另存 PNG）
 * 下钻：drill=["大区", "省份", "城市"]，点击图形逐级下钻，面包屑返回
-* 联动：多张图传同一个 link="销售"，点任意一张图，其它图自动联动过滤
+* 联动：多张图传同一个 link="销售"，点任意一张图，其它图自动联动过滤；
+        需要单向时写 link=("销售", "out")（只推）或 link=("销售", "in")（只接）
 * 看板：eazy_data_viz.dashboard(c1, c2, c3, cols=2, title="经营驾驶舱").show()
 * 右上角 ◐ 切换深色/浅色主题，↺ 一键清除所有联动筛选
 

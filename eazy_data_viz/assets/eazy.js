@@ -665,6 +665,15 @@
   // ======================================================================
   // 4. 各图表 option 构造
   // ======================================================================
+  // ---- 联动方向 ---------------------------------------------------------
+  // both：双向（默认）；out：单向出（只发起）；in：单向进（只接收）
+  function linkMode(spec) {
+    var m = spec && spec.linkMode;
+    return (m === 'in' || m === 'out') ? m : 'both';
+  }
+  function canSendLink(spec) { return !!spec.link && linkMode(spec) !== 'in'; }
+  function canRecvLink(spec) { return !!spec.link && linkMode(spec) !== 'out'; }
+
   function sourceSelection(spec, state) {
     if (!spec.link || !EazyViz.links) return null;
     var link = EazyViz.links[spec.link];
@@ -677,6 +686,44 @@
     if (sel === null || sel === undefined) return v;
     if (cat === sel) return v;
     return { value: v, itemStyle: { opacity: 0.28 } };
+  }
+
+  // ---- 同比（yoy）------------------------------------------------------
+  // 规则：图中恰好 2 条 color 系列时，类目值大的那条当"本期"、小的当"上期"。
+  // 例：color="年份"，2026 vs 2025 → 2026 同比 2025。
+  // 系列名不是数字时（如"华东"/"华南"），退化为总和大的当本期。
+  function yoyPlan(seriesNames, seriesTotals) {
+    var a = seriesNames[0], b = seriesNames[1];
+    var na = num(a), nb = num(b);
+    var cur;
+    if (na !== null && nb !== null && na !== nb) {
+      cur = (na > nb) ? a : b;
+    } else if ((seriesTotals[b] || 0) > (seriesTotals[a] || 0)) {
+      cur = b;
+    } else {
+      cur = a;
+    }
+    return { current: cur, base: (cur === a) ? b : a };
+  }
+
+  function yoyGrowth(cur, base) {
+    var c = num(cur), b = num(base);
+    if (c === null || b === null || b === 0) return null;
+    return (c - b) / Math.abs(b) * 100;
+  }
+
+  function yoyItem(item, growth, spec, theme) {
+    var obj = (item !== null && typeof item === 'object' && !(item instanceof Array))
+      ? item : { value: item };
+    obj.label = {
+      show: true,
+      position: spec.horizontal ? 'right' : 'top',
+      fontSize: 10,
+      fontWeight: 600,
+      color: growth >= 0 ? theme.error : theme.success,
+      formatter: (growth >= 0 ? '+' : '') + growth.toFixed(1) + '%'
+    };
+    return obj;
   }
 
   // ---- 柱 / 折线 --------------------------------------------------------
@@ -753,6 +800,16 @@
       return (v === undefined) ? null : v;
     }
 
+    // 同比（yoy）：只有 2 条 color 系列、且不是百分比模式时才做对比
+    var yoy = null, yoyG = null;
+    if (spec.yoy && cdim && seriesNames.length === 2 && !spec.percent) {
+      yoy = yoyPlan(seriesNames, seriesTotals);
+      yoyG = {};
+      for (var yi = 0; yi < cats.length; yi++) {
+        yoyG[cats[yi]] = yoyGrowth(valueOf(cats[yi], yoy.current), valueOf(cats[yi], yoy.base));
+      }
+    }
+
     var sel = sourceSelection(spec, state);
     var isBar = (spec.type === 'bar');
     var needZoom = (spec.zoom === true) || (spec.zoom !== false && cats.length > 15);
@@ -769,7 +826,10 @@
         }
         if (spec.percent && val !== null) val = Math.round(val * 10) / 10;
         if (isBar) {
-          sdata.push(dimItem(val === null ? 0 : val, sel, cats[ci]));
+          var item = dimItem(val === null ? 0 : val, sel, cats[ci]);
+          var g = (yoy && name === yoy.current) ? yoyG[cats[ci]] : null;
+          if (g !== null && g !== undefined) item = yoyItem(item, g, spec, theme);
+          sdata.push(item);
         } else {
           sdata.push(val);
         }
@@ -827,6 +887,26 @@
     if (spec.percent) {
       var origTip = opt.tooltip;
       origTip.valueFormatter = function (v) { return Number(v).toFixed(1) + '%'; };
+    }
+    if (yoy) {
+      var yoyTipBase = opt.tooltip.formatter;
+      opt.tooltip.formatter = function (params) {
+        var html = yoyTipBase(params);
+        if (!params || !params.length) return html;
+        var cands = [params[0].axisValue, params[0].name, params[0].axisValueLabel];
+        var g = null, hit = false;
+        for (var ck = 0; ck < cands.length; ck++) {
+          var key = cands[ck];
+          if (key === null || key === undefined) continue;
+          if (Object.prototype.hasOwnProperty.call(yoyG, key)) { g = yoyG[key]; hit = true; break; }
+        }
+        if (!hit || g === null || g === undefined) return html;
+        var tcolor = g >= 0 ? theme.error : theme.success;
+        return html + '<div style="border-top:1px dashed ' + theme.axis +
+          ';margin-top:4px;padding-top:4px;display:flex;gap:6px;align-items:center">' +
+          '<span style="flex:1">同比 ' + esc(yoy.current) + ' vs ' + esc(yoy.base) + '</span>' +
+          '<b style="color:' + tcolor + '">' + (g >= 0 ? '+' : '') + g.toFixed(1) + '%</b></div>';
+      };
     }
 
     if (spec.horizontal) {
@@ -1737,9 +1817,10 @@
 
   function syncFilters(c) {
     var f = {};
-    if (c.spec.link && EazyViz.links && EazyViz.links[c.spec.link]) {
+    if (canRecvLink(c.spec) && EazyViz.links && EazyViz.links[c.spec.link]) {
       var link = EazyViz.links[c.spec.link];
-      // 发起联动的图自己不过滤（保持全量 + 高亮），其他图按类目过滤
+      // 发起联动的图自己不过滤（保持全量 + 高亮），其他图按类目过滤；
+      // 单向出（out）的图永远只发起、不接收。
       if (link.sourceId !== c.spec.id && hasCol(c.data, link.dim)) {
         f[link.dim] = link.value;
       }
@@ -1787,7 +1868,13 @@
     } else if (spec.link && HTML_BUILDERS[spec.type]) {
       html += '<span class="eazy-hint" style="margin-left:0">点击单元格可按该列联动同组图表</span>';
     } else if (spec.link) {
-      html += '<span class="eazy-hint" style="margin-left:0">点击图形可联动同组图表</span>';
+      var mode = linkMode(spec);
+      var hint = mode === 'out'
+        ? '单向出：点击图形联动到同组其他图表'
+        : (mode === 'in'
+          ? '单向进：本图只接收联动，点其他图会过滤本图'
+          : '点击图形可联动同组图表（双向）');
+      html += '<span class="eazy-hint" style="margin-left:0">' + hint + '</span>';
     }
     el.innerHTML = html;
   }
@@ -1896,12 +1983,53 @@
     c._narrow = activeWidth > 0 && activeWidth < 480;
   }
 
+  // 点击的图形到底代表「哪一列 = 哪个值」。
+  // 桑基图（多级）/ 旭日图 / 树图 的节点名不一定是 x 的类目，必须按节点信息还原，
+  // 否则联动会把「二级节点的值」当成「一级列的值」传给其他图。
+  function nodeInfoOf(spec, p) {
+    if (!p || !spec) return null;
+    // 旭日 / 树：节点自带层级（点过之后 rootToNode 会重设根，treePathInfo 会变短，
+    // 只能用建树时写好的 nodeDim / nodeLayer 才不会传错维度）。
+    if (p.data && p.data.nodeDim !== undefined && p.data.nodeDim !== null) {
+      return {
+        dim: p.data.nodeDim,
+        value: (p.data.nodeValue !== undefined && p.data.nodeValue !== null)
+          ? String(p.data.nodeValue) : String(p.name),
+        layer: p.data.nodeLayer
+      };
+    }
+    var maps = EazyViz.nodeMaps || {};
+    var map = maps[spec.id] || maps[spec.type];
+    if (map) {
+      var key = (p.data && p.data.nodeKey !== undefined) ? p.data.nodeKey : p.name;
+      var hit = map[key];
+      if (!hit && p.data && p.data.name !== undefined) hit = map[p.data.name];
+      if (hit) return { dim: hit.dim, value: String(hit.value), layer: hit.layer };
+    }
+    if (p.treePathInfo && p.treePathInfo.length) {
+      var dims = (spec.roles && spec.roles.path) || null;
+      if (dims && dims.length) {
+        var idx = p.treePathInfo.length - 2;
+        if (idx < 0) idx = 0;
+        if (idx > dims.length - 1) idx = dims.length - 1;
+        var node = p.treePathInfo[p.treePathInfo.length - 1] || {};
+        var nm = (node.name !== undefined && node.name !== null) ? node.name : p.name;
+        if (nm !== undefined && nm !== null) {
+          return { dim: dims[idx], value: String(nm), layer: idx };
+        }
+      }
+    }
+    return null;
+  }
+
   function onChartClick(c, p) {
     if (!p || p.componentType !== 'series') return;
     var spec = c.spec;
-    var xdim = currentXDim(spec, c.state);
+    var info = nodeInfoOf(spec, p);
+    if (!info && (spec.type === 'sankey' || spec.type === 'graph')) return;  // 桑基的连线没有维度
+    var xdim = info ? info.dim : currentXDim(spec, c.state);
     if (!xdim || p.name === null || p.name === undefined) return;
-    var value = String(p.name);
+    var value = info ? info.value : String(p.name);
     if (value === '其他') return;
 
     var drilled = false;
@@ -1914,9 +2042,9 @@
     }
     // 带下钻的图：它发出的联动始终等于「当前最深一级的下钻条件」，回退时就不会残留旧层级；
     // 纯联动图（没有下钻）：按点击切换联动。
-    if (spec.link && spec.drill) {
+    if (canSendLink(spec) && spec.drill) {
       afterDrillChange(c);
-    } else if (spec.link) {
+    } else if (canSendLink(spec)) {
       setLink(spec.link, xdim, value, c);
     } else if (drilled) {
       renderChart(c);
@@ -1931,6 +2059,8 @@
           dim: xdim,
           value: value,
           drill: (c.state.drill || []).slice(),
+          linkMode: spec.link ? linkMode(spec) : null,
+          canSend: canSendLink(spec),
           link: (spec.link && EazyViz.links[spec.link]) ? EazyViz.links[spec.link] : null
         });
       } catch (err) { /* 回调异常不影响渲染 */ }
@@ -1947,6 +2077,8 @@
   }
 
   function setLink(group, dim, value, chart) {
+    // 单向进（in）的图不允许发起联动
+    if (chart && chart.spec && !canSendLink(chart.spec)) return;
     var cur = EazyViz.links[group];
     if (cur && cur.dim === dim && cur.value === value && cur.sourceId === chart.spec.id) {
       delete EazyViz.links[group];
@@ -2359,6 +2491,9 @@
       setAxisName: setAxisName, makeCategoryAxis: makeCategoryAxis,
       makeValueAxis: makeValueAxis, tooltipBox: tooltipBox, axisTooltip: axisTooltip,
       sourceSelection: sourceSelection, dimItem: dimItem, emptyOption: emptyOption,
+      linkMode: linkMode, canSendLink: canSendLink, canRecvLink: canRecvLink,
+      yoyPlan: yoyPlan, yoyGrowth: yoyGrowth, yoyItem: yoyItem,
+      nodeInfoOf: nodeInfoOf,
       THEME: THEME, FONT: FONT, SEP: SEP,
       PALETTES: PALETTES, themeFor: themeFor, mixColor: mixColor,
       kpiValue: kpiValue, kpiSparkPoints: kpiSparkPoints, kpiSparkSVG: kpiSparkSVG
@@ -2377,6 +2512,12 @@
     onChartClick: onChartClick,
     setLink: setLink,
     applyDrillLink: applyDrillLink,
+    syncFilters: syncFilters,
+    reRenderGroup: reRenderGroup,
+    linkMode: linkMode,
+    canSendLink: canSendLink,
+    canRecvLink: canRecvLink,
+    nodeInfoOf: nodeInfoOf,
     afterDrillChange: afterDrillChange,
     handleCrumb: handleCrumb,
     handleBack: handleBack,

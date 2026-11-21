@@ -41,6 +41,7 @@ eazy_data_viz.pie(
 | `subtitle` | `str \| None` | `None` | 否 | 副标题 |
 | `fmt` | `str` | `'compact'` | 否 | 数值格式 |
 | `height` | `int` | `360` | 否 | 画布高度（≥120） |
+| `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
 | `theme` | `str` | `'light'` | 否 | light / dark |
 | `labels` | `bool` | `True` | 否 | 显示扇区标签与引导线 |
 | `link` | `str` | `None` | 否 | 联动组名 |
@@ -121,6 +122,12 @@ eazy_data_viz.pie(
 - **示例**：`height=380`
 - **报错**：`height=100` → `ValueError: height 至少 120（像素），收到 100`
 
+### `abs_height` — 绝对高度：`height` 就是整个组件外框（`bool`，默认 `False`）
+
+- **作用**：默认 `height` 只算图表正文，标题 / 副标题 / 联动工具条会把卡片额外撑高，同一行里一张带长标题、一张带工具条的卡片底边就对不齐。打开 `abs_height=True` 后 `height` 表示**整个组件外框**（内边距、标题、工具条都算在里面），正文用剩余空间自适应。
+- **建议**：在 `dashboard` / `show` 里要「框和框严格对齐」时打开；单图导出或不在意卡片底边时保持默认。
+- **示例**：`abs_height=True, height=320`（配合 `dashboard(..., cols=2)` 看两张卡的底边）
+
 ### `theme` — 主题（light / dark）（`str`，默认 `'light'`）
 
 - **作用**：`"light"`（默认）浅色背景；`"dark"` 深色背景，坐标轴、文字、图例颜色自动反转。 主题只影响配色与背景，不改变图表结构；与其他图混排时建议统一主题。
@@ -131,7 +138,7 @@ eazy_data_viz.pie(
 ### `labels` — 显示扇区标签（`bool`，默认 `True`）
 
 - **作用**：`True`（默认）时在扇区外显示“名称 + 数值”并画引导线；`False` 只保留图形，hover 才显示 tooltip。 标签会经过 `fmt` 格式化；扇区太小标签会重叠，此时建议关闭或先 top_n。
-- **建议**：汇报截图保留标签；小屏/多类别时 `labels=False` 更干净。
+- **建议**：汇报截图保留标签；小屏/多类别时 `labels=False` 更干净。 卡片很矮时（例如 `height=320, abs_height=True`）外置标签容易顶出卡片边界，此时用 `labels=False` 或 `donut=True` 更稳。
 - **示例**：`labels=False`
 
 ### `link` — 联动组名（`str`，默认 `None`）

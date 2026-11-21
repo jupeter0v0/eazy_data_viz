@@ -18,7 +18,7 @@ edv.bar(df, x="大区", y="销售额", color="产品").show()
 | --- | --- |
 | ![画廊](docs/images/gallery_code.png) | ![Streamlit](docs/images/gallery_streamlit.png) |
 
-完整的 64 张卡片效果见 [docs/images/gallery_preview.png](docs/images/gallery_preview.png)，
+完整的 73 张卡片效果见 [docs/images/gallery_preview.png](docs/images/gallery_preview.png)，
 也可以直接打开仓库根目录的 `gallery.html` 离线浏览。
 
 ---
@@ -28,7 +28,9 @@ edv.bar(df, x="大区", y="销售额", color="产品").show()
 | 能力 | 说明 |
 | --- | --- |
 | **48 种图表** | 从 KPI 卡、瀑布图、帕累托、子弹图，到桑基图、旭日图、K 线、甘特图、相关矩阵 |
-| **下钻 / 联动** | 点击柱形逐级下钻（大区 → 省份 → 城市），同组图表点击即交叉筛选；**全部在浏览器内完成**，不触发服务器往返 |
+| **下钻 / 联动** | 点击柱形逐级下钻（大区 → 省份 → 城市），同组图表点击即交叉筛选；**全部在浏览器内完成**，不触发服务器往返；联动方向可按需设成双向 / 单向进 / 单向出 |
+| **自由排列看板** | `layout=` / `direction=` 按列/行分配图表数，或 `grid=(3,3)` + `[[2,2],[1,1]]` 占位；整块网格拼成矩形；`abs_height=True` 让框与框严格等高 |
+| **同比 / 汇总表** | `bar(yoy=True)` 两系列自动标注同比；`table(groupby={...})` 只在显示层汇总，不影响后台联动 |
 | **Material Design 3** | Google 配色与排版（Roboto、Google Blue `#1a73e8`、8/12px 圆角、卡片阴影、深浅两套主题） |
 | **窄屏自适应** | 手机 / 平板 / 窄侧栏自动改版：KPI 卡每行两张、图表与表格占满整行、KPI 数字自动缩放、图例按实际宽度换行、饼图窄屏改底部图例；桌面端外观不变 |
 | **调用极简** | 只有 `图表函数(df, x=..., y=...)`，自动识别数值 / 时间 / 分类列、自动排序、自动标题 |
@@ -384,7 +386,7 @@ edv.show(...).save("dashboard.html")
 
 得到一个自包含 `.html`（约 1.4 MB / 50 张图，ECharts 内联），双击即可打开、离线可用。
 这也正是仓库根目录 `gallery.html` 的生成方式：`python tools/build_gallery.py`。
-画廊里 **68 张卡片 / 48 种图表**，每张卡片右上角「代码」按钮会展开生成该图的完整
+画廊里 **73 张卡片 / 48 种图表**，每张卡片右上角「代码」按钮会展开生成该图的完整
 Python 代码（由构建脚本自动录制，和实际出图代码完全一致），可一键复制。
 
 ---

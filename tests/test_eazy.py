@@ -477,6 +477,269 @@ def t_responsive():
     for token in ("function fitTexts", "function fitResponsiveHeights",
                   "var activeWidth", "function legendItemPx", "function layoutLegend"):
         assert token in js, token
+def t_layout():
+    """自由排列：flow（列/行分配）、span（格子占位）、报错与页面标记。"""
+    import pandas as _pd
+    from eazy_data_viz import layout as L
+    from eazy_data_viz import render as _render
+
+    assert L.normalize_direction(None) == "h"
+    for alias in ("h", "horizontal", "lr", "从左到右", "col"):
+        assert L.normalize_direction(alias) == "h", alias
+    for alias in ("v", "vertical", "tb", "从上到下", "row"):
+        assert L.normalize_direction(alias) == "v", alias
+    try:
+        L.normalize_direction("diagonal")
+    except ValueError as exc:
+        assert "direction 只支持" in str(exc), str(exc)
+    else:
+        raise AssertionError("未知 direction 应当报错")
+
+    plan = L.parse_layout(4, layout=[1, 3], direction="h")
+    assert plan["mode"] == "flow" and plan["cols"] == 2 and plan["rows"] == 3
+    assert plan["cells"] == [(0, 0, 1, 1), (0, 1, 1, 1), (1, 1, 1, 1), (2, 1, 1, 1)], plan["cells"]
+    plan_v = L.parse_layout(3, layout=[1, 2], direction="v")
+    assert plan_v["cells"] == [(0, 0, 1, 1), (1, 0, 1, 1), (1, 1, 1, 1)], plan_v["cells"]
+    assert plan_v["cols"] == 2 and plan_v["rows"] == 2
+
+    plan_s = L.parse_layout(2, layout=[[2, 2], [1, 1]], grid=(3, 3))
+    assert plan_s["mode"] == "span" and plan_s["grid"] == (3, 3)
+    # 第二张图落在 2×2 的右上角
+    assert plan_s["cells"] == [(0, 0, 2, 2), (0, 2, 1, 1)], plan_s["cells"]
+    assert L.parse_layout(2, layout=[[1, 1], [1, 1]], grid="2x2")["cols"] == 2
+
+    for bad, msg in (
+        (lambda: L.parse_layout(4, layout=[1, 2], direction="h"), "只提供了 3 个位置"),
+        (lambda: L.parse_layout(2, grid=(2, 2)), "grid 需要配合 layout"),
+        (lambda: L.parse_layout(4, layout=[[2, 2]], grid=(2, 2)), "收到 1 个占位声明"),
+        (lambda: L.parse_layout(2, layout=[[3, 1], [1, 1]], grid=(2, 2)), "超过网格"),
+        (lambda: L.parse_layout(2, layout=[[1, 1, 1]], grid=(2, 2)), "需要统一是整数"),
+    ):
+        try:
+            bad()
+        except ValueError as exc:
+            assert msg in str(exc), "期望含 %r，实际 %s" % (msg, exc)
+        else:
+            raise AssertionError("应当报错：%s" % msg)
+
+    cols_specs = [eazy_data_viz.bar(DF, x="大区", y="销售额") for _ in range(4)]
+    html = _render.build_page(cols_specs, inline=False, layout=[1, 3], direction="h")
+    assert "eazy-flow" in html and html.count("eazy-flow-col") >= 2, "缺少分列容器"
+    html_v = _render.build_page(cols_specs, inline=False, layout=[1, 2, 1], direction="v")
+    assert html_v.count("eazy-flow-row") >= 2, "缺少分行容器"
+    html_s = _render.build_page(cols_specs[:2], inline=False,
+                                layout=[[2, 2], [1, 1]], grid=(3, 3))
+    assert "eazy-grid-free" in html_s and "grid-column:1 / span 2" in html_s, html_s[:400]
+
+    frag = _render.build_fragment(cols_specs, layout=[1, 3], direction="h")
+    assert frag["page"]["layout"]["mode"] == "flow", frag["page"]["layout"]
+    assert "eazy-flow-col" in frag["html"]
+
+    h_flow = _render.page_height(cols_specs, cols=2, layout=[1, 3], direction="h")
+    assert h_flow > 0
+    assert _render.page_height(cols_specs, cols=2) > 0
+
+    # 自由排列与 section 分节互斥
+    sec = [eazy_data_viz.bar(DF, x="大区", y="销售额", section="一"),
+           eazy_data_viz.bar(DF, x="产品", y="销售额")]
+    try:
+        _render.build_page(sec, inline=False, layout=[1, 1], direction="h")
+    except ValueError as exc:
+        assert "不支持 section" in str(exc), str(exc)
+    else:
+        raise AssertionError("layout + section 应当报错")
+
+    # 汇总文本可读
+    assert "第1列 1 张" in L.layout_summary(plan), L.layout_summary(plan)
+
+
+def t_table_groupby():
+    """table(groupby=...)：显示层汇总、与 columns 互斥、参数校验。"""
+    spec = eazy_data_viz.table(DF, groupby={"columns": ["大区"], "value": "销售额"}).spec
+    assert spec["type"] == "table"
+    assert spec["groupby"] == {"columns": ["大区"], "value": "销售额", "agg": "sum"}, spec["groupby"]
+    assert spec["columns"] == ["大区", "销售额"], spec["columns"]
+    assert spec["agg"] == "sum"
+    assert spec["title"] == "汇总数据", spec["title"]
+
+    cnt = eazy_data_viz.table(DF, groupby={"columns": ["大区", "渠道"]}).spec
+    assert cnt["groupby"]["agg"] == "count" and cnt["groupby"]["value"] is None
+    assert cnt["columns"] == ["大区", "渠道"], cnt["columns"]
+
+    detail = eazy_data_viz.table(DF, columns=["日期", "大区", "销售额"]).spec
+    assert detail["groupby"] is None and detail["columns"] == ["日期", "大区", "销售额"]
+    assert detail["title"] == "明细数据"
+
+    for kwargs, msg in (
+        (dict(columns=["大区"], groupby={"columns": ["大区"]}), "已由 groupby 取代"),
+        (dict(groupby={"columns": ["大区"], "agg_func": "sum"}), "未知键"),
+        (dict(groupby={"columns": []}), "不能为空"),
+        (dict(groupby={"columns": ["大区"], "value": ["销售额", "利润"]}), "只能是一列"),
+        (dict(groupby={"columns": ["大区"], "value": "大区"}), "不能同时出现在 columns"),
+        (dict(groupby={"columns": ["大区"], "value": "销售额", "agg": "avg"}), "不支持"),
+        (dict(groupby={"columns": ["大区"], "agg": "sum"}), "只能是"),
+        (dict(groupby=["大区"]), "需要是字典"),
+    ):
+        try:
+            eazy_data_viz.table(DF, **kwargs)
+        except ValueError as exc:
+            assert msg in str(exc), "期望含 %r，实际 %s" % (msg, exc)
+        else:
+            raise AssertionError("应当报错：%s" % msg)
+
+    html = eazy_data_viz.dashboard(eazy_data_viz.table(
+        DF, groupby={"columns": ["大区"], "value": "销售额"})).to_html()
+    assert '"groupby"' in html and "大区" in html
+
+
+def t_sankey_path():
+    """多级桑基：path 相邻层成边、默认标题、两级兼容、参数互斥。"""
+    s = eazy_data_viz.sankey(DF, path=["大区", "渠道", "产品"], value="销售额").spec
+    assert s["type"] == "sankey"
+    assert s["roles"]["path"] == ["大区", "渠道", "产品"], s["roles"]
+    assert s["roles"]["value"] == "销售额"
+    assert s["title"] == "大区 → 渠道 → 产品 流向", s["title"]
+    assert s["agg"] == "sum"
+
+    legacy = eazy_data_viz.sankey(DF, source="渠道", target="产品", value="销售额").spec
+    assert legacy["roles"]["path"] == ["渠道", "产品"], legacy["roles"]
+    assert legacy["roles"]["value"] == "销售额"
+
+    counted = eazy_data_viz.sankey(DF, source="渠道", target="产品").spec
+    assert counted["agg"] == "count", counted["agg"]
+
+    for kwargs, msg in (
+        (dict(path=["大区", "渠道"], source="大区", target="渠道"), "不能同时使用"),
+        (dict(value="销售额"), "需要 path"),
+        (dict(path=["大区"]), "至少需要 2 级"),
+        (dict(path=["大区", "大区"]), "不能有重复列"),
+    ):
+        try:
+            eazy_data_viz.sankey(DF, **kwargs)
+        except ValueError as exc:
+            assert msg in str(exc), "期望含 %r，实际 %s" % (msg, exc)
+        else:
+            raise AssertionError("应当报错：%s" % msg)
+
+
+def t_bar_yoy():
+    """同比：两个取值时标注本期/上期，多于两个退化并提示，缺 color 报错。"""
+    import pandas as _pd
+
+    yy = _pd.DataFrame({
+        "月份": ["1月", "1月", "2月", "2月"],
+        "年份": ["2026", "2025", "2026", "2025"],
+        "销售额": [130, 100, 90, 120],
+    })
+    ch = eazy_data_viz.bar(yy, x="月份", y="销售额", color="年份", yoy=True)
+    assert ch.spec["yoy"] == {"dim": "年份"}, ch.spec["yoy"]
+
+    plain = eazy_data_viz.bar(yy, x="月份", y="销售额", color="年份")
+    assert plain.spec["yoy"] is None, plain.spec["yoy"]
+
+    many = eazy_data_viz.bar(DF, x="大区", y="销售额", color="渠道", yoy=True)
+    assert many.spec["yoy"] is None
+    warns = " ".join(many.warnings.get("warnings") or [])
+    assert "只有恰好 2 个取值" in warns, many.warnings
+
+    try:
+        eazy_data_viz.bar(yy, x="月份", y="销售额", yoy=True)
+    except ValueError as exc:
+        assert "需要 color 参数" in str(exc), str(exc)
+    else:
+        raise AssertionError("yoy 缺 color 应当报错")
+
+
+def t_link_modes():
+    """联动方向：both / out / in 的三种写法与校验。"""
+    g = lambda **kw: eazy_data_viz.bar(DF, x="大区", y="销售额", **kw).spec
+    assert g(link="g1")["link"] == "g1" and g(link="g1")["linkMode"] == "both"
+    assert g(link=("g1", "out"))["linkMode"] == "out"
+    assert g(link=["g1", "in"])["linkMode"] == "in"
+    assert g(link={"group": "g1", "direction": "out"})["linkMode"] == "out"
+    assert g(link={"group": "g1"})["linkMode"] == "both"
+    assert g(link=("g1", "单向出"))["linkMode"] == "out"
+    assert g(link=("g1", "单向进"))["linkMode"] == "in"
+    assert g(link=("g1", "双向"))["linkMode"] == "both"
+    assert g(link=("g1", "接收"))["linkMode"] == "in"
+
+    # KPI / 手工 spec 也走同一套解析
+    assert eazy_data_viz.kpi(DF, value="销售额", link=("k", "out")).spec["linkMode"] == "out"
+    assert eazy_data_viz.table(DF, link=("t", "in")).spec["linkMode"] == "in"
+
+    for bad, msg in (
+        (dict(link=("a", "out", "x")), "最多两个元素"),
+        (dict(link=()), "不能是空元组"),
+        (dict(link={"group": "g", "mode": "out", "extra": 1}), "未知键"),
+        (dict(link={"direction": "out"}), "需要 group 键"),
+        (dict(link=123), "需要是字符串"),
+        (dict(link=""), "不能为空"),
+        (dict(link=("g", "up")), "方向只支持"),
+    ):
+        try:
+            eazy_data_viz.bar(DF, x="大区", y="销售额", **bad)
+        except ValueError as exc:
+            assert msg in str(exc), "期望含 %r，实际 %s" % (msg, exc)
+        else:
+            raise AssertionError("应当报错：%s" % msg)
+
+
+def t_abs_height():
+    """绝对高度：height 指整个组件外框；网格拼成矩形、方向模式各列等高。"""
+    import pandas as _pd
+    from eazy_data_viz import layout as L
+    from eazy_data_viz import render as _render
+
+    plain = _spec(eazy_data_viz.bar(DF, x="大区", y="销售额", height=320))
+    assert plain["absHeight"] is False and plain["height"] == 320
+    assert _render._card_height(plain) > 320  # 默认 height 只算正文
+
+    boxed = _spec(eazy_data_viz.bar(DF, x="大区", y="销售额", height=320, abs_height=True))
+    assert boxed["absHeight"] is True and boxed["height"] == 320
+    assert _render._card_height(boxed) == 320
+    # 标题很长、还带联动工具条，框高依旧是 320
+    tall = _spec(
+        eazy_data_viz.bar(DF, x="大区", y="销售额", title="很长" * 30, subtitle="副标题",
+                          link="g1", height=320, abs_height=True)
+    )
+    assert _render._card_height(tall) == 320, _render._card_height(tall)
+
+    # 非 bar 的实现（手工 spec / 地图）也认这个参数
+    assert eazy_data_viz.kpi(DF, value="销售额", height=200, abs_height=True).spec["absHeight"] is True
+    assert eazy_data_viz.table(DF, height=360, abs_height=True).spec["absHeight"] is True
+    assert eazy_data_viz.gauge(62, height=260, abs_height=True).spec["absHeight"] is True
+
+    html = eazy_data_viz.dashboard(
+        eazy_data_viz.bar(DF, x="大区", y="销售额", title="销售额", height=320, abs_height=True),
+        eazy_data_viz.pie(DF, names="大区", values="销售额", height=320, abs_height=True),
+        cols=2,
+    ).to_html()
+    assert "eazy-card-fill" in html and "height:320px" in html
+    assert "eazy-fill" in html
+
+    # 模式 B：行高只增不减，跨行卡片吃满格子 → 整块网格是一个矩形
+    plan = L.parse_layout(4, layout=[[2, 2], [1, 1], [1, 1], [1, 1]], grid=(3, 3))
+    rows, boxes = L.grid_row_heights(plan, [700, 300, 300, 300])
+    assert len(rows) == 3, rows
+    for i in range(3):
+        assert rows[i] >= 300, (i, rows)
+    assert int(round(boxes[0])) == int(round(rows[0] + rows[1] + L.GAP)) == 700
+    assert L.layout_height(plan, [700, 300, 300, 300]) == sum(rows) + 2 * L.GAP
+
+    grid_html = _render.build_page(
+        [eazy_data_viz.bar(DF, x="大区", y="销售额") for _ in range(4)],
+        inline=False, layout=[[2, 2], [1, 1], [1, 1], [1, 1]], grid=(3, 3),
+    )
+    assert "grid-template-rows:" in grid_html and "eazy-grid-free" in grid_html
+    # 模式 A：各列高度一致（列容器带 px 高度，卡片 fill）
+    flow_html = _render.build_page(
+        [eazy_data_viz.bar(DF, x="大区", y="销售额") for _ in range(3)],
+        inline=False, layout=[1, 2], direction="h",
+    )
+    assert '<div class="eazy-flow-col" style="height:' in flow_html
+    assert "eazy-card-fill" in flow_html
+
+
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):
     check(name, fn)
 

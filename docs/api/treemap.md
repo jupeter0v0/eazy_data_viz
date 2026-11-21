@@ -33,6 +33,7 @@ eazy_data_viz.treemap(
 | `subtitle` | `str \| None` | `None` | 否 | 副标题 |
 | `fmt` | `str` | `'compact'` | 否 | 数值格式 |
 | `height` | `int` | `420` | 否 | 画布高度（默认 420） |
+| `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
 | `theme` | `str` | `'light'` | 否 | light / dark |
 | `max_rows` | `int` | `200000` | 否 | 最大绘制行数 |
 
@@ -91,6 +92,12 @@ eazy_data_viz.treemap(
 - **建议**：两层用 420~480；三层用 520 以上。
 - **示例**：`height=520`
 - **报错**：`height=100` → `ValueError: height 至少 120（像素），收到 100`
+
+### `abs_height` — 绝对高度：`height` 就是整个组件外框（`bool`，默认 `False`）
+
+- **作用**：默认 `height` 只算图表正文，标题 / 副标题 / 联动工具条会把卡片额外撑高，同一行里一张带长标题、一张带工具条的卡片底边就对不齐。打开 `abs_height=True` 后 `height` 表示**整个组件外框**（内边距、标题、工具条都算在里面），正文用剩余空间自适应。
+- **建议**：在 `dashboard` / `show` 里要「框和框严格对齐」时打开；单图导出或不在意卡片底边时保持默认。
+- **示例**：`abs_height=True, height=320`（配合 `dashboard(..., cols=2)` 看两张卡的底边）
 
 ### `theme` — 主题（light / dark）（`str`，默认 `'light'`）
 

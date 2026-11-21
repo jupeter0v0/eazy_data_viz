@@ -25,6 +25,8 @@ REQUIRED_SECTIONS = ("## 函数签名", "## 参数总览", "## 参数详解", "#
 NON_CHART = {
     "Chart", "Dashboard", "show", "dashboard", "sample_df", "help", "gallery",
     "set_palette", "palettes", "palette", "render", "maps",
+    # Streamlit 集成入口，文档在 guides/07-streamlit.md
+    "streamlit_dashboard", "streamlit_available",
 }
 
 

@@ -34,6 +34,7 @@ eazy_data_viz.geo_map(
 | `zoom` | `bool \| str \| None` | `None` | 否 | 是否允许鼠标缩放、平移 |
 | `palette` | `str \| None` | `None` | 否 | 配色方案名 |
 | `height` | `int` | `460` | 否 | 画布高度（≥120） |
+| `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
 | `theme` | `str` | `'light'` | 否 | `light` / `dark` |
 | `title` | `str \| None` | `None` | 否 | 主标题；省略自动生成 |
 | `subtitle` | `str \| None` | `None` | 否 | 副标题 |
@@ -108,6 +109,12 @@ eazy_data_viz.geo_map(
 
 - **作用**：地图画布高度；放进 `dashboard` 后卡片还会加上标题与工具栏高度。
 - **取值建议 / 示例**：单图 460～520、驾驶舱 420～480，例如 `height=520`。`height=100` → `ValueError: height 至少 120（像素），收到 100`
+
+### `abs_height` — 绝对高度：`height` 就是整个组件外框（`bool`，默认 `False`）
+
+- **作用**：默认 `height` 只算图表正文，标题 / 副标题 / 联动工具条会把卡片额外撑高，同一行里一张带长标题、一张带工具条的卡片底边就对不齐。打开 `abs_height=True` 后 `height` 表示**整个组件外框**（内边距、标题、工具条都算在里面），正文用剩余空间自适应。
+- **建议**：在 `dashboard` / `show` 里要「框和框严格对齐」时打开；单图导出或不在意卡片底边时保持默认。
+- **示例**：`abs_height=True, height=320`（配合 `dashboard(..., cols=2)` 看两张卡的底边）
 
 ### `theme` — 主题
 

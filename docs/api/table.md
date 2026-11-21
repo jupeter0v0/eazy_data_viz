@@ -19,6 +19,7 @@ eazy_data_viz.table(
     data,
     columns=None,
     *,
+    groupby=None,
     limit=100,
     title=None,
     subtitle=None,
@@ -41,12 +42,14 @@ eazy_data_viz.table(
 | 参数 | 类型 | 默认值 | 必填 | 一句话说明 |
 | --- | --- | --- | --- | --- |
 | `data` | pandas.DataFrame（也接受 dict / list，内部会转成 DataFrame） | 无 | 是 | 数据源（DataFrame） |
-| `columns` | list[str] 或 None | None | 否 | 要显示的列（默认前 12 列） |
+| `columns` | list[str] 或 None | None | 否 | 明细模式要显示的列（默认前 12 列）；与 `groupby` 互斥 |
+| `groupby` | dict 或 None | None | 否 | 汇总模式：`{"columns": [...], "value": "...", "agg": "sum"}` |
 | `limit` | int | 100 | 否 | 最多显示的行数 |
 | `title` | str 或 None | None | 否 | 图表主标题 |
 | `subtitle` | str 或 None | None | 否 | 副标题（口径/单位/时间范围） |
 | `fmt` | str | 'compact' | 否 | 数值格式（tooltip / 标签） |
 | `height` | int | 400 | 否 | 画布高度（像素） |
+| `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
 | `theme` | str | 'light' | 否 | 主题（浅色 / 深色） |
 | `link` | str 或 None | None | 否 | 联动分组名 |
 | `max_rows` | int | 200 | 否 | 嵌入前端的最大行数 |
@@ -55,7 +58,7 @@ eazy_data_viz.table(
 | `bar` | `bool \| str \| list[str] \| None` | `None` | 否 | 单元格数据条 |
 | `stripe` | `bool` | `True` | 否 | 斑马纹 |
 
-> 共 14 个参数。签名里 `*` 之后是 keyword-only，必须写参数名；`data` 之前的位置参数（本图专有）可以按位置传。
+> 共 15 个参数。签名里 `*` 之后是 keyword-only，必须写参数名；`data` 之前的位置参数（本图专有）可以按位置传。
 
 ## 参数详解
 
@@ -71,7 +74,29 @@ eazy_data_viz.table(
 - **作用**：按传入顺序显示；不传时取 `data.columns` 的前 12 列。每一列都必须存在于 `data`。列名写错会直接报错，不会静默跳过。
 - **建议**：只放关键列（4~8 列），列太多在卡片里会横向溢出。 把最常核对的列放前面，顺序就是展示顺序。 时间列会显示到分钟（`YYYY-MM-DD HH:MM`），日期列只显示日期。
 - **示例**：`edv.table(df, limit=20, columns=["日期", "大区", "产品", "销售额"])`
+- **互斥**：要汇总就改用 `groupby`，两个参数同时传会报错：`ValueError: table 的 columns 参数已由 groupby 取代：要明细就只传 columns，要汇总就只传 groupby={...}，不要同时传。`
 - **报错**：列不存在：`KeyError: "columns[1]列 '不存在' 不存在。当前可用的列有：..."`；`columns=[]`：`ValueError: table 需要至少 1 列，例如 table(df, columns=["月份", "销售额"])。`
+
+### `groupby` — 汇总模式（`dict | None`，默认 `None`）
+
+- **作用**：把表格从“逐行明细”换成“按维度分组汇总”。字典只有三个键：
+
+  | 键 | 是否必填 | 含义 |
+  | --- | --- | --- |
+  | `columns` | 是 | 分组维度列，1 列或多列（分组键） |
+  | `value` | 否 | 要汇总的数值列；不给则按组计数 |
+  | `agg` | 否 | 聚合方式：`sum`（有 value 时默认）/ `mean` / `count` / `max` / `min` / `median` |
+
+  渲染时按 `value` 降序排列；表头显示“`value（求和）`”这类“列名（聚合名）”，没有 `value` 时显示“记录数”；底部提示“共 N 行，汇总为 M 组”。
+- **只影响显示**：分组/聚合发生在浏览器端对**筛选后数据**的计算上，不会改动嵌入页面的原始数据，也不会改变其它图表收到的联动值。所以“点某个大区 → 这张表显示该大区的汇总”是安全的。
+- **建议**：分组列用低基数字段（大区、渠道、产品，5~20 个取值）；维度太多先用 `top_n` 思路在 Python 里裁剪。 需要“明细 + 汇总”两张表时，用同一个 `link` 组名各建一张。 汇总表同样支持 `link=("g", "in")` 单向进，避免点表影响别的图。
+- **示例**：
+  ```python
+  edv.table(df, groupby={"columns": ["大区"], "value": "销售额", "agg": "sum"})
+  edv.table(df, groupby={"columns": ["大区", "渠道"]})          # 按组计数
+  edv.table(df, groupby={"columns": ["产品"], "value": "利润", "agg": "mean"})
+  ```
+- **报错**：不是字典：`ValueError: groupby 需要是字典，例如 groupby={"columns": ["大区"], "value": "销售额", "agg": "sum"}。`；未知键：`ValueError: groupby 只支持 columns / value / agg 三个键，收到未知键：agg_func。`；没有 `columns`：`ValueError: groupby 需要 columns（按哪些列分组），例如 groupby={"columns": ["大区"], "value": "销售额"}。`；`columns` 为空：`ValueError: groupby 的 columns 不能为空：至少指定 1 个分组列。`；`value` 传了多列：`ValueError: groupby 的 value 只能是一列（汇总哪一列数值），收到 2 列。`；`value` 同时出现在 `columns` 里：`ValueError: groupby 的 value（'大区'）不能同时出现在 columns 里：同一列不能既分组又求和。`；`agg` 不认识：`ValueError: groupby 的 agg='avg' 不支持，可选：sum、mean、count、max、min、median。`；没给 `value` 却传了其它 `agg`：`ValueError: groupby 没给 value 时 agg 只能是 "count"（按组计数），收到 agg='sum'。`
 
 ### `limit` — 最多显示的行数（`int`，默认 `100`）
 
@@ -105,6 +130,12 @@ eazy_data_viz.table(
 - **建议**：普通看板 320~460；层级图/关系图建议 ≥420。 多张图并排时高度取一致，视觉更整齐。 `height` 小于 120 会直接报错，不要用它做“隐藏图”。
 - **示例**：`edv.table(df, columns=["大区", "销售额"], limit=20, height=520)`
 - **报错**：`height=100`：`ValueError: height 至少 120（像素），收到 100`；`height="400"`：同样报错（必须是 `int/float`）。
+
+### `abs_height` — 绝对高度：`height` 就是整个组件外框（`bool`，默认 `False`）
+
+- **作用**：默认 `height` 只算图表正文，标题 / 副标题 / 联动工具条会把卡片额外撑高，同一行里一张带长标题、一张带工具条的卡片底边就对不齐。打开 `abs_height=True` 后 `height` 表示**整个组件外框**（内边距、标题、工具条都算在里面），正文用剩余空间自适应。
+- **建议**：在 `dashboard` / `show` 里要「框和框严格对齐」时打开；单图导出或不在意卡片底边时保持默认。
+- **示例**：`abs_height=True, height=320`（配合 `dashboard(..., cols=2)` 看两张卡的底边）
 
 ### `theme` — 主题（浅色 / 深色）（`str`，默认 `'light'`）
 
@@ -182,7 +213,8 @@ eazy_data_viz.table(
 | `type` | 固定为 `"table"`。 |
 | `columns` | 字符串列表，决定表头与列顺序。 |
 | `limit` | 显示行数上限（Python 已截到 ≤200）。 |
-| `roles` | `{"columns": [...]}`。 |
+| `roles` | 明细 `{"columns": [...], "value": None}`；汇总 `{"columns": [...], "value": "销售额"}`。 |
+| `groupby` | 汇总模式的三键字典；明细模式为 `None`。 |
 | `fmt` | 数值格式：`compact` 在表格里按千分位显示，`percent`/`currency` 按对应格式，`raw` 原样。 |
 | `max_rows` | 嵌入页面的最大行数（默认 200，且不会超过 200）。 |
 | `total` | 是否绘制表尾合计行。 |
@@ -290,6 +322,27 @@ chart.save("examples/output/table_6.html")
 ```
 
 **输出**：最左侧出现 1–12 的「序号」列，横向滚动时固定；「销售额」单元格带浅色数据条，「利润」不带；表尾一行「合计」，销售额/利润按千分位显示（如 `7,735.98`），大区/产品列留空；底部仍提示「共 1500 行，仅显示前 12 行」。
+
+### 示例 6：汇总表：只显示汇总，不影响后台联动（1.5 新参数）
+
+```python
+import eazy_data_viz as edv
+
+df = edv.sample_df()
+bar = edv.bar(df, x="大区", y="销售额", link=("s1", "out"))
+summary = edv.table(
+    df,
+    groupby={"columns": ["大区"], "value": "销售额", "agg": "sum"},
+    link=("s1", "in"),
+    limit=20,
+    title="大区销售汇总",
+)
+edv.dashboard(bar, summary, title="汇总表联动", cols=2).save("examples/output/table_6.html")
+```
+
+**输出**：表格一进页面就显示 4 行汇总（华东/华北/华南/西南 + 求和列）；点击柱状图的某个大区后，表格变成 **1 行**——该大区的汇总值，而不是把明细行过滤出来。后台数据没被改写，其它图表照常收到原来的联动值。
+
+**验证**：`chart.spec["groupby"] == {"columns": ["大区"], "value": "销售额", "agg": "sum"}`；`chart.data.rows` 仍是原始行（汇总只在前端算）。
 
 ## 常见问题 / 注意事项
 

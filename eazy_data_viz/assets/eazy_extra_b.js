@@ -122,6 +122,11 @@
       var node = {
         name: key,
         value: v,
+        // 点击回传联动参数时用：这一层对应哪个维度、值是什么。
+        // 不能用 treePathInfo 推，旭日图 rootToNode 放大后根会变、路径会变短。
+        nodeDim: dim,
+        nodeLayer: depth,
+        nodeValue: key,
         itemStyle: { color: palAt(theme, idx) }
       };
       // 同一条分支用同一色相，越深越淡，层级更清楚
@@ -208,6 +213,38 @@
     var tree = buildTree(rows, dims, measureCol(spec), aggHow(spec), 0, theme, null);
     var vcol = measureCol(spec) || '记录数';
 
+    // 扇形太窄的名字不画：否则文字会互相压住、还会被 ECharts 挤到环外去。
+    // 外层扇形最窄，要求占比更高；这些节点仍然能点、能悬停看 tooltip。
+    var total = 0;
+    for (var t = 0; t < tree.length; t++) total += Number(tree[t].value) || 0;
+    var deepest = dims.length - 1;
+    (function hideSmall(nodes, depth) {
+      for (var i = 0; i < nodes.length; i++) {
+        var nd = nodes[i];
+        var v = Number(nd.value) || 0;
+        var minShare = depth >= deepest ? 0.035 : (depth >= deepest - 1 ? 0.03 : 0.015);
+        if (total > 0 && v / total < minShare) nd.label = { show: false };
+        if (nd.children) hideSmall(nd.children, depth + 1);
+      }
+    })(tree, 0);
+
+    // 环半径按层数均分（12% → 88%）：path 给到 4、5 级时也不会画到画布外。
+    var ringLevels = [{}];
+    var step = (88 - 12) / Math.max(1, dims.length);
+    for (var lv = 0; lv < dims.length; lv++) {
+      var isLast = lv === dims.length - 1;
+      ringLevels.push({
+        r0: (12 + step * lv).toFixed(1) + '%',
+        r: (12 + step * (lv + 1)).toFixed(1) + '%',
+        label: {
+          rotate: lv === 0 ? 0 : 'tangential',
+          fontSize: lv === 0 ? 12 : (isLast ? 10 : 11),
+          fontWeight: lv === 0 ? 600 : 400,
+          position: 'inside'
+        }
+      });
+    }
+
     return {
       color: theme.palette,
       tooltip: (function () {
@@ -227,7 +264,7 @@
       series: [{
         type: 'sunburst',
         data: tree,
-        radius: ['12%', '90%'],
+        radius: ['12%', '88%'],
         center: ['50%', '52%'],
         sort: null,
         nodeClick: 'rootToNode',
@@ -235,17 +272,16 @@
         label: {
           color: theme.text,
           fontSize: 11,
+          position: 'inside',
           textBorderColor: theme.bg,
           textBorderWidth: 2
         },
+        // 只有 3 层以上才需要「重叠就隐藏」：层数少时标签本来就够放，
+        // 打开 hideOverlap 反而会把它判定成互相压住、只剩一个名字。
+        labelLayout: { hideOverlap: dims.length >= 3 },
         labelLine: { show: false },
-        levels: [
-          {},
-          { r0: '12%', r: '42%', label: { rotate: 0, fontSize: 12 } },
-          { r0: '42%', r: '72%', label: { rotate: 'tangential', fontSize: 11 } },
-          { r0: '72%', r: '90%', label: { rotate: 'tangential', fontSize: 10 } }
-        ],
-        emphasis: { focus: 'ancestor' }
+        levels: ringLevels,
+        emphasis: { focus: 'ancestor', label: { show: true } }
       }]
     };
   };
@@ -328,49 +364,106 @@
   };
 
   // ======================================================================
-  // 3.20 sankey 桑基图
+  // 3.20 sankey 桑基图（多级：roles.path = [一级, 二级, 三级 …]）
   // ======================================================================
+  // ECharts sankey 要求全图节点名唯一，而不同层级很容易出现同名值
+  // （例如「华东」既是 大区 也是 渠道），所以节点内部名用
+  // "层级\u0001值" 编码，label/tooltip/点击回调再解码回真实值。
+  var NODE_SEP = '\u0001';
+
+  function sankeyDims(spec) {
+    var roles = spec.roles || {};
+    var dims = roles.path;
+    if (dims && dims.length) return dims;
+    var two = [];
+    if (roles.source) two.push(roles.source);
+    if (roles.target) two.push(roles.target);
+    return two;
+  }
+
   B['sankey'] = function (spec, data, state, theme) {
     var rows = U.filteredRows(spec, data, state);
-    var roles = spec.roles || {};
-    var sdim = roles.source, tdim = roles.target;
-    if (!rows.length || !sdim || !tdim) return U.emptyOption(theme);
+    var dims = sankeyDims(spec);
     var vcol = measureCol(spec);
-    var groups = U.groupBy(rows, [sdim, tdim], vcol, aggHow(spec));
-    var links = [], totals = {}, order = [];
-
-    function touch(name) {
-      if (totals[name] === undefined) { totals[name] = 0; order.push(name); }
+    var how = aggHow(spec);
+    if (!rows.length || dims.length < 2) return U.emptyOption(theme);
+    for (var d0 = 0; d0 < dims.length; d0++) {
+      if (!U.hasCol(data, dims[d0])) return U.emptyOption(theme);
     }
 
-    for (var i = 0; i < groups.length; i++) {
-      var g = groups[i];
-      var s = U.catName(g.keys[0]);
-      var t = U.catName(g.keys[1]);
-      var v = Number(g.value);
-      if (!isFinite(v) || v <= 0 || s === t) continue;
-      v = Math.round(v * 1000) / 1000;
-      touch(s);
-      touch(t);
-      totals[s] += v;
-      totals[t] += v;
-      links.push({ source: s, target: t, value: v });
+    var nodeInfo = {};     // 唯一名 -> { dim, value, layer }
+    var order = [];        // 唯一名出现顺序
+    var totals = {};       // 唯一名 -> 关联总量
+    var links = [];
+    var dropped = 0;
+
+    function register(name, dim, value, layer) {
+      if (!nodeInfo[name]) {
+        nodeInfo[name] = { dim: dim, value: value, layer: layer };
+        order.push(name);
+        totals[name] = 0;
+      }
+      return name;
+    }
+
+    // 逐层聚合：path[i] → path[i+1]，每层各自 groupBy，节点不跨层合并。
+    for (var lv = 0; lv < dims.length - 1; lv++) {
+      var groups = U.groupBy(rows, [dims[lv], dims[lv + 1]], vcol, how);
+      for (var i = 0; i < groups.length; i++) {
+        var g = groups[i];
+        var sv = g.keys[0], tv = g.keys[1];
+        if (sv === null || sv === undefined || sv === '' ||
+            tv === null || tv === undefined || tv === '') { dropped++; continue; }
+        var v = Number(g.value);
+        if (!isFinite(v) || v <= 0 || sv === tv) { dropped++; continue; }
+        v = Math.round(v * 1000) / 1000;
+        var sn = register(lv + NODE_SEP + sv, dims[lv], sv, lv);
+        var tn = register((lv + 1) + NODE_SEP + tv, dims[lv + 1], tv, lv + 1);
+        totals[sn] += v;
+        totals[tn] += v;
+        links.push({ source: sn, target: tn, value: v });
+      }
     }
     if (!links.length) return U.emptyOption(theme);
 
-    var layer = sankeyLayer(order, links);
+    // 联动高亮：本图作为联动发起方时，把同一维度上的其它节点淡出
+    var selDim = null, selValue = null;
+    if (spec.link && EazyViz.links) {
+      var lk = EazyViz.links[spec.link];
+      if (lk && lk.sourceId === spec.id) { selDim = lk.dim; selValue = lk.value; }
+    }
+
+    function labelOf(name) {
+      var m = nodeInfo[name];
+      return m ? U.catName(m.value) : name;
+    }
+
+    function dimOf(name) {
+      var m = nodeInfo[name];
+      return m ? m.dim : '';
+    }
+
     var nodes = [];
     for (var j = 0; j < order.length; j++) {
       var nm = order[j];
-      nodes.push({
+      var info = nodeInfo[nm];
+      var item = {
         name: nm,
         itemStyle: {
-          color: palAt(theme, layer[nm] || 0),
+          color: palAt(theme, info.layer || 0),
           borderColor: theme.bg,
           borderWidth: 1
         }
-      });
+      };
+      if (selDim !== null && info.dim === selDim && U.catName(info.value) !== U.catName(selValue)) {
+        item.itemStyle.opacity = 0.25;
+      }
+      nodes.push(item);
     }
+
+    // 供 onChartClick 取回 (维度, 真实值)：点击节点时 p.name 是唯一名
+    if (!EazyViz.nodeMaps) EazyViz.nodeMaps = {};
+    EazyViz.nodeMaps[spec.id || spec.type] = nodeInfo;
 
     return {
       color: theme.palette,
@@ -380,10 +473,11 @@
         tip.formatter = function (p) {
           if (p.dataType === 'edge') {
             var d = p.data || {};
-            return tipHead(U.catName(d.source) + ' → ' + U.catName(d.target)) +
+            return tipHead(labelOf(d.source) + ' → ' + labelOf(d.target)) +
               tipRow(vcol || '记录数', U.fmtValue(d.value, spec.fmt));
           }
-          return tipHead(p.name) + tipRow('关联总量', U.fmtValue(totals[p.name] || 0, spec.fmt));
+          return tipHead(labelOf(p.name)) +
+            tipRow(dimOf(p.name) + ' · 关联总量', U.fmtValue(totals[p.name] || 0, spec.fmt));
         };
         return tip;
       })(),
@@ -401,10 +495,15 @@
         nodeAlign: 'justify',
         layoutIterations: 40,
         draggable: true,
-        label: { color: theme.text, fontSize: 11 },
+        label: {
+          color: theme.text,
+          fontSize: 11,
+          formatter: function (p) { return labelOf(p.name); }
+        },
         itemStyle: { borderWidth: 0 },
         lineStyle: { color: 'gradient', opacity: 0.3, curveness: 0.5 },
-        emphasis: { focus: 'adjacency', lineStyle: { opacity: 0.55 } }
+        emphasis: { focus: 'adjacency', lineStyle: { opacity: 0.55 } },
+        labelLayout: { hideOverlap: true }
       }]
     };
   };

@@ -440,6 +440,8 @@ def main():
         "--hide-scrollbars", "--virtual-time-budget=9000",
         "--window-size=1500,1400", "--dump-dom",
         "--allow-file-access-from-files",
+        "--user-data-dir=" + os.path.join(tempfile.gettempdir(), "eazy_js_test_profile"),
+        "--no-first-run", "--no-default-browser-check", "--disable-extensions",
         "file:///" + path.replace("\\", "/"),
     ]
     cp = subprocess.run(cmd, capture_output=True)
