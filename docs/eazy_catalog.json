@@ -1,6 +1,6 @@
 {
  "name": "eazy_data_viz",
- "version": "1.5.5",
+ "version": "1.5.6",
  "summary": "pandas → 单文件 HTML 交互图表库（经营驾驶舱场景，Material Design 3，45 种图表，客户端下钻/联动，Streamlit 兼容）",
  "install": "pip install -e .   # 或构建 wheel: python -m pip wheel . --no-deps",
  "quickstart": [
@@ -6113,7 +6113,7 @@
  "helpers": {
   "show": {
    "name": "show",
-   "signature": "show(*charts: 'object', cols: 'int' = 2, title: 'str | None' = None, desc: 'str | None' = None, theme: 'str | None' = None, palette: 'str | None' = None, layout: 'list | None' = None, direction: 'str | None' = None, grid: 'tuple | int | str | None' = None) -> 'None'",
+   "signature": "show(*charts: 'object', cols: 'int' = 2, title: 'str | None' = None, desc: 'str | None' = None, theme: 'str | None' = None, palette: 'str | None' = None, layout: 'list | None' = None, direction: 'str | None' = None, grid: 'tuple | int | str | None' = None, hints: 'bool | None' = None, card_style: 'str' = 'default') -> 'None'",
    "params": [
     {
      "name": "charts",
@@ -6167,6 +6167,18 @@
      "name": "grid",
      "kind": "keyword_only",
      "default": null,
+     "required": false
+    },
+    {
+     "name": "hints",
+     "kind": "keyword_only",
+     "default": null,
+     "required": false
+    },
+    {
+     "name": "card_style",
+     "kind": "keyword_only",
+     "default": "default",
      "required": false
     }
    ],
@@ -6236,7 +6248,7 @@
   },
   "Dashboard": {
    "name": "Dashboard",
-   "signature": "Dashboard(charts: 'list', cols: 'int' = 2, title: 'str | None' = None, desc: 'str | None' = None, theme: 'str | None' = None, inline: 'bool' = True, palette: 'str | None' = None, layout: 'list | None' = None, direction: 'str | None' = None, grid: 'tuple | int | str | None' = None) -> 'None'",
+   "signature": "Dashboard(charts: 'list', cols: 'int' = 2, title: 'str | None' = None, desc: 'str | None' = None, theme: 'str | None' = None, inline: 'bool' = True, palette: 'str | None' = None, layout: 'list | None' = None, direction: 'str | None' = None, grid: 'tuple | int | str | None' = None, hints: 'bool' = None, card_style: 'str' = 'default') -> 'None'",
    "params": [
     {
      "name": "charts",
@@ -6296,6 +6308,18 @@
      "name": "grid",
      "kind": "positional_or_keyword",
      "default": null,
+     "required": false
+    },
+    {
+     "name": "hints",
+     "kind": "positional_or_keyword",
+     "default": null,
+     "required": false
+    },
+    {
+     "name": "card_style",
+     "kind": "positional_or_keyword",
+     "default": "default",
      "required": false
     }
    ],
@@ -6379,7 +6403,7 @@
   },
   "streamlit_dashboard": {
    "name": "streamlit_dashboard",
-   "signature": "streamlit_dashboard(charts: 'list', *, cols: 'int' = 2, title: 'str | None' = None, desc: 'str | None' = None, theme: 'str | None' = None, palette: 'str | None' = None, height: 'int | None' = None, key: 'str | None' = None, on_select: 'object' = None, layout: 'list | None' = None, direction: 'str | None' = None, grid: 'tuple | int | str | None' = None) -> 'str'",
+   "signature": "streamlit_dashboard(charts: 'list', *, cols: 'int' = 2, title: 'str | None' = None, desc: 'str | None' = None, theme: 'str | None' = None, palette: 'str | None' = None, height: 'int | None' = None, key: 'str | None' = None, on_select: 'object' = None, layout: 'list | None' = None, direction: 'str | None' = None, grid: 'tuple | int | str | None' = None, hints: 'bool | None' = None, card_style: 'str' = 'default') -> 'str'",
    "params": [
     {
      "name": "charts",
@@ -6451,6 +6475,18 @@
      "name": "grid",
      "kind": "keyword_only",
      "default": null,
+     "required": false
+    },
+    {
+     "name": "hints",
+     "kind": "keyword_only",
+     "default": null,
+     "required": false
+    },
+    {
+     "name": "card_style",
+     "kind": "keyword_only",
+     "default": "default",
      "required": false
     }
    ],

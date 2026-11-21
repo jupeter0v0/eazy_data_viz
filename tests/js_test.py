@@ -211,8 +211,9 @@ TEST_JS = r"""
   steps.push(function () {
     ok('drill-link-both', cd.state.drill.length === 1 && !!(EazyViz.links || {})['g1'],
        cd.state.drill.length + '/' + JSON.stringify((EazyViz.links || {})['g1'] || null));
-    var btn = document.querySelector('[data-eazy-reset-drill]');
-    ok('drill-reset-btn', !!btn);
+    // 1.5.6 起两个重置合并成页脚的一个「重置」
+    var btn = document.querySelector('.eazy-footbar [data-eazy-reset]');
+    ok('drill-reset-btn', !!btn, btn && btn.textContent);
     if (btn) btn.click();
   });
   steps.push(function () {
@@ -285,7 +286,14 @@ TEST_JS = r"""
     ok('tbl-no-hit-when-target', tbl.el.querySelectorAll('tr.eazy-row-hit').length === 0,
        tbl.el.querySelectorAll('tr.eazy-row-hit').length);
     var tb = document.querySelector('[data-eazy-toolbar="19"]');
-    ok('tbl-toolbar-hint', !!tb && /单元格/.test(tb.textContent), tb && tb.textContent.slice(0, 30));
+    // 1.5.6：操作提示小字默认关闭，hints 打开后才出现
+    ok('tbl-toolbar-hint-off', !tb || !/单元格/.test(tb.textContent), tb && tb.textContent.slice(0, 30));
+    EazyViz.hints = true;
+    core0.renderToolbar(tbl);
+    ok('tbl-toolbar-hint-on', /单元格/.test(tbl.el.closest('.eazy-card').textContent),
+       tbl.el.closest('.eazy-card').textContent.slice(0, 40));
+    EazyViz.hints = false;
+    core0.renderToolbar(tbl);
     clickCat(c1, tblCat, tblVal);
   });
 

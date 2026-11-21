@@ -216,28 +216,30 @@ def t_dashboard_orders():
 
 
 def t_dashboard_reset_buttons():
-    """顶栏回退入口：有 link 或 drill 就渲染，「重置下钻」按钮总在其中。"""
+    """1.5.6：页头只在有 title/desc 时出现且不含按钮；页脚固定有「主题」+「重置」。"""
+    from eazy_data_viz import render as _render2
+    _footbar_html = _render2._footbar_html
     HDR = '<header class="eazy-appbar'
-    bar = eazy_data_viz.bar(DF, x="大区" if "大区" in DF.columns else "月份", y="销售额")
-    only_bar = eazy_data_viz.dashboard(bar).to_html()
-    assert HDR not in only_bar, "既无联动也无下钻时不该渲染顶栏"
+    col = "大区" if "大区" in DF.columns else "月份"
+    bar = eazy_data_viz.bar(DF, x=col, y="销售额")
+    plain = eazy_data_viz.dashboard(bar).to_html()
+    assert HDR not in plain, "没标题没副标题时不该渲染页头"
+    assert '<select' not in plain, "页头不该有配色下拉"
+    assert 'data-eazy-reset' in plain and 'data-eazy-theme' in plain, "页脚缺少主题/重置按钮"
+    assert 'data-eazy-reset-drill' not in _footbar_html(), "1.5.6 起两个重置合并成一个"
+
     linked = eazy_data_viz.dashboard(
-        eazy_data_viz.bar(DF, x="大区" if "大区" in DF.columns else "月份", y="销售额", link="g9"),
-    ).to_html()
-    assert HDR in linked, "有 link 就该渲染顶栏（否则没有回退入口）"
-    assert 'data-eazy-reset-drill' in linked, "缺少重置下钻按钮"
-    assert 'data-eazy-reset-drill title=' in linked or 'data-eazy-reset-drill ' in linked
-    assert HDR + ' is-plain"' in linked, "没有标题时应使用紧凑工具条样式"
+        eazy_data_viz.bar(DF, x=col, y="销售额", link="g9")).to_html()
+    assert HDR not in linked, "有 link 也不该凭空渲染页头"
+    assert 'eazy-footbar' in linked and 'data-eazy-reset' in linked
+
     drill_only = eazy_data_viz.dashboard(
-        eazy_data_viz.bar(DF, x="大区" if "大区" in DF.columns else "月份", y="销售额",
-                          drill=["大区", "月份"] if "大区" in DF.columns else ["月份"]),
-    ).to_html()
-    assert 'data-eazy-reset-drill' in drill_only, "只有 drill 的看板也要有重置下钻按钮"
+        eazy_data_viz.bar(DF, x=col, y="销售额", drill=[col])).to_html()
+    assert 'data-eazy-reset' in drill_only, "只有 drill 的看板也要有重置按钮"
+
     titled = eazy_data_viz.dashboard(
-        eazy_data_viz.bar(DF, x="大区" if "大区" in DF.columns else "月份", y="销售额", link="g9"),
-        title="有标题",
-    ).to_html()
-    assert HDR in titled and HDR + ' is-plain"' not in titled
+        eazy_data_viz.bar(DF, x=col, y="销售额", link="g9"), title="有标题").to_html()
+    assert HDR in titled and "<button" not in titled.split("</header>")[0]
 
 
 def t_empty_df():
@@ -1014,6 +1016,70 @@ def t_agg_unique():
         assert "unique" in str(err), str(err)
     else:
         raise AssertionError("未知 agg 应报 ValueError")
+
+
+def t_card_style():
+    """1.5.6：card_style 只接受 default / glass；页头无配色下拉、页脚只有主题+重置。"""
+    from eazy_data_viz import render as _render
+
+    for value in (None, "", "default", "solid", "实心"):
+        assert _render.normalize_card_style(value) == "default", value
+    for value in ("glass", "liquid", "液态玻璃", "玻璃", "liquid-glass", "GLASS"):
+        assert _render.normalize_card_style(value) == "glass", value
+    try:
+        _render.normalize_card_style("nope")
+    except ValueError as e:
+        assert "card_style" in str(e) and "glass" in str(e), str(e)
+    else:
+        raise AssertionError("非法 card_style 没有报错")
+
+    df = DF
+    a = eazy_data_viz.bar(df, x="大区", y="销售额", link="g1")
+    b = eazy_data_viz.line(df, x="月份", y="销售额", link="g1")
+
+    html = eazy_data_viz.dashboard(a, b, cols=2, title="T").to_html()
+    assert '"cardStyle": "default"' in html, "page 里没有 cardStyle"
+    assert "eazy-footbar" in html and "data-eazy-reset" in html and "data-eazy-theme" in html
+    assert "<select" not in html, "页头还留着配色下拉"
+    assert "is-glass" not in _render.build_fragment([a, b], cols=2)["html"]
+
+    frag_glass = _render.build_fragment([a, b], cols=2, card_style="glass")
+    assert 'class="eazy-root is-glass"' in frag_glass["html"]
+    assert frag_glass["page"]["cardStyle"] == "glass"
+    assert "backdrop-filter" in frag_glass["css"], "液态玻璃 CSS 缺失"
+    html_glass = eazy_data_viz.dashboard(a, b, cols=2, title="T", card_style="glass").to_html()
+    assert '"cardStyle": "glass"' in html_glass
+    assert eazy_data_viz.dashboard(a, b, card_style="液态玻璃").card_style == "glass"
+
+
+def t_hints():
+    """1.5.6：提示小字默认关，hints=True 才开。"""
+    from eazy_data_viz import render as _render
+
+    df = DF
+    a = eazy_data_viz.bar(df, x="大区", y="销售额", drill=["渠道"], link="g1")
+    b = eazy_data_viz.kpi(df, value="销售额", label="销售额", link="g1")
+
+    html = eazy_data_viz.dashboard(a, b, cols=2, title="T").to_html()
+    assert '"hints": false' in html
+    assert _render.Dashboard([a, b]).hints is False
+    html_on = eazy_data_viz.dashboard(a, b, cols=2, title="T", hints=True).to_html()
+    assert '"hints": true' in html_on
+    assert _render.Dashboard([a, b], hints=True).hints is True
+
+
+def t_footer_buttons():
+    """1.5.6：页脚只有「主题」「重置」两个按钮；页头没有按钮/下拉。"""
+    from eazy_data_viz import render as _render
+
+    foot = _render._footbar_html()
+    assert foot.count("<button") == 2, foot
+    assert "data-eazy-theme" in foot and "data-eazy-reset" in foot
+    assert "data-eazy-palette" not in foot
+    head = _render._appbar_html("标题", "副标题")
+    assert "<button" not in head and "<select" not in head
+    assert "标题" in head and "副标题" in head
+    assert _render._appbar_html(None, None) == ""
 
 
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):

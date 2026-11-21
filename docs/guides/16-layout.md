@@ -318,7 +318,35 @@ edv.dashboard(*cards, direction="h", layout=[1, 2])
 > `abs_height` 也适用于普通 `cols` 等宽看板：`edv.dashboard(a, b, c, cols=3)` 里给三张图都设
 > `height=320, abs_height=True`，同样能消掉标题/工具条带来的高度差。
 
-## 7. 常见问题
+## 7. 卡片外框：`card_style="glass"`（1.5.6）
+
+默认是实心白卡（`card_style="default"`）。把页面放进自己的底色里（Streamlit 主题、深色底、彩色背景）时，
+白卡会像一块块白框压住背景，这时换成**液态玻璃**：
+
+```python
+edv.dashboard(a, b, c, d, cols=2, title="经营看板", card_style="glass")
+edv.show(a, b, c, d, grid=(2, 2), layout=[[1, 1], [1, 1]], card_style="glass")
+```
+
+效果是半透明渐变 + 背景模糊（`backdrop-filter: blur(22px) saturate(180%)`）+ 一圈白色高光边，
+页面底色会**透**上来，不再被白框挡住；深色主题自己有一套更暗的玻璃层。
+
+* 取值：`"default"`（默认，实心） / `"glass"`（液态玻璃，别名 `liquid`、`液态玻璃`、`玻璃`）；
+* 传别的值直接报错：`ValueError: card_style 只支持 "default"（实心卡片）或 "glass"（液态玻璃），收到 'x'。`；
+* 同样支持 `dashboard(...)` / `show(...)` / `streamlit_dashboard(...)`。
+
+### 顺带：工具栏搬到页脚（1.5.6）
+
+页头只留标题与副标题；配色下拉去掉了（要整页换色请用 `palette=` 参数），
+页脚只保留两个控件：**◐ 主题** 与 **重置**（一次清掉全部联动 + 下钻 + 旭日放大）。
+图表里那些操作提示小字（「点击图形下钻到…」「点击单元格可按该列联动…」）默认不显示了，
+需要时按 `hints=True` 打开：
+
+```python
+edv.dashboard(a, b, c, d, hints=True)
+```
+
+## 8. 常见问题
 
 **Q1. 为什么我的页面右边突然空了？**
 模式 A 里 `sum(layout)` 大于图数时，多出来的格子会留空。把 `layout` 的数量改成和图的分布一致即可。
@@ -327,7 +355,8 @@ edv.dashboard(*cards, direction="h", layout=[1, 2])
 用模式 B（`grid` + `[[1, 2], [1, 1]]`），模式 A 只能整列/整行计数。
 
 **Q3. 手机窄屏会不会挤坏？**
-`eazy-flow` 与网格都按比例分配宽度，窄屏会等比例缩小、不会溢出；卡片内部图表自身会自适应宽度。
+1.5.6 起不会了。窗口宽度 ≤ 820px 时：模式 B 的多列网格自动折成**单列**（内联的 `grid-column` / `grid-row`
+会被媒体查询压掉），模式 A 的 `eazy-flow` 改成竖排、每张卡占满一行；卡片高度改为 `auto`，不会再被固定框高裁掉。
 
 **Q4. `cols` 还需要传吗？**
 不需要，自由排列模式下 `cols` 会被覆盖（`build_page` 用 `plan["cols"]`）。留着也不影响。

@@ -282,6 +282,7 @@ def page_height(charts: list, cols: int | None = None, has_header: bool = False,
         total += 60
     if has_filters:
         total += 46
+    total += 48  # 底部工具条（主题 / 重置）
     return int(total)
 
 
@@ -315,10 +316,8 @@ body{
 
 /* ---------- AppBar ---------- */
 .eazy-appbar{
-  position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;
-  min-height:64px;padding:10px 24px;background:var(--pv-surface);
-  border-bottom:1px solid var(--pv-outline-var);
-  box-shadow:0 1px 2px rgba(60,64,67,.08);
+  display:flex;align-items:center;gap:14px;
+  min-height:0;padding:16px 24px 6px;background:transparent;
 }
 .eazy-appbar-main{min-width:0;display:flex;flex-direction:column;gap:2px}
 .eazy-header-title{font-family:"Google Sans",Roboto,sans-serif;font-size:20px;font-weight:500;
@@ -440,7 +439,9 @@ html[data-theme=dark] .eazy-kpi-delta.eazy-down{background:rgba(242,139,130,.14)
 .eazy-kpi-deltalabel{font-size:11.5px;color:var(--pv-on-surface-var)}
 .eazy-kpi-hint{font-size:11.5px;color:var(--pv-on-surface-var);margin-top:-2px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.eazy-kpi-sparkwrap{height:34px;margin-top:1px}
+.eazy-kpi-sparkwrap{position:relative;height:38px;margin-top:auto;padding-top:4px}
+  .eazy-kpi-sparkdot{position:absolute;right:2.5%;width:6px;height:6px;border-radius:50%;
+    transform:translateY(-50%);box-shadow:0 0 0 1.5px var(--pv-surface-1)}
 .eazy-kpi-spark{display:block;width:100%;height:100%;overflow:visible}
 .eazy-kpi-progress{display:flex;align-items:center;gap:8px}
 .eazy-kpi-track{flex:1;height:6px;border-radius:999px;background:var(--pv-surface-3);overflow:hidden}
@@ -524,6 +525,40 @@ html[data-theme=dark] .eazy-kpi-delta.eazy-down{background:rgba(242,139,130,.14)
 .eazy-wc-wrap{position:relative;width:100%;height:100%;overflow:hidden}
 .eazy-wc-canvas{display:block;width:100%;height:100%}
 
+
+/* ---------- 卡片外框：实心 / 液态玻璃（card_style="glass"） ---------- */
+/* 液态玻璃靠半透明渐变 + 背景模糊，换页面底色时卡片不会像白框一样压住背景。 */
+.eazy-root.is-glass .eazy-card{
+  background:linear-gradient(155deg,rgba(255,255,255,.58) 0%,rgba(240,246,255,.3) 45%,
+    rgba(255,247,252,.22) 100%);
+  -webkit-backdrop-filter:blur(22px) saturate(180%);
+  backdrop-filter:blur(22px) saturate(180%);
+  border:1px solid rgba(255,255,255,.7);
+  border-radius:18px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.3),
+    0 12px 32px rgba(23,43,77,.12),0 2px 6px rgba(23,43,77,.06);
+}
+/* 顶边一道高光，模拟玻璃边缘的折射 */
+.eazy-root.is-glass .eazy-card::after{
+  content:"";position:absolute;left:14px;right:14px;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.95),transparent);
+  pointer-events:none;
+}
+html[data-theme=dark] .eazy-root.is-glass .eazy-card,
+body[data-theme=dark] .eazy-root.is-glass .eazy-card{
+  background:linear-gradient(155deg,rgba(255,255,255,.11) 0%,rgba(255,255,255,.05) 60%,
+    rgba(255,255,255,.02) 100%);
+  border-color:rgba(255,255,255,.15);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -1px 0 rgba(255,255,255,.04),
+    0 14px 34px rgba(0,0,0,.46);
+}
+.eazy-root.is-glass .eazy-appbar,.eazy-root.is-glass .eazy-footbar{background:transparent}
+
+/* ---------- 底部工具条 ---------- */
+.eazy-footbar{display:flex;align-items:center;justify-content:flex-end;gap:8px;
+  flex-wrap:wrap;padding:14px 24px 18px}
+.eazy-footbar .eazy-textbtn{background:var(--pv-surface);padding:6px 18px}
+
 /* ---------- 响应式：窄屏自适应 ----------
    同一份页面要塞进手机、窄侧栏、半屏窗口：栅格自动降列、字号收紧、顶栏换行。
    KPI 数字还有 JS 兜底（fitTexts 按容器宽度缩），表格保持横向滚动。 */
@@ -534,6 +569,8 @@ html[data-theme=dark] .eazy-kpi-delta.eazy-down{background:rgba(242,139,130,.14)
   /* 窄屏搞成两列：KPI 两列并排、图表和表格各占满一行
      （图表挤到 170px 宽就没法看了，KPI 一行一张又太浪费纵向空间） */
   .eazy-grid{--eazy-cols:2!important;gap:12px;padding:12px 12px 0}
+  .eazy-appbar{padding:12px 12px 4px}
+  .eazy-header-title{font-size:17px;line-height:24px}
   .eazy-card{grid-column:1/-1}
   .eazy-card:has(.eazy-kpi),.eazy-card:has(.eazy-metric){grid-column:auto}
   .eazy-appbar{padding:10px 12px;gap:6px;min-height:0;display:block}
@@ -563,6 +600,22 @@ html[data-theme=dark] .eazy-kpi-delta.eazy-down{background:rgba(242,139,130,.14)
   .eazy-chip{height:28px;font-size:11.5px;padding:0 5px 0 10px}
   .eazy-filters{padding:8px 12px;gap:6px}
 }
+
+@media (max-width: 820px){
+  /* 1.5.6：自定义排列（grid / flow）在手机上退化成单列。
+     之前 grid-column / grid-row / height 是内联样式，窄屏照样按 3 列挤在一起。 */
+  .eazy-grid-free{grid-template-columns:1fr!important;grid-template-rows:none!important;
+    gap:12px}
+  .eazy-grid-free>.eazy-card{grid-column:auto!important;grid-row:auto!important;
+    height:auto!important;min-height:0!important}
+  .eazy-grid-free>.eazy-card .eazy-fill{min-height:300px}
+  .eazy-grid-free>.eazy-card:has(.eazy-kpi),
+  .eazy-grid-free>.eazy-card:has(.eazy-kpi) .eazy-fill{min-height:0!important}
+  .eazy-flow{flex-direction:column;gap:12px;padding:12px 12px 0}
+  .eazy-flow-col,.eazy-flow-row{width:100%;height:auto!important;flex:0 0 auto}
+  .eazy-flow-row{flex-direction:column}
+  .eazy-footbar{padding:10px 12px 14px}
+}
 @media (max-width: 460px){
   .eazy-appbar-desc{display:none}
   .eazy-kpi-value{font-size:23px}
@@ -582,42 +635,55 @@ window.addEventListener('error', function (e) {
 """
 
 
+_CARD_STYLES = ("default", "glass")
+_CARD_GLASS = ("glass", "liquid", "液态玻璃", "玻璃", "liquid-glass")
+
+
+def normalize_card_style(card_style):
+    """把 ``card_style`` 归一化成 ``"default"`` / ``"glass"``。"""
+    if card_style is None:
+        return "default"
+    if not isinstance(card_style, str):
+        raise ValueError('card_style 只支持 "default"（实心卡片）或 "glass"（液态玻璃），收到 %r。'
+                         % (card_style,))
+    key = card_style.strip().lower()
+    if key in ("", "default", "solid", "plain", "实心"):
+        return "default"
+    if key in _CARD_GLASS:
+        return "glass"
+    raise ValueError('card_style 只支持 "default"（实心卡片）或 "glass"（液态玻璃），收到 %r。'
+                     % (card_style,))
+
+
 def _esc(text):
     return _html.escape("" if text is None else str(text))
 
 
-def _appbar_html(title, desc, palette, specs):
-    """看板顶栏：标题 + 配色/主题/重置按钮。
+def _appbar_html(title, desc):
+    """看板顶栏：只剩标题与副标题。
 
-    没有标题也照样出按钮——只要看板里有联动或下钻，用户就需要一键回退的入口，
-    否则下钻带出来的筛选没有地方可清（「回不去了」）。
+    1.5.6 起配色下拉、主题切换、重置按钮都挪到底部工具条（``_footbar_html``）——
+    顶部一行标题就够，正文能多占几十像素；配色改用 ``palette=`` 参数在代码里定。
     """
-    has_filters = any(s.get("link") for s in specs)
-    has_drill = any(s.get("drill") for s in specs)
-    if not (title or desc or has_filters or has_drill):
+    if not (title or desc):
         return ""
-    # 没有标题时用「紧凑工具条」样式：只有配色/主题/重置按钮，别留一条空标题栏
-    plain = not (title or desc)
-    parts = ['<header class="eazy-appbar%s">' % (" is-plain" if plain else "")]
-    if title or desc:
-        parts.append('<div class="eazy-appbar-main"><div class="eazy-header-title">%s</div>'
-                     % _esc(title or "eazy_data_viz 看板"))
-        if desc:
-            parts.append('<div class="eazy-header-desc">%s</div>' % _esc(desc))
-        parts.append('</div>')
-    opts = []
-    for _p in _palette.listing():
-        _sel = " selected" if _p["name"] == palette else ""
-        opts.append('<option value="%s"%s>配色：%s</option>'
-                    % (_p["name"], _sel, _esc(_p["label"])))
-    parts.append('<div class="eazy-appbar-actions">'
-                 '<select class="eazy-select" data-eazy-palette title="切换配色库">%s</select>'
-                 '<button class="eazy-iconbtn" data-eazy-theme title="切换浅色/深色">◐</button>'
-                 '<button class="eazy-textbtn" data-eazy-reset title="清除所有联动筛选">重置联动</button>'
-                 '<button class="eazy-textbtn" data-eazy-reset-drill '
-                 'title="清除所有图表的逐级下钻（连同下钻带出的联动），回到第一层">重置下钻</button>'
-                 '</div></header>' % "".join(opts))
+    parts = ['<header class="eazy-appbar">',
+             '<div class="eazy-appbar-main"><div class="eazy-header-title">%s</div>'
+             % _esc(title or "eazy_data_viz 看板")]
+    if desc:
+        parts.append('<div class="eazy-header-desc">%s</div>' % _esc(desc))
+    parts.append("</div></header>")
     return "".join(parts)
+
+
+def _footbar_html():
+    """底部工具条：主题切换 + 一个「重置」按钮（联动与下钻一起清）。"""
+    return ('<footer class="eazy-footbar">'
+            '<button class="eazy-iconbtn" data-eazy-theme '
+            'title="切换浅色/深色">◐</button>'
+            '<button class="eazy-textbtn" data-eazy-reset '
+            'title="清除所有联动筛选与下钻，回到初始视图">重置</button>'
+            "</footer>")
 
 
 def _card_html(spec, index, style=None, extra_height=0, box_height=None, fill=False):
@@ -707,7 +773,8 @@ def streamlit_show(charts: list, cols: int = 2, title: str | None = None,
                    palette: str | None = None, key: str | None = None,
                    on_select: object = None, layout: list | None = None,
                    direction: str | None = None,
-                   grid: tuple | int | str | None = None) -> str:
+                   grid: tuple | int | str | None = None,
+                   hints: bool = None, card_style: str = "default") -> str:
     """在 Streamlit 页面里渲染一张或多张图，返回实际使用的模式（``"v2"`` / ``"v1"``）。
 
     优先使用 ``st.components.v2``（无 iframe、高度按内容自适应、图表点击可回传
@@ -734,6 +801,8 @@ def streamlit_show(charts: list, cols: int = 2, title: str | None = None,
                 layout=layout,
                 direction=direction,
                 grid=grid,
+                hints=hints,
+                card_style=card_style,
             )
             _LAST_STREAMLIT_ERROR = None
             return "v2"
@@ -754,6 +823,7 @@ def streamlit_show(charts: list, cols: int = 2, title: str | None = None,
     html = build_page(
         charts, inline=True, title=title, cols=cols, theme=theme, desc=desc,
         palette=palette, layout=layout, direction=direction, grid=grid,
+        hints=hints, card_style=card_style,
     )
     components.html(html, height=height, scrolling=False)
     return "v1"
@@ -789,7 +859,9 @@ def build_page(charts: list, inline: bool = True, title: str | None = None,
                cols: int | None = None, theme: str | None = None,
                desc: str | None = None, palette: str | None = None,
                layout: list | None = None, direction: str | None = None,
-               grid: tuple | int | str | None = None) -> str:
+               grid: tuple | int | str | None = None,
+               hints: bool = None,
+               card_style: str = "default") -> str:
     """把一组 Chart 组装成一个完整 HTML 文档字符串。
 
     ``palette`` 指定页面默认配色（google / antd / tableau / carbon / echarts /
@@ -826,11 +898,13 @@ def build_page(charts: list, inline: bool = True, title: str | None = None,
         cols = max(1, min(int(plan["cols"]), 12))
     has_filters = any(s.get("link") for s in specs)
 
-    header = _appbar_html(title, desc, palette, specs)
+    header = _appbar_html(title, desc)
     cards = _grid_markup(specs, plan, cols)
+    footer = _footbar_html()
 
+    style = normalize_card_style(card_style)
     page = {"theme": theme, "palette": palette, "charts": specs, "links": [],
-            "layout": plan}
+            "layout": plan, "hints": bool(hints), "cardStyle": style}
     maps = _map_payload(specs)
     cities = _cities_payload() if "china" in maps else {}
     payload = {"maps": _frame.to_json(maps) if maps else "{}",
@@ -851,10 +925,11 @@ def build_page(charts: list, inline: bool = True, title: str | None = None,
 <style>{css}</style>
 </head>
 <body data-theme="{theme}" data-palette="{palette}">
-<div class="eazy-root">
+<div class="eazy-root{root_cls}">
 {header}
 {filters}
 {cards}
+{footer}
 </div>
 <script>window.EAZY_MAPS = {maps};window.EAZY_CITIES = {cities};window.EAZY_DATA = {data};window.EAZY_PAGE = {page};</script>
 {scripts}
@@ -881,6 +956,8 @@ try {{
         filters=filters,
         cols=cols,
         cards=cards,
+        footer=footer,
+        root_cls=" is-glass" if style == "glass" else "",
         maps=payload["maps"],
         cities=payload["cities"],
         data=payload["data"],
@@ -913,7 +990,8 @@ def build_fragment(charts: list, title: str | None = None, desc: str | None = No
                    cols: int | None = None, theme: str | None = None,
                    palette: str | None = None, layout: list | None = None,
                    direction: str | None = None,
-                   grid: tuple | int | str | None = None) -> dict:
+                   grid: tuple | int | str | None = None,
+                   hints: bool = None, card_style: str = "default") -> dict:
     """组装 components.v2 组件所需的三部分：HTML 片段、CSS、data。
 
     返回值是 dict：
@@ -954,19 +1032,22 @@ def build_fragment(charts: list, title: str | None = None, desc: str | None = No
         cols = max(1, min(int(plan["cols"]), 12))
     has_filters = any(s.get("link") for s in specs)
 
-    header = _appbar_html(title, desc, palette, specs)
+    header = _appbar_html(title, desc)
     cards = _grid_markup(specs, plan, cols)
+    footer = _footbar_html()
 
     filters = ""
     if has_filters:
         filters = ('<div class="eazy-filters" id="eazy-filters" style="display:none">'
                    '<span class="eazy-filters-label">联动筛选</span></div>')
 
-    markup = ('<div class="eazy-root" data-theme="%s" data-palette="%s">%s%s</div>'
-              % (theme, palette, header + filters, cards))
+    style = normalize_card_style(card_style)
+    markup = ('<div class="eazy-root%s" data-theme="%s" data-palette="%s">%s%s</div>'
+              % (" is-glass" if style == "glass" else "", theme, palette,
+                 header + filters, cards + footer))
 
     page = {"theme": theme, "palette": palette, "charts": specs, "links": [],
-            "layout": plan}
+            "layout": plan, "hints": bool(hints), "cardStyle": style}
     maps = _map_payload(specs)
     cities = _cities_payload() if "china" in maps else {}
     return {
@@ -978,6 +1059,7 @@ def build_fragment(charts: list, title: str | None = None, desc: str | None = No
         "cities": cities,
         "cols": cols,
         "has_filters": has_filters,
+        "card_style": style,
     }
 
 class Dashboard:
@@ -987,7 +1069,9 @@ class Dashboard:
                  desc: str | None = None, theme: str | None = None,
                  inline: bool = True, palette: str | None = None,
                  layout: list | None = None, direction: str | None = None,
-                 grid: tuple | int | str | None = None) -> None:
+                 grid: tuple | int | str | None = None,
+                 hints: bool = None,
+                 card_style: str = "default") -> None:
         charts = list(charts)
         if not charts:
             raise ValueError("dashboard 至少需要一张图。")
@@ -1001,6 +1085,8 @@ class Dashboard:
         self.layout = layout
         self.direction = direction
         self.grid = grid
+        self.hints = bool(hints)
+        self.card_style = normalize_card_style(card_style)
 
     # ---- 展示 -----------------------------------------------------------
     def to_html(self, inline: bool | None = None) -> str:
@@ -1015,6 +1101,8 @@ class Dashboard:
             layout=self.layout,
             direction=self.direction,
             grid=self.grid,
+            hints=self.hints,
+            card_style=self.card_style,
         )
 
     def save(self, path: str, inline: bool | None = None) -> str:
@@ -1041,6 +1129,8 @@ class Dashboard:
                 layout=self.layout,
                 direction=self.direction,
                 grid=self.grid,
+                hints=self.hints,
+                card_style=self.card_style,
             )
             self._print_warnings()
             return self

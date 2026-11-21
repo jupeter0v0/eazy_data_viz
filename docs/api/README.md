@@ -171,10 +171,13 @@ edv.dashboard(k, trend, region, detail, cols=2, title="经营驾驶舱",
               desc="2024 全年").save("examples/output/api-dashboard.html")
 ```
 
-* 函数：`edv.dashboard(*charts, cols=2, title=None, desc=None, theme=None, palette=None)`，返回 `Dashboard`，同样有 `to_html()` / `save()` / `show()`；也可以传一个图表列表。
-* 简写：`edv.show(*charts, cols=2, ...)`；只有一张图时等同于 `Chart.show()`。
-* `cols` 为栅格列数（1–6）；带 `title`/`desc` 时出现页头、配色下拉、深色切换与「重置联动」按钮。
-* 看板主题取第一张图的 `theme`，可在页头运行时切换；`palette` 参数指定整页配色。
+* 函数：`edv.dashboard(*charts, cols=2, title=None, desc=None, theme=None, palette=None, layout=None, direction=None, grid=None, hints=None, card_style="default")`，返回 `Dashboard`，同样有 `to_html()` / `save()` / `show()`；也可以传一个图表列表。
+* 简写：`edv.show(*charts, ...)`；只有一张图、又没传 `layout` / `grid` 时等同于 `Chart.show()`。
+* `cols` 为栅格列数（1–6）；想不等宽排布用 `layout=` / `direction=` / `grid=`（见 [16 · 自由排列](../guides/16-layout.md)）。
+* 1.5.6 起页头只留标题/副标题：配色下拉已去掉（换色用 `palette=`），主题切换 ◐ 与「重置」合并放在页脚；
+  图表里的操作提示小字默认不显示，需要时 `hints=True`。
+* `card_style="glass"` 换成液态玻璃外框（半透明 + 背景模糊），换页面底色时不会被白框挡住；默认 `"default"` 实心卡片。
+* 看板主题取第一张图的 `theme`，可在页脚运行时切换；`palette` 参数指定整页配色。
 * 每张图可用 `section="分区名"` 分组，页面按图表顺序插入分区标题。
 * Streamlit 中 `Dashboard.show()` 会自动按 `page_height()` 计算 iframe 高度；若手动 `components.html(dash.to_html(), height=...)`，高度不足会出现裁剪（见 [12 · 常见问题](../guides/12-troubleshooting.md)）。
 

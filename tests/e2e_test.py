@@ -116,7 +116,7 @@ TEST_JS = r"""
   P('toolbar-text', document.querySelectorAll('[data-eazy-toolbar]').length >= 5,
     document.querySelectorAll('[data-eazy-toolbar]').length);
   P('wc-canvas', document.querySelectorAll('canvas.eazy-wc-canvas').length === 1);
-  P('palette-select', !!document.querySelector('[data-eazy-palette]'));
+  P('palette-select-gone', document.querySelectorAll('[data-eazy-palette]').length === 0);
   P('theme-btn', !!document.querySelector('[data-eazy-theme]'));
 
   // ---------- 1. 点柱状图 → 全组过滤 ----------
@@ -201,18 +201,19 @@ TEST_JS = r"""
 
   // ---------- 6. 主题 / 配色 / 重置 ----------
   var themeBtn = document.querySelector('[data-eazy-theme]');
-  themeBtn.click();
+  P('theme-btn-alive', !!themeBtn);
+  if (themeBtn) { themeBtn.click(); }
   P('theme-dark', document.documentElement.getAttribute('data-eazy-theme') === 'dark'
      || document.body.getAttribute('data-eazy-theme') === 'dark'
      || charts[0].theme.mode === 'dark' || charts[0].theme.bg !== '#ffffff',
      charts[0].theme.bg);
-  themeBtn.click();
-  var sel = document.querySelector('[data-eazy-palette]');
-  sel.value = 'tableau';
-  sel.dispatchEvent(new Event('change', { bubbles: true }));
+  if (themeBtn) { themeBtn.click(); }
+  // 1.5.6 去掉了配色下拉：运行时换配色改走 API
+  C.setPalette('tableau');
   var opt = C.buildOption(charts[0].spec, charts[0].data, charts[0].state,
                           U.themeFor('light', 'tableau'));
   P('palette-switch', opt.color && opt.color[0] === '#4e79a7', opt.color && opt.color[0]);
+  C.setPalette(V.page.palette);
 
   var resetBtn = document.querySelector('[data-eazy-reset]');
   P('reset-btn', !!resetBtn);

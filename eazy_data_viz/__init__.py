@@ -68,7 +68,7 @@ from .render import Dashboard, dashboard
 from .render import streamlit_show as _streamlit_show
 from .streamlit_v2 import is_available as streamlit_available
 
-__version__ = "1.5.5"
+__version__ = "1.5.6"
 
 __all__ = [
     "Chart",
@@ -156,7 +156,9 @@ def show(*charts: object, cols: int = 2, title: str | None = None,
          desc: str | None = None, theme: str | None = None,
          palette: str | None = None, layout: list | None = None,
          direction: str | None = None,
-         grid: tuple | int | str | None = None) -> None:
+         grid: tuple | int | str | None = None,
+         hints: bool | None = None,
+         card_style: str = "default") -> None:
     """显示一张或多张图。
 
     >>> eazy_data_viz.show(c1, c2, cols=2, title="经营看板", palette="antd")
@@ -178,7 +180,8 @@ def show(*charts: object, cols: int = 2, title: str | None = None,
         items[0].show()
         return items[0]
     d = Dashboard(items, cols=cols, title=title, desc=desc, theme=theme,
-                  palette=palette, layout=layout, direction=direction, grid=grid)
+                  palette=palette, layout=layout, direction=direction, grid=grid,
+                  hints=hints, card_style=card_style)
     d.show()
     return d
 
@@ -192,7 +195,9 @@ def streamlit_dashboard(charts: list, *, cols: int = 2, title: str | None = None
                         key: str | None = None, on_select: object = None,
                         layout: list | None = None,
                         direction: str | None = None,
-                        grid: tuple | int | str | None = None) -> str:
+                        grid: tuple | int | str | None = None,
+                        hints: bool | None = None,
+                        card_style: str = "default") -> str:
     """在 Streamlit 页面里用 ``st.components.v2`` 渲染一张看板。
 
     相比 ``dashboard(...).show()``（内部也会优先走 v2），这个函数把
@@ -249,6 +254,8 @@ def streamlit_dashboard(charts: list, *, cols: int = 2, title: str | None = None
         layout=layout,
         direction=direction,
         grid=grid,
+        hints=hints,
+        card_style=card_style,
     )
 
 

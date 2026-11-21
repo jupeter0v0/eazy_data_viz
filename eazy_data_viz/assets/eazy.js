@@ -502,10 +502,19 @@
   }
 
   // 按横轴自身排序（时间列在 Python 侧已格式化成 ISO 字符串，可直接比较）
+  // 1.5.6：带数字后缀的类目（"1月" / "第2季度" / "2026年"）按「数字优先」比，
+  // 否则 "10月" < "2月" 会按字符串比较把月份排乱。
+  function firstNum(v) {
+    var m = String(v === null || v === undefined ? '' : v).match(/-?\d+(?:\.\d+)?/);
+    return m ? parseFloat(m[0]) : null;
+  }
+
   function compareCatX(a, b) {
     var sa = String(a), sb = String(b);
     var na = Number(sa), nb = Number(sb);
     if (sa !== '' && sb !== '' && isFinite(na) && isFinite(nb)) return na - nb;
+    var fa = firstNum(sa), fb = firstNum(sb);
+    if (fa !== null && fb !== null && fa !== fb) return fa - fb;
     return sa < sb ? -1 : (sa > sb ? 1 : 0);
   }
 
@@ -1564,6 +1573,27 @@
     return pts;
   }
 
+  // Catmull-Rom → 三次贝塞尔，把折线画成顺滑曲线
+  function sparkCurve(coords) {
+    var d = 'M ' + coords[0][0] + ' ' + coords[0][1];
+    for (var i = 0; i < coords.length - 1; i++) {
+      var p0 = coords[i === 0 ? 0 : i - 1];
+      var p1 = coords[i];
+      var p2 = coords[i + 1];
+      var p3 = coords[i + 2 < coords.length ? i + 2 : coords.length - 1];
+      var c1x = p1[0] + (p2[0] - p0[0]) / 6;
+      var c1y = p1[1] + (p2[1] - p0[1]) / 6;
+      var c2x = p2[0] - (p3[0] - p1[0]) / 6;
+      var c2y = p2[1] - (p3[1] - p1[1]) / 6;
+      d += ' C ' + Math.round(c1x * 100) / 100 + ' ' + Math.round(c1y * 100) / 100 +
+        ' ' + Math.round(c2x * 100) / 100 + ' ' + Math.round(c2y * 100) / 100 +
+        ' ' + p2[0] + ' ' + p2[1];
+    }
+    return d;
+  }
+
+  var sparkSeq = 0;
+
   function kpiSparkSVG(pts, color) {
     if (!pts || pts.length < 2) return '';
     var w = 120, h = 34, pad = 3;
@@ -1583,17 +1613,24 @@
       var y = cv === null ? (h - pad) : (h - pad - (cv - min) / (max - min) * (h - 2 * pad));
       coords.push([Math.round(x * 100) / 100, Math.round(y * 100) / 100]);
     }
-    var d = 'M ' + coords[0][0] + ' ' + coords[0][1];
-    for (i = 1; i < coords.length; i++) d += ' L ' + coords[i][0] + ' ' + coords[i][1];
+    var d = sparkCurve(coords);
     var area = d + ' L ' + coords[n - 1][0] + ' ' + (h - pad) + ' L ' + coords[0][0] + ' ' + (h - pad) + ' Z';
     var last = coords[n - 1];
+    sparkSeq += 1;
+    var gid = 'eazy-spark-' + sparkSeq;
     return '<svg class="eazy-kpi-spark" viewBox="0 0 ' + w + ' ' + h + '"' +
       ' preserveAspectRatio="none" aria-hidden="true">' +
-      '<path d="' + area + '" fill="' + color + '" opacity="0.13"></path>' +
+      '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="' + color + '" stop-opacity="0.28"></stop>' +
+      '<stop offset="100%" stop-color="' + color + '" stop-opacity="0.02"></stop>' +
+      '</linearGradient></defs>' +
+      '<path d="' + area + '" fill="url(#' + gid + ')"></path>' +
       '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="1.8"' +
-      ' stroke-linejoin="round" stroke-linecap="round"></path>' +
-      '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="2.1" fill="' + color + '"></circle>' +
-      '</svg>';
+      ' stroke-linejoin="round" stroke-linecap="round"' +
+      ' vector-effect="non-scaling-stroke"></path>' +
+      '</svg>' +
+      '<i class="eazy-kpi-sparkdot" style="top:' + roundTo(last[1] / h * 100, 1) + '%;' +
+      'background:' + color + '"></i>';
   }
 
   function deltaText(v) {
@@ -1638,7 +1675,7 @@
     html += '</div>';
 
     var hint = spec.hint;
-    if (!hint && spec.link) hint = '联动组 ' + spec.link + ' · 点同组图表筛选';
+    if (!hint && spec.link && EazyViz.hints) hint = '联动组 ' + spec.link + ' · 点同组图表筛选';
     if (hint) html += '<div class="eazy-kpi-hint">' + esc(hint) + '</div>';
 
     var spark = kpiSparkSVG(kpiSparkPoints(spec, data, state), accent);
@@ -1805,6 +1842,8 @@
   EazyViz.links = {};
   EazyViz.page = {};
   EazyViz.dataStore = {};
+  EazyViz.hints = false;
+  EazyViz.cardStyle = 'default';
   // components.v2 里页面挂在 Shadow DOM 中：scope 指向 ShadowRoot，host 指向宿主元素。
   // 静态 HTML 导出时两者为 null，所有查询自动退化为 document。
   EazyViz.scope = null;
@@ -1947,12 +1986,16 @@
       if (depthNow) {
         html += '<button class="eazy-btn" data-back="' + c.index + '">↰ 返回</button>';
       }
-      html += '<span class="eazy-hint">' +
-        (depthNow >= spec.drill.length ? '已到最末级' : ('点击图形下钻到「' + esc(spec.drill[depthNow]) + '」')) +
-        '</span>';
+      if (EazyViz.hints) {
+        html += '<span class="eazy-hint">' +
+          (depthNow >= spec.drill.length ? '已到最末级' : ('点击图形下钻到「' + esc(spec.drill[depthNow]) + '」')) +
+          '</span>';
+      }
     } else if (spec.link && HTML_BUILDERS[spec.type]) {
-      html += '<span class="eazy-hint" style="margin-left:0">点击单元格可按该列联动同组图表</span>';
-    } else if (spec.link) {
+      if (EazyViz.hints) {
+        html += '<span class="eazy-hint" style="margin-left:0">点击单元格可按该列联动同组图表</span>';
+      }
+    } else if (spec.link && EazyViz.hints) {
       var mode = linkMode(spec);
       var hint = mode === 'out'
         ? '单向出：点击图形联动到同组其他图表'
@@ -2490,7 +2533,7 @@
             return;
           }
           if (el.hasAttribute('data-eazy-reset')) {
-            clearAllLinks();
+            resetAll();
             return;
           }
           if (el.hasAttribute('data-eazy-reset-drill')) {
@@ -2591,19 +2634,27 @@
     return pname;
   }
 
-  function clearAllLinks() {
+  // 一键重置：清联动 + 清每张图的下钻，回到初始视图
+  function resetAll() {
     EazyViz.links = {};
     for (var i = 0; i < EazyViz.charts.length; i++) {
       var c = EazyViz.charts[i];
-      c.zoomPath = null;   // 一键重置：旭日图也回到根，别停在某个圈里
+      c.zoomPath = null;   // 旭日图也回到根，别停在某个圈里
+      if (c.state && c.state.drill) c.state.drill = [];
       syncFilters(c);
       renderChart(c);
+      renderToolbar(c);
     }
     syncFilterBar();
   }
 
+  function clearAllLinks() {
+    resetAll();
+  }
+
   // 供外部（streamlit 回调 / 自定义工具栏）主动重置下钻
   EazyViz.resetDrill = resetDrill;
+  EazyViz.resetAll = resetAll;
   EazyViz.chartOfEl = chartOfEl;
 
   EazyViz.init = function (page, rootEl) {
@@ -2619,6 +2670,8 @@
     }
     EazyViz.charts = alive;
     if (!alive.length) EazyViz.links = {};
+    EazyViz.hints = !!EazyViz.page.hints;
+    EazyViz.cardStyle = EazyViz.page.cardStyle || 'default';
     EazyViz.dataStore = global.EAZY_DATA || {};
     EazyViz.scope = rootEl || null;
     EazyViz.host = (rootEl && rootEl.host) ? rootEl.host : null;
@@ -2674,6 +2727,7 @@
       groupBy: groupBy, makeGrid: makeGrid, makeLegend: makeLegend,
       makeToolbox: makeToolbox, axisTitle: axisTitle, axisLabelRotate: axisLabelRotate,
       applyLim: applyLim, compareCatX: compareCatX, catRanker: catRanker,
+      firstNum: firstNum, sparkCurve: sparkCurve,
       setAxisName: setAxisName, makeCategoryAxis: makeCategoryAxis,
       makeValueAxis: makeValueAxis, tooltipBox: tooltipBox, axisTooltip: axisTooltip,
       sourceSelection: sourceSelection, dimItem: dimItem, emptyOption: emptyOption,
@@ -2717,6 +2771,10 @@
     setPalette: setPalette,
     PALETTES: PALETTES,
     clearAllLinks: clearAllLinks,
+    resetAll: resetAll,
+    kpiSparkPoints: kpiSparkPoints,
+    kpiSparkSVG: kpiSparkSVG,
+    renderToolbar: renderToolbar,
     syncFilterBar: syncFilterBar,
     THEME: THEME
   };

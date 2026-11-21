@@ -453,10 +453,17 @@ TEST_JS = r"""
        [core0.linkMode(co.spec), core0.linkMode(ci.spec), core0.linkMode(chart(1).spec)].join(','));
     ok('link15-can', core0.canSendLink(co.spec) && !core0.canRecvLink(co.spec)
        && !core0.canSendLink(ci.spec) && core0.canRecvLink(ci.spec));
+    // 1.5.6：方向提示属于「小字」，hints 打开后才出现在工具栏
+    EazyViz.hints = true;
+    core0.renderToolbar(co);
+    core0.renderToolbar(ci);
     var to = document.querySelector('[data-eazy-toolbar="' + co.index + '"]');
     var ti = document.querySelector('[data-eazy-toolbar="' + ci.index + '"]');
     ok('link15-toolbar-out', !!to && /单向出/.test(to.textContent), to && to.textContent.slice(0, 40));
     ok('link15-toolbar-in', !!ti && /单向进/.test(ti.textContent), ti && ti.textContent.slice(0, 40));
+    EazyViz.hints = false;
+    core0.renderToolbar(co);
+    core0.renderToolbar(ci);
     // 单向出点击：自己不过滤，单向进被过滤
     var g1 = core0.groupBy(core0.rowsOf(co.data), [co.spec.roles.x], co.spec.roles.y, 'sum');
     core0.onChartClick(co, { componentType: 'series', name: g1[0].key });
@@ -504,6 +511,55 @@ TEST_JS = r"""
       core0.setPalette('google');
       return okk;
     })());
+  });
+
+  // ---------------- 1.5.6：小字开关 / 重置 / 自然排序 / KPI 曲线 ----------------
+  steps.push(function () {
+    var cu16 = core0.util;
+    ok('hints16-default-off', EazyViz.hints === false, String(EazyViz.hints));
+    var withLink = null;
+    for (var hi = 0; hi < EazyViz.charts.length; hi++) {
+      if (EazyViz.charts[hi].spec.link) { withLink = EazyViz.charts[hi]; break; }
+    }
+    if (withLink) {
+      ok('hints16-none-in-toolbar',
+         withLink.el.querySelectorAll('.eazy-hint').length === 0,
+         withLink.el.querySelectorAll('.eazy-hint').length);
+    }
+    ok('sort16-natural', cu16.compareCatX('2月', '10月') < 0 &&
+       cu16.compareCatX('1月', '2月') < 0 && cu16.compareCatX('10月', '11月') < 0,
+       [cu16.compareCatX('2月', '10月'), cu16.compareCatX('10月', '11月')].join('|'));
+    ok('sort16-firstNum', cu16.firstNum('第3季度') === 3, String(cu16.firstNum('第3季度')));
+    ok('reset16-fn', typeof core0.resetAll === 'function');
+    var drillc = null;
+    for (var di = 0; di < EazyViz.charts.length; di++) {
+      if (EazyViz.charts[di].spec.drill) { drillc = EazyViz.charts[di]; break; }
+    }
+    if (drillc) {
+      drillc.state.drill = [{ dim: '大区', value: '华东' }];
+      EazyViz.links['reset16g'] = { dim: '大区', value: '华东', sourceId: drillc.spec.id };
+      core0.resetAll();
+      ok('reset16-drill', drillc.state.drill.length === 0, drillc.state.drill.length);
+      ok('reset16-links', !EazyViz.links['reset16g'], 'cleared');
+    }
+    var kc16 = null;
+    for (var ki = 0; ki < EazyViz.charts.length; ki++) {
+      if (EazyViz.charts[ki].spec.type === 'kpi' && EazyViz.charts[ki].spec.spark) {
+        kc16 = EazyViz.charts[ki]; break;
+      }
+    }
+    if (kc16) {
+      var pts16 = cu16.kpiSparkPoints(kc16.spec, kc16.data, kc16.state);
+      var sorted16 = true;
+      for (var pi = 1; pi < pts16.length; pi++) {
+        if (cu16.compareCatX(pts16[pi - 1].x, pts16[pi].x) > 0) sorted16 = false;
+      }
+      ok('spark16-sorted', pts16.length > 1 && sorted16, pts16.map(function (p) { return p.x; }).join(','));
+      var svg16 = cu16.kpiSparkSVG(pts16, '#1a73e8');
+      ok('spark16-smooth', svg16.indexOf(' C ') > 0, svg16.slice(0, 24));
+      ok('spark16-dot', svg16.indexOf('eazy-kpi-sparkdot') > 0, 'dot');
+      ok('spark16-gradient', svg16.indexOf('linearGradient') > 0, 'grad');
+    }
   });
 
   var i = 0;
