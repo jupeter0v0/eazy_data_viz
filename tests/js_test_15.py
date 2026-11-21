@@ -33,6 +33,13 @@ TEST_JS = r"""
   function core() { return EazyViz.core; }
   function rows(id) { return (EazyViz.dataStore[id] || {}).rows || []; }
   function chart(i) { return EazyViz.charts[i]; }
+  function chartByTitle(t) {
+    for (var i = 0; i < EazyViz.charts.length; i++) {
+      var sp = EazyViz.charts[i].spec || {};
+      if (String(sp.title || '').indexOf(t) >= 0) return EazyViz.charts[i];
+    }
+    return null;
+  }
 
   var c0 = chart(0), c1 = chart(1), c2 = chart(2);
   var ck = chart(13), cp = chart(14);
@@ -40,7 +47,7 @@ TEST_JS = r"""
   try {
 
   // ---------------- 纯逻辑 ----------------
-  ok('charts-count', EazyViz.charts.length === 25, EazyViz.charts.length);
+  ok('charts-count', EazyViz.charts.length === 27, EazyViz.charts.length);
   ok('dataStore', Object.keys(EazyViz.dataStore).length >= 1);
   ok('fmt-compact', core0.fmtValue(12345678, 'compact') === '1235万', core0.fmtValue(12345678, 'compact'));
   ok('fmt-percent', core0.fmtValue(12.5, 'percent') === '12.5%', core0.fmtValue(12.5, 'percent'));
@@ -305,6 +312,75 @@ TEST_JS = r"""
   });
 
   steps.push(function () {
+    // 1.5.5: bar 的下钻路径整体进联动（月→渠道 两级一起筛）
+    var cd = chartByTitle('多级下钻 + 联动'), cr = chartByTitle('下钻联动接收方');
+    var drows = core0.rowsOf(cd.data);
+    var top = String(drows[0]['大区']);
+    var sub = null, i2;
+    for (i2 = 0; i2 < drows.length; i2++) {
+      if (String(drows[i2]['大区']) === top) { sub = String(drows[i2]['产品']); break; }
+    }
+    function clickB(c, nm) { core0.onChartClick(c, { componentType: 'series', name: nm, seriesType: 'bar' }); }
+
+    clickB(cd, top);
+    var lk1 = EazyViz.links['q17'];
+    ok('drill15-level1', !!lk1 && core0.linkConds(lk1).length === 1 && lk1.dim === '大区',
+       lk1 && JSON.stringify(core0.linkConds(lk1)));
+    ok('drill15-recv1', cr.state.filters['大区'] === top, JSON.stringify(cr.state.filters));
+
+    clickB(cd, sub);
+    var lk2 = EazyViz.links['q17'];
+    var cds = core0.linkConds(lk2);
+    ok('drill15-level2', cds.length === 2, JSON.stringify(cds));
+    ok('drill15-dims', cds[0].dim === '大区' && cds[1].dim === '产品', JSON.stringify(cds));
+    ok('drill15-vals', cds[0].value === top && cds[1].value === sub, JSON.stringify(cds));
+    ok('drill15-compat', lk2.dim === '产品' && lk2.value === sub, lk2.dim + '/' + lk2.value);
+    ok('drill15-recv2', cr.state.filters['大区'] === top && cr.state.filters['产品'] === sub,
+       JSON.stringify(cr.state.filters));
+    ok('drill15-self', !cd.state.filters['大区'] && !cd.state.filters['产品'],
+       JSON.stringify(cd.state.filters));
+    var chip = document.getElementById('eazy-filters');
+    var chipTxt = chip ? chip.textContent : '';
+    ok('drill15-chip', /大区\s*=\s*/.test(chipTxt) && /产品\s*=\s*/.test(chipTxt),
+       chipTxt.replace(/\s+/g, ' ').slice(0, 80));
+
+    // 清掉，别影响后面的用例
+    delete EazyViz.links['q17'];
+    core0.reRenderGroup('q17');
+    ok('drill15-cleared', !EazyViz.links['q17'] && !cr.state.filters['大区'],
+       JSON.stringify(cr.state.filters));
+  });
+
+  steps.push(function () {
+    // 1.5.5: 层级图（旭日/树）点深层节点 → 从根到该节点的整条路径进联动
+    var csun = chartByTitle('旭日多级');
+    var srows = core0.rowsOf(csun.data);
+    var topV = String(srows[0]['大区']);
+    var chV = null, k;
+    for (k = 0; k < srows.length; k++) {
+      if (String(srows[k]['大区']) === topV) { chV = String(srows[k]['渠道']); break; }
+    }
+    core0.onChartClick(csun, {
+      componentType: 'series', name: chV,
+      treePathInfo: [{ name: 'root' }, { name: topV }, { name: chV }]
+    });
+    var lkH = EazyViz.links['g15'];
+    var cdH = core0.linkConds(lkH);
+    ok('hier15-count', cdH.length === 2, JSON.stringify(cdH));
+    ok('hier15-dims', cdH[0].dim === '大区' && cdH[1].dim === '渠道', JSON.stringify(cdH));
+    ok('hier15-vals', cdH[0].value === topV && cdH[1].value === chV, JSON.stringify(cdH));
+    var recv = chartByTitle('多级桑基');
+    ok('hier15-recv', recv.state.filters['大区'] === topV && recv.state.filters['渠道'] === chV,
+       JSON.stringify(recv.state.filters));
+    ok('hier15-self', Object.keys(csun.state.filters).length === 0,
+       JSON.stringify(csun.state.filters));
+    delete EazyViz.links['g15'];
+    core0.reRenderGroup('g15');
+    ok('hier15-clear', !EazyViz.links['g15'] && Object.keys(recv.state.filters).length === 0,
+       JSON.stringify(recv.state.filters));
+  });
+
+  steps.push(function () {
     // 1.5.4: agg="unique" 去重计数
     var urows = [
       { '大区': '华东', '客户名称': 'A' },
@@ -331,7 +407,7 @@ TEST_JS = r"""
        core0.groupBy(nrows, ['k'], 'v', 'unique')[0].value);
 
     // 页面上的图：25 号是 agg=unique 的 bar（华东 2 / 华北 2 / 华南 1）
-    var cu = chart(24);
+    var cu = chartByTitle('去重计数');
     ok('unique15-spec', cu && cu.spec.agg === 'unique', cu && cu.spec.agg);
     var ou = cu.ec.getOption();
     var axu = (ou.xAxis instanceof Array) ? ou.xAxis[0] : ou.xAxis;
@@ -499,6 +575,10 @@ def build_page():
             x="月份", y="销售额", color="年份", yoy=True, title="同比"),
         eazy_data_viz.bar(df, x="大区", y="销售额", link=("g16", "out"), title="单向出"),
         eazy_data_viz.bar(df, x="大区", y="销售额", link=("g16", "in"), title="单向进"),
+        # 1.5.5：多级下钻把整条路径作为联动条件
+        eazy_data_viz.bar(df, x="大区", y="销售额", drill=["大区", "产品"],
+                          link="q17", title="多级下钻 + 联动"),
+        eazy_data_viz.line(df, x="月份", y="销售额", link="q17", title="下钻联动接收方"),
         # 1.5.4：agg="unique" 去重计数（文本列）
         eazy_data_viz.bar(
             __import__("pandas").DataFrame({

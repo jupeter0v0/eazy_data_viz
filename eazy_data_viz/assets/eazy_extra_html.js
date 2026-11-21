@@ -200,10 +200,19 @@
       var grp = groups[i];
       var rowHit = false;
       if (link) {
-        for (var ld = 0; ld < dims.length; ld++) {
-          if (String(link.dim) === String(dims[ld]) &&
-              U.catName(grp.keys[ld]) === String(link.value)) { rowHit = true; break; }
+        var lconds = (link.conds && link.conds.length) ? link.conds
+          : [{ dim: link.dim, value: link.value }];
+        var matched = 0, hitAll = true;
+        for (var lc = 0; lc < lconds.length; lc++) {
+          var dimIdx = -1;
+          for (var ld = 0; ld < dims.length; ld++) {
+            if (String(lconds[lc].dim) === String(dims[ld])) { dimIdx = ld; break; }
+          }
+          if (dimIdx < 0) continue;                       // 这级不在表的分组列里，跳过
+          matched += 1;
+          if (U.catName(grp.keys[dimIdx]) !== String(lconds[lc].value)) { hitAll = false; break; }
         }
+        rowHit = matched > 0 && hitAll;
       }
       html += '<tr' + (rowHit ? ' class="eazy-row-hit"' : '') + '>';
       for (var d = 0; d < dims.length; d++) {
@@ -286,7 +295,19 @@
     }
     html += '</tr></thead><tbody>';
     for (var i = 0; i < shown.length; i++) {
-      var rowHit = !!(link && U.catName(shown[i][link.dim]) === String(link.value));
+      var rowHit = false;
+      if (link) {
+        var lconds2 = (link.conds && link.conds.length) ? link.conds
+          : [{ dim: link.dim, value: link.value }];
+        var anyHit = 0, allOk = true;
+        for (var lc2 = 0; lc2 < lconds2.length; lc2++) {
+          var ldim = lconds2[lc2].dim;
+          if (!(ldim in shown[i])) continue;       // 这一级不在明细表里，跳过
+          anyHit += 1;
+          if (U.catName(shown[i][ldim]) !== String(lconds2[lc2].value)) { allOk = false; break; }
+        }
+        rowHit = anyHit > 0 && allOk;
+      }
       html += '<tr' + (rowHit ? ' class="eazy-row-hit"' : '') + '>';
       if (showIndex) html += '<td class="eazy-col-idx">' + (i + 1) + '</td>';
       for (var k = 0; k < cols.length; k++) {

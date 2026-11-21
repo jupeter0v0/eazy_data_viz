@@ -697,12 +697,51 @@
   function canSendLink(spec) { return !!spec.link && linkMode(spec) !== 'in'; }
   function canRecvLink(spec) { return !!spec.link && linkMode(spec) !== 'out'; }
 
+  // 联动条件统一成 [{dim, value}...]：多级下钻时一条联动会带多个维度。
+  // 旧数据（只有 dim/value）自动包成一条，外部代码读 link.dim / link.value 仍然有效。
+  function linkConds(link) {
+    if (!link) return [];
+    if (link.conds && link.conds.length) return link.conds;
+    if (link.dim === null || link.dim === undefined || link.dim === '') return [];
+    return [{ dim: link.dim, value: link.value }];
+  }
+
+  function makeLink(conds, sourceId) {
+    var list = [], i;
+    for (i = 0; i < conds.length; i++) {
+      var c = conds[i];
+      if (!c || c.dim === null || c.dim === undefined || c.dim === '') continue;
+      list.push({ dim: String(c.dim), value: String(c.value === null || c.value === undefined ? '' : c.value) });
+    }
+    if (!list.length) return null;
+    var last = list[list.length - 1];
+    return { dim: last.dim, value: last.value, conds: list, sourceId: sourceId };
+  }
+
+  function sameLink(a, b) {
+    if (!a || !b) return false;
+    if (a.sourceId !== b.sourceId) return false;
+    var ca = linkConds(a), cb = linkConds(b);
+    if (ca.length !== cb.length) return false;
+    for (var i = 0; i < ca.length; i++) {
+      if (String(ca[i].dim) !== String(cb[i].dim)) return false;
+      if (String(ca[i].value) !== String(cb[i].value)) return false;
+    }
+    return true;
+  }
+
   function sourceSelection(spec, state) {
     if (!spec.link || !EazyViz.links) return null;
     var link = EazyViz.links[spec.link];
     if (!link || link.sourceId !== spec.id) return null;
     var xdim = currentXDim(spec, state);
-    return (xdim && link.dim === xdim) ? link.value : null;
+    if (!xdim) return null;
+    var conds = linkConds(link);
+    // 当前这一级找不到时，用最深一级兜底（比如柱状图重画后类目名一致的情况）
+    for (var i = 0; i < conds.length; i++) {
+      if (String(conds[i].dim) === String(xdim)) return conds[i].value;
+    }
+    return null;
   }
 
   function dimItem(v, sel, cat) {
@@ -1863,8 +1902,12 @@
       var link = EazyViz.links[c.spec.link];
       // 发起联动的图自己不过滤（保持全量 + 高亮），其他图按类目过滤；
       // 单向出（out）的图永远只发起、不接收。
-      if (link.sourceId !== c.spec.id && hasCol(c.data, link.dim)) {
-        f[link.dim] = link.value;
+      // 多级下钻会带来多条条件（月=1月 AND 渠道=直销），能对上的列都收。
+      if (link.sourceId !== c.spec.id) {
+        var conds = linkConds(link);
+        for (var ci = 0; ci < conds.length; ci++) {
+          if (hasCol(c.data, conds[ci].dim)) f[conds[ci].dim] = conds[ci].value;
+        }
       }
     }
     c.state.filters = f;
@@ -2124,6 +2167,21 @@
     return null;
   }
 
+  // 层级图（旭日 / 树 / 矩形树）点击时：把从根到该节点的整条路径作为联动条件，
+  // 这样点第三层产品时，其它图同时按「大区 AND 渠道 AND 产品」筛，而不是只筛产品。
+  function pathConds(spec, p) {
+    var dims = (spec && spec.roles && spec.roles.path) || null;
+    var tp = (p && p.treePathInfo) || [];
+    if (!dims || !dims.length || tp.length < 2) return [];
+    var out = [];
+    for (var i = 1; i < tp.length && (i - 1) < dims.length; i++) {
+      var nm = tp[i] ? tp[i].name : undefined;
+      if (nm === undefined || nm === null || nm === '' || nm === '(空)') continue;
+      out.push({ dim: String(dims[i - 1]), value: String(nm) });
+    }
+    return out;
+  }
+
   function onChartClick(c, p) {
     if (!p || p.componentType !== 'series') return;
     var spec = c.spec;
@@ -2154,12 +2212,15 @@
         drilled = true;
       }
     }
+    // 联动条件：层级图用整条祖先路径，下钻图用整条下钻路径，其余用当前一级。
+    var conds = pathConds(spec, p);
+    if (!conds.length) conds = [{ dim: xdim, value: value }];
     // 带下钻的图：它发出的联动始终等于「当前最深一级的下钻条件」，回退时就不会残留旧层级；
     // 纯联动图（没有下钻）：按点击切换联动。
     if (canSendLink(spec) && spec.drill) {
       afterDrillChange(c);
     } else if (canSendLink(spec)) {
-      setLink(spec.link, xdim, value, c);
+      setLink(spec.link, conds, null, c);
     } else if (drilled) {
       renderChart(c);
     }
@@ -2175,7 +2236,8 @@
           drill: (c.state.drill || []).slice(),
           linkMode: spec.link ? linkMode(spec) : null,
           canSend: canSendLink(spec),
-          link: (spec.link && EazyViz.links[spec.link]) ? EazyViz.links[spec.link] : null
+          link: (spec.link && EazyViz.links[spec.link]) ? EazyViz.links[spec.link] : null,
+          linkConds: (spec.link && EazyViz.links[spec.link]) ? linkConds(EazyViz.links[spec.link]) : []
         });
       } catch (err) { /* 回调异常不影响渲染 */ }
     }
@@ -2193,11 +2255,17 @@
   function setLink(group, dim, value, chart) {
     // 单向进（in）的图不允许发起联动
     if (chart && chart.spec && !canSendLink(chart.spec)) return;
+    var sourceId = chart && chart.spec ? chart.spec.id : null;
+    // dim 传数组时表示「一次带多条条件」（多级下钻 / 多列筛选）
+    var conds = (Object.prototype.toString.call(dim) === '[object Array]')
+      ? dim
+      : [{ dim: dim, value: value }];
+    var next = makeLink(conds, sourceId);
     var cur = EazyViz.links[group];
-    if (cur && cur.dim === dim && cur.value === value && cur.sourceId === chart.spec.id) {
+    if (!next || sameLink(cur, next)) {
       delete EazyViz.links[group];
     } else {
-      EazyViz.links[group] = { dim: dim, value: value, sourceId: chart.spec.id };
+      EazyViz.links[group] = next;
     }
     reRenderGroup(group);
   }
@@ -2213,8 +2281,12 @@
     var html = '<span class="eazy-filters-label">联动筛选</span>';
     for (var i = 0; i < groups.length; i++) {
       var g = groups[i], link = EazyViz.links[g];
-      html += '<span class="eazy-chip"><span>' + esc(link.dim) + ' = <b>' + esc(link.value) +
-        '</b></span><span class="eazy-chip-x" data-clear-link="' + esc(g) + '" title="清除">×</span></span>';
+      var conds = linkConds(link), parts = [];
+      for (var ci = 0; ci < conds.length; ci++) {
+        parts.push(esc(conds[ci].dim) + ' = <b>' + esc(conds[ci].value) + '</b>');
+      }
+      html += '<span class="eazy-chip"><span>' + parts.join(' · ') +
+        '</span><span class="eazy-chip-x" data-clear-link="' + esc(g) + '" title="清除">×</span></span>';
     }
     // 每个看板都有自己的筛选条：都刷一遍，别只刷最后挂载的那块。
     var roots = chartRoots();
@@ -2265,11 +2337,10 @@
     var drill = (c.state && c.state.drill) ? c.state.drill : [];
     var cur = EazyViz.links[group];
     if (drill.length) {
-      var last = drill[drill.length - 1];
-      var dim = (last.dim === null || last.dim === undefined) ? '' : String(last.dim);
-      var val = (last.value === null || last.value === undefined) ? '' : String(last.value);
-      if (!cur || cur.dim !== dim || cur.value !== val || cur.sourceId !== c.spec.id) {
-        EazyViz.links[group] = { dim: dim, value: val, sourceId: c.spec.id };
+      // 整条下钻路径都作为联动条件：月=1月 AND 渠道=直销（不是只留最末一级）
+      var next = makeLink(drill, c.spec.id);
+      if (!sameLink(cur, next)) {
+        EazyViz.links[group] = next;
         return true;
       }
       return false;
@@ -2607,6 +2678,7 @@
       makeValueAxis: makeValueAxis, tooltipBox: tooltipBox, axisTooltip: axisTooltip,
       sourceSelection: sourceSelection, dimItem: dimItem, emptyOption: emptyOption,
       linkMode: linkMode, canSendLink: canSendLink, canRecvLink: canRecvLink,
+    linkConds: linkConds, sameLink: sameLink,
       yoyPlan: yoyPlan,
     nameOrder: nameOrder, yoyGrowth: yoyGrowth, yoyItem: yoyItem,
       nodeInfoOf: nodeInfoOf,
@@ -2633,6 +2705,9 @@
     linkMode: linkMode,
     canSendLink: canSendLink,
     canRecvLink: canRecvLink,
+    linkConds: linkConds,
+    sameLink: sameLink,
+    makeLink: makeLink,
     nodeInfoOf: nodeInfoOf,
     afterDrillChange: afterDrillChange,
     handleCrumb: handleCrumb,
