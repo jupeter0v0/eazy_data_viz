@@ -68,7 +68,7 @@ from .render import Dashboard, dashboard
 from .render import streamlit_show as _streamlit_show
 from .streamlit_v2 import is_available as streamlit_available
 
-__version__ = "1.5.3"
+__version__ = "1.5.4"
 
 __all__ = [
     "Chart",
@@ -408,7 +408,7 @@ eazy_data_viz · pandas 交互式图表库（经营驾驶舱版）  v%s
     eazy_data_viz.ring_progress(72.5, label="完成率")
     eazy_data_viz.group_kpi(df, items=[{"label": "总销售额", "value": 1630000, "fmt": "compact"}])
 
-1.5 新增（自由排列 / 联动方向 / 汇总表 / 多级桑基 / 同比）
+1.5 新增（自由排列 / 联动方向 / 汇总表 / 多级桑基 / 同比 / 去重计数）
 --------------------------------------------------------------------------------
     # 自由排列 A：direction="h" 按列数、direction="v" 按行数，layout 是每列/每行的图表数
     eazy_data_viz.show(c1, c2, c3, c4, layout=[1, 3], direction="h")
@@ -423,6 +423,8 @@ eazy_data_viz · pandas 交互式图表库（经营驾驶舱版）  v%s
     eazy_data_viz.sankey(df, path=["大区", "渠道", "产品"], value="销售额")
     # 同比：color 恰好两个取值时，值大的对比值小的（2026 vs 2025），柱顶标注增长率
     eazy_data_viz.bar(df, x="月份", y="销售额", color="年份", yoy=True)
+    # 去重计数（1.5.4）：agg="unique" 数不重复的值，文本列也能数（count 数的是行数）
+    eazy_data_viz.kpi(df, value="客户名称", label="客户数", agg="unique")
 
 KPI 卡片（驾驶舱指标头）
     eazy_data_viz.kpi(df, value="销售额", label="全年销售额", delta=0.128, delta_label="同比",

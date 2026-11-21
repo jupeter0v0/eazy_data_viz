@@ -1118,6 +1118,14 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       }
       if (how === 'count') {
         rec.cnt++;
+      } else if (how === 'unique') {
+        // 去重计数：保留原始值（文本也数），忽略 null / NaN / 空串
+        var uv = measure ? r[measure] : null;
+        if (uv !== null && uv !== undefined && uv === uv && String(uv) !== '') {
+          if (!rec.uniq) rec.uniq = {};
+          rec.uniq['$' + String(uv)] = 1;
+          rec.cnt++;
+        }
       } else {
         var v = measure ? num(r[measure]) : null;
         if (v !== null) {
@@ -1129,7 +1137,8 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     }
     for (var k = 0; k < list.length; k++) {
       var g = list[k];
-      if (how === 'count') g.value = g.cnt;
+      if (how === 'unique') g.value = g.uniq ? Object.keys(g.uniq).length : 0;
+      else if (how === 'count') g.value = g.cnt;
       else if (how === 'sum') g.value = g.cnt ? g.sum : null;
       else if (how === 'mean') g.value = g.cnt ? g.sum / g.cnt : null;
       else if (how === 'max') g.value = g.vals.length ? Math.max.apply(null, g.vals) : null;
@@ -1137,6 +1146,7 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       else if (how === 'median') g.value = g.vals.length ? median(g.vals) : null;
       else g.value = g.sum;
       delete g.vals;
+      delete g.uniq;
     }
     return list;
   }
@@ -7413,7 +7423,8 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
   }
 
   var AGG_LABELS = {
-    sum: '求和', mean: '平均', count: '计数', max: '最大', min: '最小', median: '中位数'
+    sum: '求和', mean: '平均', count: '计数', unique: '去重数', max: '最大', min: '最小',
+    median: '中位数'
   };
 
   // 汇总表：按 groupby.columns 分组，对 groupby.value 做 groupby.agg 聚合。

@@ -113,7 +113,7 @@ def target(
 - **类型 / 默认值**：`str` / `'sum'`
 - **说明**：`actual` 与 `target` 列分别按 `x` 聚合，同一个 `agg` 同时作用于两者。可选 `sum` / `mean` / `count` / `max` / `min` / `median`。
 - **取值建议**：金额、销量用 `"sum"`；达成率/单价类指标用 `"mean"`，否则求和后达成率会失真。目标列与实际列口径必须一致。
-- **报错**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **报错**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `sort` — 类目顺序
 

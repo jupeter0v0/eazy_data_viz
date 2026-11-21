@@ -113,7 +113,7 @@ eazy_data_viz.sankey(
 - **作用**：同一对上下级有多条记录时，把数值列合成一个数的方法。可选：`sum`（默认）、`mean`、`count`、`max`、`min`、`median`。当函数没有拿到数值列（例如没传 `value`）时，内部会把 `agg` 强制为 `count`，按记录条数统计。 本图实现：对每一组相邻层级 `(path[i], path[i+1])` 分别用 `agg` 聚合流量。
 - **建议**：金额、订单数用 `sum`；单价、率值用 `mean` 或 `median`。 想看“有多少条记录”就传 `agg="count"`，此时数值列只作存在性检查。
 - **示例**：`edv.sankey(df, path=["大区", "渠道"], value="销售额", agg="mean")`
-- **报错**：`agg="average"`：`ValueError: agg='average' 不支持，可选：sum, mean, count, max, min, median`
+- **报错**：`agg="average"`：`ValueError: agg='average' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `sort` — 排序方式（`str | None`，默认 `None`）
 

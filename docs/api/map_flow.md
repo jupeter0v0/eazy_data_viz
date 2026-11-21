@@ -71,7 +71,7 @@ eazy_data_viz.map_flow(
 
 - **类型 / 默认值**：`str`；`'sum'`。
 - **作用**：同一对 `(source, target)` 有多行时先聚合，可选 `sum`、`mean`、`count`、`max`、`min`、`median`；`value=None` 时强制 `count`。
-- **取值建议 / 示例**：总额用 `sum`、平均单笔用 `mean`，例如 `agg="mean"`。`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **取值建议 / 示例**：总额用 `sum`、平均单笔用 `mean`，例如 `agg="mean"`。`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `fmt` — 数值格式
 
@@ -436,7 +436,7 @@ ValueError: source 和 target 不能是同一列：飞线图需要「起点 → 
 
 ```
 ValueError: map 只支持 "china"（中国）/ "world"（世界），收到 'usa'。
-ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median
+ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median
 ValueError: fmt='wan' 不支持，可选：compact, thousands, raw, percent, currency
 TypeError: name_map 需要是 dict，例如 name_map={'USA': 'United States'}，收到 'list'。
 ValueError: theme 只支持 "light" / "dark"，收到 'blue'

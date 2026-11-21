@@ -406,6 +406,14 @@
       }
       if (how === 'count') {
         rec.cnt++;
+      } else if (how === 'unique') {
+        // 去重计数：保留原始值（文本也数），忽略 null / NaN / 空串
+        var uv = measure ? r[measure] : null;
+        if (uv !== null && uv !== undefined && uv === uv && String(uv) !== '') {
+          if (!rec.uniq) rec.uniq = {};
+          rec.uniq['$' + String(uv)] = 1;
+          rec.cnt++;
+        }
       } else {
         var v = measure ? num(r[measure]) : null;
         if (v !== null) {
@@ -417,7 +425,8 @@
     }
     for (var k = 0; k < list.length; k++) {
       var g = list[k];
-      if (how === 'count') g.value = g.cnt;
+      if (how === 'unique') g.value = g.uniq ? Object.keys(g.uniq).length : 0;
+      else if (how === 'count') g.value = g.cnt;
       else if (how === 'sum') g.value = g.cnt ? g.sum : null;
       else if (how === 'mean') g.value = g.cnt ? g.sum / g.cnt : null;
       else if (how === 'max') g.value = g.vals.length ? Math.max.apply(null, g.vals) : null;
@@ -425,6 +434,7 @@
       else if (how === 'median') g.value = g.vals.length ? median(g.vals) : null;
       else g.value = g.sum;
       delete g.vals;
+      delete g.uniq;
     }
     return list;
   }

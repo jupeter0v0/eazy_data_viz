@@ -68,7 +68,7 @@ eazy_data_viz.geo_map(
 ### `agg` — 聚合方式
 
 - **作用**：同一区域有多行时先聚合再上色，可选 `sum`、`mean`、`count`、`max`、`min`、`median`；`value=None` 时强制 `count`。聚合在前端完成，`chart.data` 仍保留原始明细行。
-- **取值建议 / 示例**：销售额用 `sum`、客单价用 `mean`，例如 `agg="mean"`；统计记录数就省略 `value`。`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **取值建议 / 示例**：销售额用 `sum`、客单价用 `mean`，例如 `agg="mean"`；统计记录数就省略 `value`。`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `fmt` — 数值格式
 
@@ -471,7 +471,7 @@ ValueError: zoom 只支持 None / True / False / 'auto'（地图里表示是否�
 ValueError: theme 只支持 "light" / "dark"，收到 'blue'
 ValueError: height 至少 120（像素），收到 100
 ValueError: fmt='wan' 不支持，可选：compact, thousands, raw, percent, currency
-ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median
+ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median
 ValueError: 未知配色 'foo'，可选：google、antd、tableau、carbon、echarts、morandi、tailwind
 ```
 

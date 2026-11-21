@@ -72,7 +72,7 @@ eazy_data_viz.map_bubble(
 
 - **类型 / 默认值**：`str`；`'sum'`。
 - **作用**：同一区域（且同一分组）有多行时先聚合，可选 `sum`、`mean`、`count`、`max`、`min`、`median`；`value=None` 时强制 `count`。
-- **取值建议 / 示例**：销售额用 `sum`、客单价用 `mean`，例如 `agg="mean"`。`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **取值建议 / 示例**：销售额用 `sum`、客单价用 `mean`，例如 `agg="mean"`。`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `size` — 气泡大小指标列
 

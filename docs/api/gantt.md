@@ -104,7 +104,7 @@ eazy_data_viz.gantt(
 - **作用**：同一分类下有多条记录时，把数值列合成一个数的方法。可选：`sum`（默认）、`mean`、`count`、`max`、`min`、`median`。当函数没有拿到数值列（例如没传 `values`/`value`）时，内部会把 `agg` 强制为 `count`，按记录条数统计。 本图实现：每条记录画一条任务条，`agg` 不参与计算（传什么都一样）。
 - **建议**：金额、订单数用 `sum`；单价、率值用 `mean` 或 `median`。 想看“有多少条记录”就传 `agg="count"`，此时数值列只作存在性检查。 `median` 对极端值更稳健，适合客单价、利润率这类偏态指标。
 - **示例**：`edv.gantt(tasks, task="任务", start="开始", end="结束", agg="mean")`
-- **报错**：`agg="average"`：`ValueError: agg='average' 不支持，可选：sum, mean, count, max, min, median`
+- **报错**：`agg="average"`：`ValueError: agg='average' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `sort` — 排序方式（`str | None`，默认 `None`）
 

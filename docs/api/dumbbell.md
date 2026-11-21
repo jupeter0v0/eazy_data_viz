@@ -120,7 +120,7 @@ def dumbbell(
 - **类型 / 默认值**：`str` / `'sum'`
 - **说明**：`y1`、`y2` 各自按 `x` 聚合，同一个 `agg` 同时作用于两者。可选 `sum` / `mean` / `count` / `max` / `min` / `median`。
 - **取值建议**：金额、销量用 `"sum"`；单价、转化率用 `"mean"`，否则求和后差值失真。
-- **报错**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **报错**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `sort` — 类目顺序（按 `y1`）
 

@@ -228,8 +228,9 @@ def _require_cols(df, pairs):
 
 def _coerce_numeric(data, pairs, agg=None):
     """校验数值列；object 里近似全数字的列自动转成数值（返回可能复制过的 df）。"""
-    # agg="count" 统计的是行数，列是文本也合法，不需要（也不能）转成数值。
-    if agg == "count":
+    # agg="count" 统计的是行数、agg="unique" 统计不重复值的个数，
+    # 两种情况下列是文本也合法，不需要（也不能）转成数值。
+    if agg in ("count", "unique"):
         return data
     df = _frame.ensure_frame(data)
     copy = None
@@ -313,7 +314,21 @@ def _pick_num(df):
 
 
 def _apply_agg(values, agg):
-    """在 Python 侧对一小段数值做聚合（只用于预计算类图表）。"""
+    """在 Python 侧对一小段数据做聚合（只用于预计算类图表）。"""
+    if agg == "unique":
+        seen = set()
+        for v in values:
+            if v is None:
+                continue
+            try:
+                if v != v:  # NaN
+                    continue
+            except Exception:
+                pass
+            text = str(v)
+            if text != "":
+                seen.add(text)
+        return float(len(seen))
     clean = []
     for v in values:
         if v is None:
@@ -413,7 +428,7 @@ def waterfall(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if y is None else agg),
+        agg=("count" if (y is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -561,7 +576,7 @@ def lollipop(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if y is None else agg),
+        agg=("count" if (y is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -709,7 +724,7 @@ def pareto(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if y is None else agg),
+        agg=("count" if (y is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -947,7 +962,7 @@ def radar(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if y is None else agg),
+        agg=("count" if (y is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -1019,7 +1034,7 @@ def rose(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if values is None else agg),
+        agg=("count" if (values is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -1160,7 +1175,7 @@ def pictorial(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if y is None else agg),
+        agg=("count" if (y is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -1672,7 +1687,7 @@ def sunburst(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if value is None else agg),
+        agg=("count" if (value is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -1737,7 +1752,7 @@ def tree(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if value is None else agg),
+        agg=("count" if (value is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -1833,7 +1848,7 @@ def sankey(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if value is None else agg),
+        agg=("count" if (value is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -1898,7 +1913,7 @@ def graph(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if value is None else agg),
+        agg=("count" if (value is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -1964,7 +1979,7 @@ def theme_river(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if value is None else agg),
+        agg=("count" if (value is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -2026,7 +2041,7 @@ def calendar(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if value is None else agg),
+        agg=("count" if (value is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -2246,7 +2261,7 @@ def pyramid(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if values is None else agg),
+        agg=("count" if (values is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -2454,7 +2469,7 @@ def progress(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if y is None else agg),
+        agg=("count" if (y is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=False,
@@ -2516,7 +2531,7 @@ def tile(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if values is None else agg),
+        agg=("count" if (values is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=False,
@@ -2558,7 +2573,7 @@ def _parse_table_groupby(df, groupby):
     if isinstance(value, (list, tuple)):
         if len(value) != 1:
             raise ValueError(
-                "groupby 的 value 只能是一列（汇总哪一列数值），收到 %d 列。" % len(value)
+                "groupby 的 value 只能是一列（汇总 / 去重计数的列），收到 %d 列。" % len(value)
             )
         value = value[0]
     if value is not None:
@@ -2581,7 +2596,8 @@ def _parse_table_groupby(df, groupby):
         )
     if value is None and agg != "count":
         raise ValueError(
-            'groupby 没给 value 时 agg 只能是 "count"（按组计数），收到 agg=%r。' % (agg,)
+            'groupby 没给 value 时 agg 只能是 "count"（按组计数）；'
+            'unique（去重计数）需要指定 value 列。收到 agg=%r。' % (agg,)
         )
     return {
         "columns": [str(c) for c in dims],
@@ -2621,7 +2637,7 @@ def table(
 
     - ``columns``：分组维度列（1 列或多列）。
     - ``value``：汇总的数值列；不给则按组计数（此时 ``agg`` 只能是 ``count``）。
-    - ``agg``：聚合方式，可选 sum / mean / count / max / min / median，默认 ``sum``。
+    - ``agg``：聚合方式，可选 sum / mean / count / unique / max / min / median，默认 ``sum``。
 
     汇总只发生在**显示层**：联动筛选后表格里显示的是「筛选后数据的汇总」，
     后台数据与其它图表的联动值不受影响。
@@ -2671,7 +2687,7 @@ def table(
             )
         group = _parse_table_groupby(df, groupby)
         if group["value"] is not None:
-            if group["agg"] != "count":
+            if group["agg"] not in ("count", "unique"):
                 df = _coerce_numeric(df, [("groupby.value（汇总数值）", group["value"])])
         columns = list(group["columns"])
         if group["value"] is not None:
@@ -2862,7 +2878,7 @@ def wordcloud(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if values is None else agg),
+        agg=("count" if (values is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=False,
@@ -2954,8 +2970,11 @@ def group_kpi(
                     "当前 DataFrame 里没有数值列。"
                 )
             for c in num_cols:
-                s = pd.to_numeric(df[c], errors="coerce")
-                v = _apply_agg(s.tolist(), agg)
+                if agg == "unique":
+                    v = _apply_agg(df[c].tolist(), agg)
+                else:
+                    s = pd.to_numeric(df[c], errors="coerce")
+                    v = _apply_agg(s.tolist(), agg)
                 result.append(
                     {
                         "label": str(c),
@@ -2976,11 +2995,14 @@ def group_kpi(
             _frame.require_column(df, names, "names（分组）")
             if values is not None:
                 df = _coerce_numeric(df, [("values（数值）", values)], agg=agg)
-            raw_values = (
-                pd.to_numeric(df[values], errors="coerce").tolist()
-                if values is not None
-                else [1.0] * len(df)
-            )
+            if values is None or agg == "count":
+                # 计数看的是行数，values 列只用来分组，取什么值都一样
+                raw_values = [1.0] * len(df)
+            elif agg == "unique":
+                # 去重计数要保留原始值（文本也要数），不能 to_numeric
+                raw_values = df[values].tolist()
+            else:
+                raw_values = pd.to_numeric(df[values], errors="coerce").tolist()
             buckets = {}
             order = []
             for lab, raw in zip(df[names].tolist(), raw_values):

@@ -94,7 +94,7 @@ def waterfall(
 - **类型 / 默认值**：`str` / `'sum'`
 - **说明**：`x` 相同的行先按 `agg` 折成一个数，再作为该段增量。可选 `sum` / `mean` / `count` / `max` / `min` / `median`。
 - **取值建议**：金额、销量等可加指标用 `"sum"`；单价、转化率、客单价用 `"mean"`；想数条数用 `"count"`（等价于省略 `y`）。注意 `y=None` 时 `agg` 会被强制改成 `count`，此时传非法值**不会**报错。
-- **报错**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **报错**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `total` — 是否追加“合计”柱
 

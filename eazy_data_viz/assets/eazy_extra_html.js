@@ -164,7 +164,8 @@
   }
 
   var AGG_LABELS = {
-    sum: '求和', mean: '平均', count: '计数', max: '最大', min: '最小', median: '中位数'
+    sum: '求和', mean: '平均', count: '计数', unique: '去重数', max: '最大', min: '最小',
+    median: '中位数'
   };
 
   // 汇总表：按 groupby.columns 分组，对 groupby.value 做 groupby.agg 聚合。

@@ -94,7 +94,7 @@ def pareto(
 - **类型 / 默认值**：`str` / `'sum'`
 - **说明**：按 `x` 聚合 `y` 时使用。可选 `sum` / `mean` / `count` / `max` / `min` / `median`；`y=None` 时被强制为 `count`。
 - **取值建议**：贡献度分析（金额、缺陷数）用 `"sum"`；注意帕累托的“累计”语义是求和，用 `"mean"` 时柱高不再是可累加的份额，累计占比会失真。
-- **报错**：`y` 已给且 `agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **报错**：`y` 已给且 `agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `top_n` — 只保留前 N 项（当前版本不裁剪）
 

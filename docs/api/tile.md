@@ -87,7 +87,7 @@ eazy_data_viz.tile(
 - **说明**：同一个类目对应多行时如何合并。合法值只有 `sum` / `mean` / `count` / `max` / `min` / `median`，其它值抛 `ValueError`。聚合在前端做，`chart.data` 里仍是原始行。
 - **取值建议**：金额、件数等可加指标用 `sum`；单价、比率用 `mean` 或 `median`；比率列不要直接 `sum`（会得到无意义的和）。
 - **示例**：`agg="mean"`
-- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `sort` — 排序偏好（默认 `None`）
 

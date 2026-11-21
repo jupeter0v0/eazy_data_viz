@@ -92,7 +92,7 @@ def lollipop(
 - **类型 / 默认值**：`str` / `'sum'`
 - **说明**：按 `x` 聚合 `y` 时使用。可选 `sum` / `mean` / `count` / `max` / `min` / `median`；`y=None` 时被强制为 `count`。
 - **取值建议**：金额、销量用 `"sum"`；单价、转化率、客单价等比率型指标用 `"mean"`；`"count"` 可直接统计每个类目的记录数。
-- **报错**：`y` 已给且 `agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **报错**：`y` 已给且 `agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `sort` — 类目顺序
 

@@ -2,6 +2,29 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## 1.5.4 — 2026-11-21
+
+### 新增：`agg="unique"`（去重计数）
+- `agg` 新增第 7 种取值 `unique`，数的是**不重复的值有几个**，相当于 `pandas.Series.nunique()`。
+  和第 1.5.3 的 `count` 不同：`count` 数行数，`unique` 数不同的值（`A / A / B` → count 3、unique 2）。
+- 与 `count` 一样，度量列可以是**文本列**（客户名称、SKU、订单号……），不会被强制转数值：
+
+```python
+edv.kpi(df, value="客户名称", label="客户数", agg="unique")          # 多少家不同客户
+edv.bar(df, x="大区", y="客户名称", agg="unique")                     # 每个大区几个不同客户
+edv.table(df, groupby={"columns": ["大区"], "value": "客户名称", "agg": "unique"})
+edv.wordcloud(df, names="客户名称", agg="unique")                     # 也支持
+```
+
+- 覆盖范围与 `count` 一致：`kpi`（含 `spark` 迷你趋势）、`bar` / `line` / `area` / `pie` / `funnel` /
+  `sunburst` / `sankey` / `tree` / `treemap` / `group_kpi` / `wordcloud` / `waterfall` / `pareto` 等 30 多个函数，
+  以及 `table(groupby={"agg": "unique"})`（表头显示「去重数」）。
+- `agg="unique"` 必须指定要计数的列：`bar(df, x="大区", agg="unique")` 会报
+  `ValueError: agg="unique"（去重计数）需要指定要计数的列…只数行数请用 agg="count"`；
+  `table(groupby={"columns": [...], "agg": "unique"})` 缺 `value` 时同样提示改用 `count`。
+- 忽略 `None` / `NaN` / 空串，与 `nunique()` 口径一致。
+- `sum` / `mean` / `max` / `min` / `median` 仍然要求数值列，不受影响。
+
 ## 1.5.3 — 2026-11-21
 
 ### 修复：`agg="count"` 不再要求 measure 列是数值

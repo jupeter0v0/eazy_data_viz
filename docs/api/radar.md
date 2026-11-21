@@ -116,7 +116,7 @@ eazy_data_viz.radar(
 - **说明**：同一 (指标, 系列) 多行时的合并方式，合法值 `sum` / `mean` / `count` / `max` / `min` / `median`，默认 `mean`（与 `bar` 的 `sum` 不同）。`y=None` 时被强制为 `count`。
 - **取值建议**：评分/比率用 `mean`；总量对比用 `sum`；想看最大单笔用 `max`。混用 `sum` 时注意各指标量级会被放大。
 - **示例**：`agg="sum"`
-- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `sort` — 轴顺序（默认 `None`，按数据出现顺序）
 - **类型**：`str | None`

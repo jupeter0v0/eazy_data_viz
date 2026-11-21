@@ -108,7 +108,7 @@ eazy_data_viz.area_pct(
 - **说明**：同一 (x, color) 多行时的合并方式，合法值 `sum` / `mean` / `count` / `max` / `min` / `median`。注意：百分比归一化发生在聚合之后，所以 `mean` 改变的是「每层的原始值」，最终仍会被归一化成占比。
 - **取值建议**：销售额/订单数用 `sum`；想看「平均每单」的构成时用 `mean`（但结论会变成「按均值占比」）。
 - **示例**：`agg="mean"`
-- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `sort` — X 轴顺序（默认 `None`）
 - **类型**：`str | None`

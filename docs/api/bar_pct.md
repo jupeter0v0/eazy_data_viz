@@ -108,7 +108,7 @@ eazy_data_viz.bar_pct(
 - **说明**：同一 (x, color) 多行时的合并方式，合法值 `sum` / `mean` / `count` / `max` / `min` / `median`；归一化发生在聚合之后。
 - **取值建议**：金额/数量用 `sum`；想看「平均单笔的构成」用 `mean`。
 - **示例**：`agg="mean"`
-- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `sort` — 类目顺序（默认 `None`）
 - **类型**：`str | None`

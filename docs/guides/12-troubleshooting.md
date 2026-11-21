@@ -100,7 +100,7 @@ print(edv.gantt(tasks, task="任务", start="开始", end="结束").warnings)
 
 ## 6. agg 只支持 ...
 
-**现象**：`ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`（旧版提示为「agg 只支持 …」）。
+**现象**：`ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`（旧版提示为「agg 只支持 …」）。
 **原因**：写成了 SQL 习惯的 `avg`、`average`；聚合方式只有 6 种。
 
 ```python

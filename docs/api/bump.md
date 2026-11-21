@@ -101,7 +101,7 @@ def bump(
 - **类型 / 默认值**：`str` / `'sum'`
 - **说明**：按 (`x`, `group`) 聚合 `y` 后再排名。可选 `sum` / `mean` / `count` / `max` / `min` / `median`。
 - **取值建议**：销量/金额用 `"sum"`；比率/得分用 `"mean"`；排名对聚合方式很敏感，口径要统一。
-- **报错**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **报错**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `sort` — 排序方式
 

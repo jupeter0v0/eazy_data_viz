@@ -35,7 +35,7 @@ __all__ = [
 ]
 
 # 支持的聚合方式
-AGGS = ("sum", "mean", "count", "max", "min", "median")
+AGGS = ("sum", "mean", "count", "unique", "max", "min", "median")
 FORMATS = ("compact", "thousands", "raw", "percent", "currency")
 
 # sort 的保留取值；其它字符串按「列名」处理（按该列在每个类目下的最小值排序）。
@@ -444,9 +444,22 @@ def _base_spec(
 
     # 按图表类型决定哪些角色是数值、哪些是维度：
     # 例如热力图的 y 是分类维度，散点图的 x 是数值，饼图的 value 是数值。
-    # agg="count" 数的是行数，measure 列是文本也合法（例如数「客户名称」有多少个），
+    # agg="count" 数的是行数、agg="unique" 数的是不重复的值（去重计数），
+    # 两种情况下 measure 列是文本也合法（例如数「客户名称」有多少个客户），
     # 所以这时不能把 measure 列强制转成数值。
-    count_mode = agg == "count"
+    if agg == "unique":
+        _ucol = None
+        for _rk in ("y", "value", "y2", "spark", "size"):
+            if roles.get(_rk) is not None:
+                _ucol = roles.get(_rk)
+                break
+        if _ucol is None:
+            raise ValueError(
+                'agg="unique"（去重计数）需要指定要计数的列，例如 '
+                'bar(df, x="大区", y="客户名称", agg="unique")；'
+                '只数行数请用 agg="count"。'
+            )
+    count_mode = agg in ("count", "unique")
     numeric_cols, dim_cols = [], []
     for rk, rv in roles.items():
         if rv is None:
@@ -570,7 +583,7 @@ _COMMON_DOC = """
     theme : str
         "light"（默认）或 "dark"。
     agg : str
-        聚合方式：sum(默认) / mean / count / max / min / median。
+        聚合方式：sum(默认) / mean / count（计数）/ unique（去重计数）/ max / min / median。
     sort : str
         类目排序：
             * "desc"(默认) / "asc" / "none"(保持数据顺序) / "x"(横轴列顺序)
@@ -700,7 +713,7 @@ def bar(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if y is None else agg),
+        agg=("count" if (y is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -849,7 +862,7 @@ def pie(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if values is None else agg),
+        agg=("count" if (values is None and agg != "unique") else agg),
         sort=sort,
         top_n=top_n,
         legend=True,
@@ -1130,7 +1143,7 @@ def funnel(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if values is None else agg),
+        agg=("count" if (values is None and agg != "unique") else agg),
         sort="desc",
         top_n=None,
         legend=False,
@@ -1302,7 +1315,7 @@ def kpi(
     value : str
         数值列（从 df 聚合时必填）。
     agg : str
-        聚合方式，sum / mean / count / max / min / median。
+        聚合方式，sum / mean / count（计数）/ unique（去重计数）/ max / min / median。
     label : str
         指标名（显示在数值上方）。
     fmt : str
@@ -1390,8 +1403,9 @@ def kpi(
         if spark is not None:
             roles["spark_x"] = spark_x
             roles["spark_y"] = spark
-        # agg="count" 时 value / spark 可以是任意类型（数行数），不再强制转数值。
-        numeric = [] if agg == "count" else ([value] + ([spark] if spark is not None else []))
+        # agg="count" / "unique" 时 value / spark 可以是任意类型（数行数 / 去重计数），
+        # 不再强制转数值。
+        numeric = [] if agg in ("count", "unique") else ([value] + ([spark] if spark is not None else []))
         dims = [spark_x] if spark is not None else []
         records, ref, info = _frame.prepare(
             df, roles, numeric_roles=numeric, dimension_roles=dims,
@@ -1506,9 +1520,10 @@ def combo(
 def _ensure_numeric(records, col, role, agg=None):
     """确认某列在记录里是数值型（否则给中文提示）。
 
-    agg="count" 统计的是行数，列是文本也合法，这时直接跳过检查。
+    agg="count" 统计的是行数、agg="unique" 统计不重复值的个数，
+    两种情况下列是文本也合法，这时直接跳过检查。
     """
-    if agg == "count":
+    if agg in ("count", "unique"):
         return
     kind = (records.get("kinds") or {}).get(str(col))
     if kind not in (None, _frame.KIND_NUM):

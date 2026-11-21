@@ -40,7 +40,7 @@ TEST_JS = r"""
   try {
 
   // ---------------- 纯逻辑 ----------------
-  ok('charts-count', EazyViz.charts.length === 24, EazyViz.charts.length);
+  ok('charts-count', EazyViz.charts.length === 25, EazyViz.charts.length);
   ok('dataStore', Object.keys(EazyViz.dataStore).length >= 1);
   ok('fmt-compact', core0.fmtValue(12345678, 'compact') === '1235万', core0.fmtValue(12345678, 'compact'));
   ok('fmt-percent', core0.fmtValue(12.5, 'percent') === '12.5%', core0.fmtValue(12.5, 'percent'));
@@ -305,6 +305,48 @@ TEST_JS = r"""
   });
 
   steps.push(function () {
+    // 1.5.4: agg="unique" 去重计数
+    var urows = [
+      { '大区': '华东', '客户名称': 'A' },
+      { '大区': '华东', '客户名称': 'A' },
+      { '大区': '华东', '客户名称': 'B' },
+      { '大区': '华东', '客户名称': null },
+      { '大区': '华东', '客户名称': '' },
+      { '大区': '华北', '客户名称': 'A' },
+      { '大区': '华北', '客户名称': 'C' },
+      { '大区': '华南', '客户名称': 'D' }
+    ];
+    var ug = core0.groupBy(urows, ['大区'], '客户名称', 'unique');
+    var umap = {};
+    ug.forEach(function (r) { umap[r.key] = r.value; });
+    ok('unique15-basic', umap['华东'] === 2 && umap['华北'] === 2 && umap['华南'] === 1,
+       JSON.stringify(umap));
+    ok('unique15-cleanup', ug.every(function (r) { return r.uniq === undefined; }),
+       JSON.stringify(ug[0]));
+    var ugc = core0.groupBy(urows, ['大区'], '客户名称', 'count');
+    ok('unique15-count-diff', ugc[0].value === 5, ugc[0].value);
+    // 数值列去重
+    var nrows = [{ k: 'x', v: 1 }, { k: 'x', v: 1 }, { k: 'x', v: 2 }, { k: 'x', v: null }];
+    ok('unique15-number', core0.groupBy(nrows, ['k'], 'v', 'unique')[0].value === 2,
+       core0.groupBy(nrows, ['k'], 'v', 'unique')[0].value);
+
+    // 页面上的图：25 号是 agg=unique 的 bar（华东 2 / 华北 2 / 华南 1）
+    var cu = chart(24);
+    ok('unique15-spec', cu && cu.spec.agg === 'unique', cu && cu.spec.agg);
+    var ou = cu.ec.getOption();
+    var axu = (ou.xAxis instanceof Array) ? ou.xAxis[0] : ou.xAxis;
+    var ucats = (axu && axu.data) || [];
+    var uvals = {};
+    ((ou.series || [])[0] || { data: [] }).data.forEach(function (d, i) {
+      uvals[ucats[i]] = (d && d.value !== undefined) ? d.value : d;
+    });
+    ok('unique15-bars', Number(uvals['华东']) === 2 && Number(uvals['华北']) === 2
+       && Number(uvals['华南']) === 1, JSON.stringify(uvals));
+    ok('unique15-kinds', (cu.data.kinds || {})['客户名称'] !== 'num',
+       (cu.data.kinds || {})['客户名称']);
+  });
+
+  steps.push(function () {
     var oy = cy.ec.getOption();
     var labeled = (oy.series || []).filter(function (s) {
       return (s.data || []).some(function (d) { return d && d.label && d.label.show; });
@@ -457,6 +499,12 @@ def build_page():
             x="月份", y="销售额", color="年份", yoy=True, title="同比"),
         eazy_data_viz.bar(df, x="大区", y="销售额", link=("g16", "out"), title="单向出"),
         eazy_data_viz.bar(df, x="大区", y="销售额", link=("g16", "in"), title="单向进"),
+        # 1.5.4：agg="unique" 去重计数（文本列）
+        eazy_data_viz.bar(
+            __import__("pandas").DataFrame({
+                "大区": ["华东", "华东", "华东", "华北", "华北", "华南"],
+                "客户名称": ["A", "A", "B", "A", "C", "D"]}),
+            x="大区", y="客户名称", agg="unique", title="去重计数"),
     ]
     for _c in charts[:3]:
         _c.spec["code"] = ('eazy_data_viz.%s(%s)' % (

@@ -103,7 +103,7 @@ eazy_data_viz.progress(
 - **说明**：同一类目多行时的合并方式。合法值只有 `sum` / `mean` / `count` / `max` / `min` / `median`，其它值抛 `ValueError`。`y=None` 时该参数被忽略（强制 `count`）。
 - **取值建议**：金额、件数用 `sum`；客单价、转化率用 `mean`；担心极值用 `median`。
 - **示例**：`agg="mean"`
-- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `sort` — 排序方式（默认 `"desc"`）
 

@@ -113,7 +113,7 @@ eazy_data_viz.pictorial(
 - **说明**：同一类目多行时的合并方式，合法值 `sum` / `mean` / `count` / `max` / `min` / `median`；`y=None` 时被强制为 `count`。聚合在前端完成，Python 只校验取值。
 - **取值建议**：总量用 `sum`，客单价/转化率用 `mean`，怕极值用 `median`。
 - **示例**：`agg="mean"`
-- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `sort` — 排序方式（默认 `None`，保持原始顺序）
 - **类型**：`str | None`

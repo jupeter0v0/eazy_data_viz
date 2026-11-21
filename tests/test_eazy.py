@@ -942,6 +942,80 @@ def t_type_hints():
     assert "pd.DataFrame" in sig and "groupby" in sig, sig
 
 
+def t_agg_unique():
+    """agg="unique" 去重计数：文本列可用，与 count 的区别是数不重复的值。"""
+    import pandas as _pdu
+    df = _pdu.DataFrame({
+        "大区": ["华东", "华东", "华东", "华北", "华北", "华南"],
+        "年份": ["2025年", "2026年", "2026年", "2025年", "2026年", "2025年"],
+        "客户名称": ["A Ltd", "B Ltd", "A Ltd", "A Ltd", "C Ltd", "D Ltd"],
+        "金额": [10.5, 20.5, 30.5, 40.5, 50.5, 60.5],
+    })
+
+    # 1) unique 在 AGGS 里，且是「计数类」聚合（不要求数值列）
+    from eazy_data_viz.chart import AGGS as _AGGS
+    from eazy_data_viz.charts_extra import _apply_agg as _apply
+    assert "unique" in _AGGS, _AGGS
+    assert _apply(["A", "B", "A", None, ""], "unique") == 2.0, _apply(["A", "B", "A", None, ""], "unique")
+    assert _apply([1, 1, 2, float("nan"), 3], "unique") == 3.0
+    assert _apply([], "unique") == 0.0
+
+    # 2) kpi：去重客户数 = 5（A/B/C/D 四个 + 无重复 A）
+    ch = eazy_data_viz.kpi(df, value="客户名称", label="客户数", agg="unique")
+    assert ch.spec["agg"] == "unique", ch.spec["agg"]
+    assert ch.spec["roles"]["value"] == "客户名称"
+    assert ch.data["kinds"]["客户名称"] != "num", ch.data["kinds"]
+    # count 是 6 行，unique 是 5 个不同客户
+    assert eazy_data_viz.kpi(df, value="客户名称", agg="count").spec["agg"] == "count"
+
+    # 3) bar / pie / sunburst / sankey / group_kpi 都接受文本列 + unique
+    for name, chart in (
+        ("bar", eazy_data_viz.bar(df, x="大区", y="客户名称", agg="unique")),
+        ("pie", eazy_data_viz.pie(df, names="大区", values="客户名称", agg="unique")),
+        ("sunburst", eazy_data_viz.sunburst(df, path=["大区"], value="客户名称", agg="unique")),
+        ("sankey", eazy_data_viz.sankey(df, path=["大区", "年份"], value="客户名称", agg="unique")),
+        ("treemap", eazy_data_viz.treemap(df, path="大区", value="客户名称", agg="unique")),
+        ("group_kpi", eazy_data_viz.group_kpi(df, names="大区", values="客户名称", agg="unique")),
+    ):
+        assert chart.spec["agg"] == "unique", name
+
+    # 4) 汇总表：华东 3 行 2 个客户、华北 2 行 2 个、华南 1 行 1 个
+    tb = eazy_data_viz.table(df, groupby={"columns": ["大区"], "value": "客户名称", "agg": "unique"})
+    assert tb.spec["groupby"]["agg"] == "unique", tb.spec["groupby"]
+    assert tb.spec["columns"] == ["大区", "客户名称"], tb.spec["columns"]
+    assert tb.data["kinds"]["客户名称"] != "num", tb.data["kinds"]
+
+    # 5) group_kpi 的两个分支（有无 values）都走得通
+    gk1 = eazy_data_viz.group_kpi(df, names="大区", values="客户名称", agg="unique")
+    gk2 = eazy_data_viz.group_kpi(df, names="大区", agg="unique", values="客户名称")
+    assert gk1.spec["agg"] == gk2.spec["agg"] == "unique"
+
+    # 6) unique 没给列 → 明确报错；count 不受影响
+    try:
+        eazy_data_viz.bar(df, x="大区", agg="unique")
+    except ValueError as err:
+        assert "去重计数" in str(err) and 'agg="count"' in str(err), str(err)
+    else:
+        raise AssertionError("agg=unique 缺少度量列时应报 ValueError")
+    assert eazy_data_viz.bar(df, x="大区", agg="count").spec["agg"] == "count"
+
+    # 7) 汇总表 unique 没给 value → 报错提示只能 count
+    try:
+        eazy_data_viz.table(df, groupby={"columns": ["大区"], "agg": "unique"})
+    except ValueError as err:
+        assert "unique" in str(err) and "count" in str(err), str(err)
+    else:
+        raise AssertionError("table groupby unique 缺 value 应报 ValueError")
+
+    # 8) 不认识的 agg 仍然报错，且提示里列出 unique
+    try:
+        eazy_data_viz.bar(df, x="大区", y="金额", agg="nunique")
+    except ValueError as err:
+        assert "unique" in str(err), str(err)
+    else:
+        raise AssertionError("未知 agg 应报 ValueError")
+
+
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):
     check(name, fn)
 

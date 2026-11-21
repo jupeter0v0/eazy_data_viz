@@ -85,7 +85,7 @@ eazy_data_viz.table(
   | --- | --- | --- |
   | `columns` | 是 | 分组维度列，1 列或多列（分组键） |
   | `value` | 否 | 要汇总的数值列；不给则按组计数 |
-  | `agg` | 否 | 聚合方式：`sum`（有 value 时默认）/ `mean` / `count` / `max` / `min` / `median` |
+  | `agg` | 否 | 聚合方式：`sum`（有 value 时默认）/ `mean` / `count` / `unique`（去重计数）/ `max` / `min` / `median` |
 
   渲染时按 `value` 降序排列；表头显示“`value（求和）`”这类“列名（聚合名）”，没有 `value` 时显示“记录数”；底部提示“共 N 行，汇总为 M 组”。
 - **只影响显示**：分组/聚合发生在浏览器端对**筛选后数据**的计算上，不会改动嵌入页面的原始数据，也不会改变其它图表收到的联动值。所以“点某个大区 → 这张表显示该大区的汇总”是安全的。
@@ -96,7 +96,7 @@ eazy_data_viz.table(
   edv.table(df, groupby={"columns": ["大区", "渠道"]})          # 按组计数
   edv.table(df, groupby={"columns": ["产品"], "value": "利润", "agg": "mean"})
   ```
-- **报错**：不是字典：`ValueError: groupby 需要是字典，例如 groupby={"columns": ["大区"], "value": "销售额", "agg": "sum"}。`；未知键：`ValueError: groupby 只支持 columns / value / agg 三个键，收到未知键：agg_func。`；没有 `columns`：`ValueError: groupby 需要 columns（按哪些列分组），例如 groupby={"columns": ["大区"], "value": "销售额"}。`；`columns` 为空：`ValueError: groupby 的 columns 不能为空：至少指定 1 个分组列。`；`value` 传了多列：`ValueError: groupby 的 value 只能是一列（汇总哪一列数值），收到 2 列。`；`value` 同时出现在 `columns` 里：`ValueError: groupby 的 value（'大区'）不能同时出现在 columns 里：同一列不能既分组又求和。`；`agg` 不认识：`ValueError: groupby 的 agg='avg' 不支持，可选：sum、mean、count、max、min、median。`；没给 `value` 却传了其它 `agg`：`ValueError: groupby 没给 value 时 agg 只能是 "count"（按组计数），收到 agg='sum'。`
+- **报错**：不是字典：`ValueError: groupby 需要是字典，例如 groupby={"columns": ["大区"], "value": "销售额", "agg": "sum"}。`；未知键：`ValueError: groupby 只支持 columns / value / agg 三个键，收到未知键：agg_func。`；没有 `columns`：`ValueError: groupby 需要 columns（按哪些列分组），例如 groupby={"columns": ["大区"], "value": "销售额"}。`；`columns` 为空：`ValueError: groupby 的 columns 不能为空：至少指定 1 个分组列。`；`value` 传了多列：`ValueError: groupby 的 value 只能是一列（汇总哪一列数值），收到 2 列。`；`value` 同时出现在 `columns` 里：`ValueError: groupby 的 value（'大区'）不能同时出现在 columns 里：同一列不能既分组又求和。`；`agg` 不认识：`ValueError: groupby 的 agg='avg' 不支持，可选：sum、mean、count、unique、max、min、median。`；没给 `value` 却传了其它 `agg`：`ValueError: groupby 没给 value 时 agg 只能是 "count"（按组计数），收到 agg='sum'。`
 
 ### `limit` — 最多显示的行数（`int`，默认 `100`）
 

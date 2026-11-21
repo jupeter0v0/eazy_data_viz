@@ -106,7 +106,7 @@ eazy_data_viz.group_kpi(
 - **说明**：同一分组多行时的合并方式，合法值 `sum` / `mean` / `count` / `max` / `min` / `median`。该值只影响 Python 侧算出的卡片数值，也会写进 `spec["agg"]`；`items` 模式下不参与计算（仅原样写入 spec）。
 - **取值建议**：总量用 `sum`；客单价、平均利润用 `mean`；担心极值用 `median`；想显式计数用 `count`。
 - **示例**：`agg="mean"`
-- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **常见错误**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `sort` — 卡片顺序（默认 `"desc"`）
 

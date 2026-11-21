@@ -69,7 +69,7 @@ eazy_data_viz.funnel(
 - **作用**：同一阶段有多行时如何合并；默认 sum。省略 values 时内部自动改为 count。 阶段数通常来自“人数”列，如果每阶段只有一行则 agg 不影响结果。
 - **建议**：计数用省略 values 的方式；人数/金额求和用 sum。
 - **示例**：`agg="sum"`
-- **报错**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, max, min, median`
+- **报错**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
 
 ### `fmt` — 数值格式（`str`，默认 `'compact'`）
 
