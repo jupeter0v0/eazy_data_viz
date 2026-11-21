@@ -239,7 +239,7 @@ eazy_data_viz.show(
         code='eazy_data_viz.bar(df, x="大区", y="销售额", color="产品", stack=True)\n'
              'eazy_data_viz.line(df, x="月份", y="销售额", color="渠道", smooth=True)',
     )
-    st.subheader("45 种图表，全部从 DataFrame 出发")
+    st.subheader("49 种图表，全部从 DataFrame 出发")
     st.markdown(
         "| 分类 | 图表 |\n| --- | --- |\n"
         "| 指标 | `kpi` `group_kpi` `gauge` `ring_progress` `progress` |\n"

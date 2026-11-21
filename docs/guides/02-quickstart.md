@@ -170,7 +170,8 @@ dash.save("examples/output/quickstart_dashboard.html")
 
 1. **`link` 分组**：上面三张图都写了 `link="经营"`，点任意一张的柱子/折线点，
    另外两张会按点击的类目筛选；再点一次同一项取消筛选。
-2. **`edv.dashboard(...)` 接受任意张图**，`cols=2` 表示两列网格；宽度按视口自适应。
+2. **`edv.dashboard(...)` 接受任意张图**，`cols=2` 表示两列等宽网格；宽度按视口自适应。
+   等宽网格不够用时，1.5 起可以用 `layout=` / `direction=` / `grid=` 自由排布（见 [15 · 自由排列](15-layout.md)）。
 3. **`edv.show(...)` 就是 `edv.dashboard(...).show()`**，脚本里等价：
 
 ```python

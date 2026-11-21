@@ -57,6 +57,7 @@ def bump(
 | `ylim` | `tuple[float, float]` | `None` | 否 | 数值范围（本图为排名轴，不生效） |
 | `fmt` | `str` | `'compact'` | 否 | 数值格式：compact / thousands / raw / percent / currency |
 | `height` | `int` | `420` | 否 | 画布高度（像素，≥120） |
+| `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
 | `theme` | `str` | `'light'` | 否 | light / dark |
 | `legend` | `bool` | `True` | 否 | 是否显示图例 |
 | `labels` | `bool` | `False` | 否 | 是否在点上标**实际值**（不是名次） |
@@ -171,6 +172,12 @@ def bump(
 - **说明**：排名图默认比其他扩展图高 40px（420），给线间交叉留出空间；传 `None` 时**回落到 380**（不是 420）。
 - **取值建议**：分组 4~6 用 420；7 个以上用 480~560。
 - **报错**：`height=100` → `ValueError: height 至少 120（像素），收到 100`
+
+### `abs_height` — 绝对高度：`height` 就是整个组件外框（`bool`，默认 `False`）
+
+- **作用**：默认 `height` 只算图表正文，标题 / 副标题 / 联动工具条会把卡片额外撑高，同一行里一张带长标题、一张带工具条的卡片底边就对不齐。打开 `abs_height=True` 后 `height` 表示**整个组件外框**（内边距、标题、工具条都算在里面），正文用剩余空间自适应。
+- **建议**：在 `dashboard` / `show` 里要「框和框严格对齐」时打开；单图导出或不在意卡片底边时保持默认。
+- **示例**：`abs_height=True, height=320`（配合 `dashboard(..., cols=2)` 看两张卡的底边）
 
 ### `theme` — 主题
 

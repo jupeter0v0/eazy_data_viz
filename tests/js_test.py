@@ -40,7 +40,7 @@ TEST_JS = r"""
   try {
 
   // ---------------- 纯逻辑 ----------------
-  ok('charts-count', EazyViz.charts.length === 18, EazyViz.charts.length);
+  ok('charts-count', EazyViz.charts.length === 24, EazyViz.charts.length);
   ok('dataStore', Object.keys(EazyViz.dataStore).length >= 1);
   ok('fmt-compact', core0.fmtValue(12345678, 'compact') === '1235万', core0.fmtValue(12345678, 'compact'));
   ok('fmt-percent', core0.fmtValue(12.5, 'percent') === '12.5%', core0.fmtValue(12.5, 'percent'));
@@ -94,6 +94,9 @@ TEST_JS = r"""
     if (c.spec.type === 'kpi') {
       ok('kpi-html-' + c.index, /总销售额|平均|KPI 进阶/.test(c.el.innerHTML), c.el.innerHTML.slice(0, 30));
       return;
+    }
+    if (EazyViz.core.htmlBuilders[c.spec.type]) {
+      return;  // HTML 类图表（table / tile / progress …）没有 ECharts option
     }
     var opt = core0.buildOption(c.spec, c.data, c.state, c.theme);
     ok('option-' + c.spec.type, opt && opt.series && opt.series.length >= 1, c.spec.type);
@@ -169,6 +172,129 @@ TEST_JS = r"""
     ok('kpi-rerender-on-link', now !== kpiText0, now.slice(0, 40));
     clickCat(c1, Object.keys(EazyViz.links).length ? c1.spec._testCat : c1.spec._testCat,
              c1.spec._testVal);
+  });
+
+  // ---------------- 1.5：多级桑基 / 旭日 / 汇总表 / 同比 / 联动方向 ----------------
+  var cs = chart(18), cu = chart(19), ct = chart(20), cy = chart(21), co = chart(22), ci = chart(23);
+  steps.push(function () {
+    ok('sankey15-path', cs.spec.roles.path.length === 3, JSON.stringify(cs.spec.roles.path));
+    var os = cs.ec.getOption();
+    var sr = os.series[0];
+    var nodes = sr.data || [];
+    var names = nodes.map(function (n) { return n.name; });
+    var uniq = names.filter(function (v, i, a) { return a.indexOf(v) === i; });
+    ok('sankey15-nodes', nodes.length === uniq.length && nodes.length >= 3, nodes.length);
+    ok('sankey15-level-prefix', /\u0001/.test(names[0] || ''), names[0]);
+    ok('sankey15-links', (sr.links || []).length >= 3, (sr.links || []).length);
+    ok('sankey15-nodeMaps', !!(EazyViz.nodeMaps && EazyViz.nodeMaps[cs.spec.id]));
+    // 第二层节点点击 → 维度应为 path[1]
+    var lv1 = names.filter(function (n) { return /^1\u0001/.test(n); })[0];
+    ok('sankey15-layer1', !!lv1, lv1);
+    var info = core0.nodeInfoOf(cs.spec, { componentType: 'series', dataType: 'node', name: lv1 });
+    ok('sankey15-info', !!info && info.dim === '渠道' && !!info.value, JSON.stringify(info));
+    core0.onChartClick(cs, { componentType: 'series', dataType: 'node', name: lv1, data: { name: lv1 } });
+    var lk = EazyViz.links['g15'];
+    ok('sankey15-click-dim', !!lk && lk.dim === '渠道', lk && lk.dim);
+    ok('sankey15-self-unfiltered', !cs.state.filters['渠道'], JSON.stringify(cs.state.filters));
+    ok('sunburst15-filtered', cu.state.filters['渠道'] === lk.value,
+       cu.state.filters['渠道'] + '/' + lk.value);
+    // 点边不应触发联动
+    core0.onChartClick(cs, { componentType: 'series', dataType: 'edge', name: '' });
+    ok('sankey15-edge-ignored', EazyViz.links['g15'].dim === '渠道', EazyViz.links['g15'].dim);
+    // 旭日层级 → 维度
+    var s0 = core0.nodeInfoOf(cu.spec, { treePathInfo: [{}, { name: '华东' }] });
+    var s1 = core0.nodeInfoOf(cu.spec, { treePathInfo: [{}, {}, { name: '线上' }] });
+    ok('sunburst15-dims', s0 && s0.dim === '大区' && s0.value === '华东'
+       && s1 && s1.dim === '渠道' && s1.value === '线上',
+       JSON.stringify([s0, s1]));
+    // 点开一层后（nodeClick:rootToNode）treePathInfo 会变短，节点自带的 nodeDim 必须压过它
+    var deep = core0.nodeInfoOf(cu.spec, {
+      name: '线上', data: { nodeDim: '渠道', nodeLayer: 1, nodeValue: '线上' },
+      treePathInfo: [{ name: '线上' }]
+    });
+    ok('sunburst15-nodeDim', deep && deep.dim === '渠道' && deep.value === '线上' && deep.layer === 1,
+       JSON.stringify(deep));
+    // 旭日标签：环内 + 重叠隐藏，且过小的节点不画 label
+    var so = core0.buildOption(cu.spec, cu.data, { filters: {}, drill: [] });
+    var sser = so.series && so.series[0] || {};
+    ok('sunburst15-label-inside',
+       sser.label && sser.label.position === 'inside' && sser.labelLayout && sser.labelLayout.hideOverlap === true,
+       JSON.stringify([sser.label, sser.labelLayout]));
+    ok('sunburst15-radius', String(sser.radius) === '12%,88%', JSON.stringify(sser.radius));
+    var hidden = (function walk(nodes, n) {
+      n = n || 0;
+      for (var i = 0; i < (nodes || []).length; i++) {
+        var nd = nodes[i];
+        if (nd.label && nd.label.show === false) n += 1;
+        if (nd.children) n = walk(nd.children, n);
+      }
+      return n;
+    })(sser.data);
+    ok('sunburst15-small-hidden', hidden > 0, 'hidden=' + hidden);
+  });
+
+  steps.push(function () {
+    var theme = core0.util.themeFor('light', null);
+    var clean = EazyViz.htmlBuilders['table'](ct.spec, ct.data, { filters: {}, drill: [] }, theme);
+    ok('table15-header', /销售额/.test(clean) && /求和/.test(clean), clean.slice(0, 60));
+    ok('table15-groups', /共 \d+ 组|汇总为 \d+ 组/.test(clean), (clean.match(/共 \d+ 组|汇总为 \d+ 组/) || [''])[0]);
+    var filtered = EazyViz.htmlBuilders['table'](ct.spec, ct.data,
+      { filters: { '大区': '华东' }, drill: [] }, theme);
+    ok('table15-display-only', /华东/.test(filtered) && !/华北/.test(filtered), filtered.slice(0, 80));
+    var rows = core0.rowsOf(ct.data), n0 = rows.length;
+    EazyViz.htmlBuilders['table'](ct.spec, ct.data, { filters: { '大区': '华东' }, drill: [] }, theme);
+    ok('table15-data-intact', core0.rowsOf(ct.data).length === n0 && n0 === ct.data.rows.length, n0);
+    ok('table15-spec', ct.spec.groupby && ct.spec.groupby.agg === 'sum', JSON.stringify(ct.spec.groupby));
+  });
+
+  steps.push(function () {
+    var oy = cy.ec.getOption();
+    var labeled = (oy.series || []).filter(function (s) {
+      return (s.data || []).some(function (d) { return d && d.label && d.label.show; });
+    });
+    ok('yoy15-one-series', labeled.length === 1, labeled.length);
+    var first = labeled.length ? (labeled[0].data.filter(function (d) { return d && d.label; })[0] || {}) : {};
+    ok('yoy15-label', /^[+-]\d+(\.\d+)?%$/.test((first.label || {}).formatter || ''),
+       (first.label || {}).formatter);
+    ok('yoy15-spec', !!(cy.spec.yoy && cy.spec.yoy.dim === '年份'), JSON.stringify(cy.spec.yoy));
+    // ECharts 的 getOption() 会把 tooltip 归一化成数组
+    var tdef = (oy.tooltip instanceof Array) ? oy.tooltip[0] : oy.tooltip;
+    var tf = tdef && tdef.formatter;
+    var dbg = 'fmtType=' + typeof tf;
+    var html = '';
+    if (typeof tf === 'function') {
+      try { html = tf([{ axisValue: '1月', name: '1月', seriesName: '2026', value: 130 }]); }
+      catch (e) { dbg += ' throw=' + e.message; }
+      dbg += ' html=' + String(html).slice(-200);
+    }
+    window.__yoyDebug = dbg;
+    ok('yoy15-tooltip',
+       /同比/.test(String(html)) && /\+30(\.0)?%/.test(String(html)), dbg);
+  });
+
+  steps.push(function () {
+    ok('link15-modes', core0.linkMode(co.spec) === 'out' && core0.linkMode(ci.spec) === 'in'
+       && core0.linkMode(chart(1).spec) === 'both',
+       [core0.linkMode(co.spec), core0.linkMode(ci.spec), core0.linkMode(chart(1).spec)].join(','));
+    ok('link15-can', core0.canSendLink(co.spec) && !core0.canRecvLink(co.spec)
+       && !core0.canSendLink(ci.spec) && core0.canRecvLink(ci.spec));
+    var to = document.querySelector('[data-eazy-toolbar="' + co.index + '"]');
+    var ti = document.querySelector('[data-eazy-toolbar="' + ci.index + '"]');
+    ok('link15-toolbar-out', !!to && /单向出/.test(to.textContent), to && to.textContent.slice(0, 40));
+    ok('link15-toolbar-in', !!ti && /单向进/.test(ti.textContent), ti && ti.textContent.slice(0, 40));
+    // 单向出点击：自己不过滤，单向进被过滤
+    var g1 = core0.groupBy(core0.rowsOf(co.data), [co.spec.roles.x], co.spec.roles.y, 'sum');
+    core0.onChartClick(co, { componentType: 'series', name: g1[0].key });
+    ok('link15-out-sent', !!EazyViz.links['g16'] && EazyViz.links['g16'].sourceId === co.spec.id,
+       JSON.stringify(EazyViz.links['g16'] || {}));
+    ok('link15-out-self', !co.state.filters[co.spec.roles.x], JSON.stringify(co.state.filters));
+    ok('link15-in-recv', ci.state.filters[ci.spec.roles.x] === g1[0].key,
+       ci.state.filters[ci.spec.roles.x]);
+    // 单向进点击：不发起
+    core0.onChartClick(ci, { componentType: 'series', name: g1[0].key });
+    ok('link15-in-no-send', EazyViz.links['g16'].sourceId === co.spec.id,
+       EazyViz.links['g16'].sourceId);
+    delete EazyViz.links['g15'];  // 清掉桑基组，避免影响后续
   });
 
   // ---------------- 配色库 ----------------
@@ -259,6 +385,21 @@ def build_page():
                 "到达城市": ["广州市", "成都市", "上海市", "北京市"],
                 "件数": [320, 280, 260, 180]}),
             source="出发城市", target="到达城市", value="件数", title="城市飞线"),
+        # ---------------- 1.5 新增 ----------------
+        eazy_data_viz.sankey(df, path=["大区", "渠道", "产品"], value="销售额",
+                             link="g15", title="多级桑基"),
+        eazy_data_viz.sunburst(df, path=["大区", "渠道", "产品"], value="销售额",
+                               link="g15", title="旭日多级"),
+        eazy_data_viz.table(df, groupby={"columns": ["大区"], "value": "销售额", "agg": "sum"},
+                            title="汇总表"),
+        eazy_data_viz.bar(
+            __import__("pandas").DataFrame({
+                "月份": ["1月", "1月", "2月", "2月", "3月", "3月"],
+                "年份": ["2026", "2025", "2026", "2025", "2026", "2025"],
+                "销售额": [130, 100, 90, 120, 96, 80]}),
+            x="月份", y="销售额", color="年份", yoy=True, title="同比"),
+        eazy_data_viz.bar(df, x="大区", y="销售额", link=("g16", "out"), title="单向出"),
+        eazy_data_viz.bar(df, x="大区", y="销售额", link=("g16", "in"), title="单向进"),
     ]
     for _c in charts[:3]:
         _c.spec["code"] = ('eazy_data_viz.%s(%s)' % (
@@ -280,6 +421,9 @@ def main():
         CHROME, "--headless=new", "--disable-gpu", "--no-sandbox",
         "--hide-scrollbars", "--virtual-time-budget=9000",
         "--window-size=1500,1400", "--dump-dom",
+        # 独立的临时 profile：避免和正在运行的 Chrome 抢用户目录导致拿不到 DOM
+        "--user-data-dir=" + os.path.join(TMP, "profile"),
+        "--no-first-run", "--no-default-browser-check", "--disable-extensions",
         "--allow-file-access-from-files",
         "file:///" + path.replace("\\", "/"),
     ]

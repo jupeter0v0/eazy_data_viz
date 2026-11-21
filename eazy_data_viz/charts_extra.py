@@ -31,6 +31,7 @@ import pandas as pd
 
 from . import frame as _frame
 from .chart import (
+    AGGS,
     Chart,
     _COMMON_DOC,
     _base_spec,
@@ -38,6 +39,7 @@ from .chart import (
     _check_fmt,
     _check_lim,
     _next_id,
+    _parse_link,
 )
 
 __all__ = [
@@ -93,6 +95,7 @@ def _ext(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     agg="sum",
     sort=None,
@@ -118,6 +121,7 @@ def _ext(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort=sort,
@@ -139,6 +143,7 @@ def _manual_spec(
     subtitle=None,
     theme="light",
     height=380,
+    abs_height=False,
     fmt=None,
     agg="sum",
     sort=None,
@@ -164,6 +169,7 @@ def _manual_spec(
     if top_n is not None:
         if not isinstance(top_n, int) or isinstance(top_n, bool) or top_n < 1:
             raise ValueError("top_n 需要是 >=1 的整数（只显示前 N 项），收到 %r" % (top_n,))
+    _link_group, _link_mode = _parse_link(link)
     spec = {
         "id": _next_id(),
         "type": kind,
@@ -171,6 +177,7 @@ def _manual_spec(
         "subtitle": subtitle,
         "theme": theme,
         "height": int(height if height is not None else 380),
+        "absHeight": bool(abs_height),
         "dataRef": None,
         "roles": dict(roles or {}),
         "agg": agg,
@@ -185,7 +192,8 @@ def _manual_spec(
         "labels": bool(labels),
         "zoom": zoom,
         "drill": None,
-        "link": link,
+        "link": _link_group,
+        "linkMode": _link_mode,
     }
     spec.update(extra)
     return spec
@@ -365,6 +373,7 @@ def waterfall(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=False,
@@ -397,6 +406,7 @@ def waterfall(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if y is None else agg),
         sort=sort,
@@ -433,6 +443,7 @@ def bullet(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=False,
@@ -475,6 +486,7 @@ def bullet(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort=sort,
@@ -509,6 +521,7 @@ def lollipop(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=False,
@@ -541,6 +554,7 @@ def lollipop(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if y is None else agg),
         sort=sort,
@@ -577,6 +591,7 @@ def dumbbell(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=True,
     zoom="auto",
@@ -614,6 +629,7 @@ def dumbbell(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort=sort,
@@ -649,6 +665,7 @@ def pareto(
     ylim=None,
     fmt="compact",
     height=400,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=False,
@@ -685,6 +702,7 @@ def pareto(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if y is None else agg),
         sort=sort,
@@ -722,6 +740,7 @@ def slope(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=True,
     labels=False,
@@ -781,6 +800,7 @@ def slope(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort=sort,
@@ -817,6 +837,7 @@ def bump(
     ylim=None,
     fmt="compact",
     height=420,
+    abs_height=False,
     theme="light",
     legend=True,
     labels=False,
@@ -848,6 +869,7 @@ def bump(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort=sort,
@@ -883,6 +905,7 @@ def radar(
     ylim=None,
     fmt="compact",
     height=400,
+    abs_height=False,
     theme="light",
     legend=True,
     labels=False,
@@ -917,6 +940,7 @@ def radar(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if y is None else agg),
         sort=sort,
@@ -952,6 +976,7 @@ def rose(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=True,
     labels=True,
@@ -987,6 +1012,7 @@ def rose(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if values is None else agg),
         sort=sort,
@@ -1018,6 +1044,7 @@ def parallel(
     ylim=None,
     fmt="compact",
     height=440,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=False,
@@ -1052,6 +1079,7 @@ def parallel(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg="sum",
         sort=None,
@@ -1087,6 +1115,7 @@ def pictorial(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=True,
@@ -1124,6 +1153,7 @@ def pictorial(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if y is None else agg),
         sort=sort,
@@ -1160,6 +1190,7 @@ def target(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=True,
     labels=False,
@@ -1201,6 +1232,7 @@ def target(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort=sort,
@@ -1233,6 +1265,7 @@ def trend(
     ylim=None,
     fmt="compact",
     height=400,
+    abs_height=False,
     theme="light",
     legend=None,
     labels=False,
@@ -1290,6 +1323,7 @@ def trend(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg="sum",
         sort="none",
@@ -1324,6 +1358,7 @@ def quadrant(
     ylim=None,
     fmt="compact",
     height=400,
+    abs_height=False,
     theme="light",
     legend=None,
     labels=False,
@@ -1380,6 +1415,7 @@ def quadrant(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg="sum",
         sort="none",
@@ -1410,6 +1446,7 @@ def matrix(
     subtitle=None,
     fmt="compact",
     height=460,
+    abs_height=False,
     theme="light",
 ):
     """相关系数矩阵（Pearson）：热力图 + 格子里两位小数的 r 值。
@@ -1458,6 +1495,7 @@ def matrix(
         subtitle=subtitle,
         theme=theme,
         height=height,
+        abs_height=abs_height,
         fmt=fmt,
     )
     # 契约：labels 是列名数组、values 是二维相关系数（覆盖通用 bool 字段）
@@ -1480,6 +1518,7 @@ def sparkline(
     subtitle=None,
     fmt="compact",
     height=260,
+    abs_height=False,
     theme="light",
     max_rows=_frame.MAX_ROWS,
 ):
@@ -1506,6 +1545,7 @@ def sparkline(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort=None,
@@ -1530,6 +1570,7 @@ def ring_progress(
     max=100,
     fmt=None,
     height=None,
+    abs_height=False,
     theme="light",
     title=None,
 ):
@@ -1561,6 +1602,7 @@ def ring_progress(
         title=title if title is not None else (label or "进度"),
         theme=theme,
         height=(260 if height is None else height),
+        abs_height=abs_height,
         fmt=(fmt or "raw"),
         labels=True,
     )
@@ -1588,6 +1630,7 @@ def sunburst(
     ytitle=None,
     fmt="compact",
     height=460,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=True,
@@ -1622,6 +1665,7 @@ def sunburst(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if value is None else agg),
         sort=sort,
@@ -1653,6 +1697,7 @@ def tree(
     ytitle=None,
     fmt="compact",
     height=460,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=True,
@@ -1685,6 +1730,7 @@ def tree(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if value is None else agg),
         sort=sort,
@@ -1704,10 +1750,11 @@ def tree(
 # ==========================================================================
 def sankey(
     data,
-    source,
-    target,
+    source=None,
+    target=None,
     value=None,
     *,
+    path=None,
     agg="sum",
     sort=None,
     top_n=None,
@@ -1715,6 +1762,7 @@ def sankey(
     subtitle=None,
     fmt="compact",
     height=420,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=True,
@@ -1722,25 +1770,55 @@ def sankey(
     link=None,
     max_rows=_frame.MAX_ROWS,
 ):
-    """桑基图：展示流量在「来源 → 去向」之间的流转及大小。
+    """桑基图：展示流量在多层「来源 → 去向」之间的流转及大小。
+
+    两种写法（二选一）：
+
+    - 两级：``sankey(df, source="渠道", target="产品", value="销售额")``
+    - 多级：``sankey(df, path=["大区", "渠道", "产品"], value="销售额")``
+      每一级与下一级各画一层流量（大区→渠道、渠道→产品），
+      跨层同名值（例如「华东」既是 大区也是渠道）不会被合并。
 
     示例
     ----
     >>> eazy_data_viz.charts_extra.sankey(df, source="渠道", target="产品", value="销售额")
+    >>> eazy_data_viz.charts_extra.sankey(df, path=["大区", "渠道", "产品"], value="销售额")
     """
     df = _frame.ensure_frame(data)
-    if source is None or target is None:
+    if path is not None:
+        if source is not None or target is not None:
+            raise ValueError(
+                "sankey 的 path 与 source/target 不能同时使用：多级流量用 "
+                'path=["一级", "二级", "三级"]，两级流量用 source= / target=。'
+            )
+        dims = [c for c in _as_list(path) if c is not None]
+    else:
+        if source is None or target is None:
+            raise ValueError(
+                'sankey 需要 path（多级）或 source / target（两级），例如 '
+                'sankey(df, path=["大区", "渠道", "产品"], value="销售额")。'
+            )
+        dims = [source, target]
+    if len(dims) < 2:
         raise ValueError(
-            'sankey 需要 source / target 两列，例如 sankey(df, source="渠道", target="产品", value="销售额")。'
+            "sankey 至少需要 2 级：path=[一级, 二级]，收到 %d 级。" % len(dims)
         )
-    _require_cols(df, [("source（来源）", source), ("target（去向）", target)])
+    if len(set(dims)) != len(dims):
+        raise ValueError(
+            "sankey 的 path 里不能有重复列：%r。同一列不能同时当两级。"
+            % (list(dims),)
+        )
+    _require_cols(
+        df,
+        [("path[%d]（第 %d 级）" % (i, i + 1), d) for i, d in enumerate(dims)],
+    )
     if value is not None:
         df = _coerce_numeric(df, [("value（数值）", value)])
     spec, records, ref, info = _ext(
         "sankey",
         df,
-        {"source": source, "target": target, "value": value},
-        title=title if title is not None else "%s → %s 流向" % (source, target),
+        {"path": list(dims), "value": value},
+        title=title if title is not None else "%s 流向" % " → ".join(str(d) for d in dims),
         subtitle=subtitle,
         xtitle=None,
         ytitle=None,
@@ -1748,6 +1826,7 @@ def sankey(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if value is None else agg),
         sort=sort,
@@ -1778,6 +1857,7 @@ def graph(
     subtitle=None,
     fmt="compact",
     height=420,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=True,
@@ -1811,6 +1891,7 @@ def graph(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if value is None else agg),
         sort=sort,
@@ -1841,6 +1922,7 @@ def theme_river(
     subtitle=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=True,
     labels=False,
@@ -1875,6 +1957,7 @@ def theme_river(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if value is None else agg),
         sort=sort,
@@ -1904,6 +1987,7 @@ def calendar(
     subtitle=None,
     fmt="compact",
     height=300,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=False,
@@ -1935,6 +2019,7 @@ def calendar(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if value is None else agg),
         sort=sort,
@@ -1966,6 +2051,7 @@ def gantt(
     subtitle=None,
     fmt="compact",
     height=420,
+    abs_height=False,
     theme="light",
     legend=None,
     labels=True,
@@ -2010,6 +2096,7 @@ def gantt(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort=sort,
@@ -2044,6 +2131,7 @@ def candlestick(
     ylim=None,
     fmt="compact",
     height=420,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=False,
@@ -2089,6 +2177,7 @@ def candlestick(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg="sum",
         sort="x",
@@ -2118,6 +2207,7 @@ def pyramid(
     subtitle=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=True,
@@ -2149,6 +2239,7 @@ def pyramid(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if values is None else agg),
         sort=sort,
@@ -2183,6 +2274,7 @@ def area_pct(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=True,
     labels=False,
@@ -2218,6 +2310,7 @@ def area_pct(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort=sort,
@@ -2250,6 +2343,7 @@ def bar_pct(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=True,
     labels=False,
@@ -2285,6 +2379,7 @@ def bar_pct(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort=sort,
@@ -2316,6 +2411,7 @@ def progress(
     subtitle=None,
     fmt="compact",
     height=340,
+    abs_height=False,
     theme="light",
     link=None,
     max_rows=_frame.MAX_ROWS,
@@ -2351,6 +2447,7 @@ def progress(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if y is None else agg),
         sort=sort,
@@ -2378,6 +2475,7 @@ def tile(
     subtitle=None,
     fmt="compact",
     height=360,
+    abs_height=False,
     theme="light",
     link=None,
     max_rows=_frame.MAX_ROWS,
@@ -2411,6 +2509,7 @@ def tile(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if values is None else agg),
         sort=sort,
@@ -2425,46 +2524,147 @@ def tile(
     return Chart(spec, records, ref, info)
 
 
+_TABLE_GROUPBY_KEYS = ("columns", "value", "agg")
+
+
+def _parse_table_groupby(df, groupby):
+    """校验 table 的 groupby 参数，返回规范化的 dict。"""
+    if not isinstance(groupby, dict):
+        raise ValueError(
+            'groupby 需要是字典，例如 groupby={"columns": ["大区"], "value": "销售额", "agg": "sum"}。'
+        )
+    unknown = [str(k) for k in groupby if k not in _TABLE_GROUPBY_KEYS]
+    if unknown:
+        raise ValueError(
+            'groupby 只支持 columns / value / agg 三个键，收到未知键：%s。'
+            % "、".join(sorted(unknown))
+        )
+    dims = groupby.get("columns")
+    if dims is None:
+        raise ValueError(
+            'groupby 需要 columns（按哪些列分组），例如 groupby={"columns": ["大区"], "value": "销售额"}。'
+        )
+    dims = [c for c in _as_list(dims) if c is not None]
+    if not dims:
+        raise ValueError("groupby 的 columns 不能为空：至少指定 1 个分组列。")
+    _require_cols(df, [("groupby.columns[%d]" % i, c) for i, c in enumerate(dims)])
+
+    value = groupby.get("value")
+    if isinstance(value, (list, tuple)):
+        if len(value) != 1:
+            raise ValueError(
+                "groupby 的 value 只能是一列（汇总哪一列数值），收到 %d 列。" % len(value)
+            )
+        value = value[0]
+    if value is not None:
+        _require_cols(df, [("groupby.value", value)])
+        if value in dims:
+            raise ValueError(
+                "groupby 的 value（%r）不能同时出现在 columns 里：同一列不能既分组又求和。"
+                % (value,)
+            )
+
+    agg = groupby.get("agg")
+    if agg is None:
+        agg = "count" if value is None else "sum"
+    if not isinstance(agg, str):
+        raise ValueError("groupby 的 agg 需要是字符串，可选：%s。" % "、".join(AGGS))
+    agg = agg.lower()
+    if agg not in AGGS:
+        raise ValueError(
+            "groupby 的 agg=%r 不支持，可选：%s。" % (agg, "、".join(AGGS))
+        )
+    if value is None and agg != "count":
+        raise ValueError(
+            'groupby 没给 value 时 agg 只能是 "count"（按组计数），收到 agg=%r。' % (agg,)
+        )
+    return {
+        "columns": [str(c) for c in dims],
+        "value": str(value) if value is not None else None,
+        "agg": agg,
+    }
+
+
 def table(
     data,
     columns=None,
     *,
+    groupby=None,
     limit=100,
     title=None,
     subtitle=None,
     fmt="compact",
     height=400,
+    abs_height=False,
     theme="light",
     link=None,
     max_rows=200,
 ):
-    """明细表（HTML 渲染）：把 DataFrame 前若干行渲染成表格。
+    """表格（HTML 渲染）：明细表或按 groupby 汇总后的透视表。
+
+    两种用法：
+
+    - 明细：``table(df, columns=["月份", "大区", "销售额"])`` 逐行展示原始数据。
+    - 汇总：``table(df, groupby={"columns": ["大区"], "value": "销售额", "agg": "sum"})``
+      按 ``columns`` 分组，对 ``value`` 做 ``agg`` 聚合后每行显示一个分组。
+
+    ``groupby`` 是字典，只有三个键：
+
+    - ``columns``：分组维度列（1 列或多列）。
+    - ``value``：汇总的数值列；不给则按组计数（此时 ``agg`` 只能是 ``count``）。
+    - ``agg``：聚合方式，可选 sum / mean / count / max / min / median，默认 ``sum``。
+
+    汇总只发生在**显示层**：联动筛选后表格里显示的是「筛选后数据的汇总」，
+    后台数据与其它图表的联动值不受影响。
 
     为控制页面体积，最多嵌入 200 行、展示 ``limit`` 行（上限 200）。
 
     示例
     ----
     >>> eazy_data_viz.charts_extra.table(df, columns=["月份", "大区", "销售额"], limit=50)
+    >>> eazy_data_viz.charts_extra.table(
+    ...     df, groupby={"columns": ["大区"], "value": "销售额", "agg": "sum"})
     """
     df = _frame.ensure_frame(data)
-    if columns is None:
+    group = None
+    if groupby is not None:
+        if columns is not None:
+            raise ValueError(
+                "table 的 columns 参数已由 groupby 取代：要明细就只传 columns，"
+                '要汇总就只传 groupby={"columns": [...], "value": "...", "agg": "sum"}，不要同时传。'
+            )
+        group = _parse_table_groupby(df, groupby)
+        if group["value"] is not None:
+            df = _coerce_numeric(df, [("groupby.value（汇总数值）", group["value"])])
+        columns = list(group["columns"])
+        if group["value"] is not None:
+            columns.append(group["value"])
+    elif columns is None:
         columns = [c for c in df.columns][:12]
     else:
         columns = [c for c in _as_list(columns) if c is not None]
+
     if not columns:
         raise ValueError(
             'table 需要至少 1 列，例如 table(df, columns=["月份", "销售额"])。'
         )
-    _require_cols(df, [("columns[%d]" % i, c) for i, c in enumerate(columns)])
+    if group is None:
+        _require_cols(df, [("columns[%d]" % i, c) for i, c in enumerate(columns)])
     if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
         raise ValueError("limit 需要是 >=1 的整数（最多显示多少行），收到 %r" % (limit,))
     show_limit = int(min(limit, 200))
     embed_rows = int(min(int(max_rows), 200))
+
+    extra = {
+        "columns": [str(c) for c in columns],
+        "limit": show_limit,
+        "groupby": group,
+    }
     spec, records, ref, info = _ext(
         "table",
         df,
-        {"columns": list(columns)},
-        title=title if title is not None else "明细数据",
+        {"columns": list(columns), "value": group["value"] if group else None},
+        title=title if title is not None else ("汇总数据" if group else "明细数据"),
         subtitle=subtitle,
         xtitle=None,
         ytitle=None,
@@ -2472,8 +2672,9 @@ def table(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
-        agg="sum",
+        agg=group["agg"] if group else "sum",
         sort=None,
         top_n=None,
         legend=False,
@@ -2482,8 +2683,7 @@ def table(
         drill=None,
         link=link,
         max_rows=embed_rows,
-        columns=[str(c) for c in columns],
-        limit=show_limit,
+        **extra
     )
     return Chart(spec, records, ref, info)
 
@@ -2500,6 +2700,7 @@ def wordcloud(
     subtitle=None,
     fmt="compact",
     height=360,
+    abs_height=False,
     theme="light",
     link=None,
     max_rows=_frame.MAX_ROWS,
@@ -2533,6 +2734,7 @@ def wordcloud(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if values is None else agg),
         sort=sort,
@@ -2562,6 +2764,7 @@ def group_kpi(
     title=None,
     subtitle=None,
     height=140,
+    abs_height=False,
     theme="light",
 ):
     """KPI 卡片组（HTML 渲染）：一排指标卡片。
@@ -2693,6 +2896,7 @@ def group_kpi(
         subtitle=subtitle,
         theme=theme,
         height=height,
+        abs_height=abs_height,
         fmt=fmt,
         agg=agg,
         top_n=int(top_n),

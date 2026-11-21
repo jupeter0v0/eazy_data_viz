@@ -60,6 +60,7 @@ def dumbbell(
 | `ylim` | `tuple[float, float]` | `None` | 否 | 数值轴范围 |
 | `fmt` | `str` | `'compact'` | 否 | 数值格式：compact / thousands / raw / percent / currency |
 | `height` | `int` | `380` | 否 | 画布高度（像素，≥120） |
+| `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
 | `theme` | `str` | `'light'` | 否 | light / dark |
 | `legend` | `bool` | `True` | 否 | 是否显示图例 |
 | `zoom` | `bool \| str` | `'auto'` | 否 | 缩放条（本图不支持） |
@@ -190,6 +191,12 @@ def dumbbell(
 - **说明**：最小 120；传 `None` 回落到 380。每行哑铃约占 30~40px。
 - **取值建议**：4~8 个类目用 380；10 个以上用 460~560。
 - **报错**：`height=100` → `ValueError: height 至少 120（像素），收到 100`
+
+### `abs_height` — 绝对高度：`height` 就是整个组件外框（`bool`，默认 `False`）
+
+- **作用**：默认 `height` 只算图表正文，标题 / 副标题 / 联动工具条会把卡片额外撑高，同一行里一张带长标题、一张带工具条的卡片底边就对不齐。打开 `abs_height=True` 后 `height` 表示**整个组件外框**（内边距、标题、工具条都算在里面），正文用剩余空间自适应。
+- **建议**：在 `dashboard` / `show` 里要「框和框严格对齐」时打开；单图导出或不在意卡片底边时保持默认。
+- **示例**：`abs_height=True, height=320`（配合 `dashboard(..., cols=2)` 看两张卡的底边）
 
 ### `theme` — 主题
 

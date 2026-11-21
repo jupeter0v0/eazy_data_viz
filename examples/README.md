@@ -22,5 +22,5 @@ streamlit run examples/streamlit_app.py   # Streamlit 内嵌
 | `drill_link.py` | 三级下钻、四图联动、KPI 联动重算 |
 | `streamlit_app.py` | `st.components.v1.html` 嵌入 + 侧栏控件 |
 
-想直接看效果，也可以打开仓库根目录的 `gallery.html`：64 张卡片、45 种图表，
+想直接看效果，也可以打开仓库根目录的 `gallery.html`：73 张卡片、49 种图表，
 每张卡片右上角「代码」按钮会展开生成该图的完整 Python 代码。

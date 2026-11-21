@@ -380,6 +380,34 @@ def main():
                                  color="负责部门", title="甘特图：项目计划", height=420), s))
 
     # ------------------------------------------------------------------
+    # ⑨ 1.5 新增
+    # ------------------------------------------------------------------
+    s = "⑨ 1.5 新增 · 自由排列 / 汇总表 / 多级桑基 / 同比 / 联动方向"
+    sections.append(_sec(X.sankey(df, path=["大区", "渠道", "产品"], value="销售额",
+                                  title="多级桑基：大区 → 渠道 → 产品（path 相邻层自动成边）",
+                                  height=460), s))
+    sections.append(_sec(X.table(df, groupby={"columns": ["大区", "渠道"], "value": "销售额",
+                                              "agg": "sum"},
+                                 limit=12, height=380,
+                                 title="汇总表：groupby 只在显示层汇总，联动时仍用后台明细"), s))
+    _m = df.groupby("月份", as_index=False)["销售额"].sum()
+    _prev = _m.copy()
+    _prev["年份"] = "2025"
+    _prev["销售额"] = (_prev["销售额"] * 0.86).round(2)
+    _cur = _m.copy()
+    _cur["年份"] = "2026"
+    yoy_df = pd.concat([_prev, _cur], ignore_index=True)
+    sections.append(_sec(eazy_data_viz.bar(yoy_df, x="月份", y="销售额", color="年份",
+                                  yoy=True, height=380,
+                                  title="同比：2026 vs 2025（柱顶标注增长率）"), s))
+    sections.append(_sec(eazy_data_viz.bar(df, x="大区", y="销售额", color="渠道",
+                                  link=("g15out", "out"), height=360,
+                                  title="单向出：点它只联动别人，自己不过滤"), s))
+    sections.append(_sec(eazy_data_viz.bar(df, x="大区", y="销售额", color="渠道",
+                                  link=("g15out", "in"), height=360,
+                                  title="单向进：只接收联动，点它不会改同组图表"), s))
+
+    # ------------------------------------------------------------------
     # ⑧ 配色库
     # ------------------------------------------------------------------
     s = "⑧ 配色库 · 一个 .palette() 换整套配色"
@@ -421,7 +449,7 @@ def main():
     dashboard = eazy_data_viz.dashboard(
         *sections, cols=2,
         title="eazy_data_viz · 经营驾驶舱组件总览",
-        desc="pandas → 单文件 HTML · Material Design 3 · 48 种图表 · 点击卡片右上角「代码」"
+        desc="pandas → 单文件 HTML · Material Design 3 · 49 种图表 · 点击卡片右上角「代码」"
              "可查看生成该图的完整 Python 代码 · 点击图形可下钻 / 联动",
     )
     html = dashboard.to_html(inline=True)

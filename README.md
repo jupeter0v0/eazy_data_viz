@@ -1,6 +1,6 @@
 # eazy_data_viz · pandas 经营驾驶舱图表组件库
 
-> 给 pandas 用的 **HTML 交互式图表库**：48 种图表、Material Design 3 视觉、
+> 给 pandas 用的 **HTML 交互式图表库**：49 种图表、Material Design 3 视觉、
 > 客户端下钻与联动、Streamlit 兼容、离线可用。调用方式只有一个原则——
 > **传 DataFrame + 列名**，不写 JSON、不写配置。
 
@@ -18,7 +18,7 @@ edv.bar(df, x="大区", y="销售额", color="产品").show()
 | --- | --- |
 | ![画廊](docs/images/gallery_code.png) | ![Streamlit](docs/images/gallery_streamlit.png) |
 
-完整的 64 张卡片效果见 [docs/images/gallery_preview.png](docs/images/gallery_preview.png)，
+完整的 73 张卡片效果见 [docs/images/gallery_preview.png](docs/images/gallery_preview.png)，
 也可以直接打开仓库根目录的 `gallery.html` 离线浏览。
 
 ---
@@ -27,8 +27,9 @@ edv.bar(df, x="大区", y="销售额", color="产品").show()
 
 | 能力 | 说明 |
 | --- | --- |
-| **48 种图表** | 从 KPI 卡、瀑布图、帕累托、子弹图，到桑基图、旭日图、K 线、甘特图、相关矩阵 |
-| **下钻 / 联动** | 点击柱形逐级下钻（大区 → 省份 → 城市），同组图表点击即交叉筛选；**全部在浏览器内完成**，不触发服务器往返 |
+| **49 种图表** | 从 KPI 卡、瀑布图、帕累托、子弹图，到桑基图、旭日图、K 线、甘特图、相关矩阵 |
+| **下钻 / 联动** | 点击柱形逐级下钻（大区 → 省份 → 城市），同组图表点击即交叉筛选，可按需设成**双向 / 单向进 / 单向出**；**全部在浏览器内完成**，不触发服务器往返 |
+| **自由排列看板** | `layout=` / `direction=` 按“第一列 1 张、第二列 3 张”分配，或 `grid=(3,3)` 配 `[[2,2],[1,1]]` 按格子占位，排出非等宽驾驶舱；整块网格拼成严丝合缝的矩形，配 `abs_height=True` 还能让框与框严格等高 |
 | **Material Design 3** | Google 配色与排版（Roboto、Google Blue `#1a73e8`、8/12px 圆角、卡片阴影、深浅两套主题） |
 | **调用极简** | 只有 `图表函数(df, x=..., y=...)`，自动识别数值 / 时间 / 分类列、自动排序、自动标题 |
 | **Streamlit 兼容** | 优先 `st.components.v2`（无 iframe、自动高度、点击回传 Python），旧版自动回退 `components.v1.html` |
@@ -44,7 +45,7 @@ edv.bar(df, x="大区", y="销售额", color="产品").show()
 
 | 文档 | 内容 |
 | --- | --- |
-| [README.md](README.md)（本文件） | 人读：安装、48 种图表、KPI、配色、交互、Streamlit、FAQ |
+| [README.md](README.md)（本文件） | 人读：安装、49 种图表、KPI、配色、交互、Streamlit、FAQ |
 | [docs/AI_GUIDE.md](docs/AI_GUIDE.md) | 给 AI 的说明书：规则、选图决策表、签名 + 可运行示例、错误对照 |
 | [docs/eazy_catalog.json](docs/eazy_catalog.json) | 机器可读目录（46 个图表条目的签名/参数/示例），由 `tools/gen_ai_doc.py` 生成 |
 | [docs/EXTRA_CHARTS.md](docs/EXTRA_CHARTS.md) | 扩展图表契约（Python spec ⇄ JS builder），加新图看这份 |
@@ -98,7 +99,7 @@ edv.show(
 )
 ```
 
-`edv.help()` 会打印 48 种图表的速查表；`edv.gallery()` 启动 Streamlit 版画廊。
+`edv.help()` 会打印 49 种图表的速查表；`edv.gallery()` 启动 Streamlit 版画廊。
 
 更多可运行示例见 [`examples/`](examples)：`cockpit.py`（完整驾驶舱）、`kpi_cards.py`、
 `palettes.py`、`drill_link.py`、`streamlit_app.py`。
@@ -303,6 +304,7 @@ edv.palettes()                                                # 列出所有配�
 
 - **下钻**：`drill=["大区","省份","城市"]`，点击柱形进入下一层，顶部面包屑可回退任意层。
 - **联动**：`link="g1"`，点击任一图的柱 / 点 / 扇区，同组图表一起过滤；顶部出现筛选 chip，再点一次取消；顶栏「重置联动」清空全部。
+  需要单向时写 `link=("g1", "out")`（只推不接）或 `link=("g1", "in")`（只接不推），详见 [06 · 交互与联动](docs/guides/06-interaction.md)。
 - **图例筛选**：点击图例显示 / 隐藏系列（跨图同步）。
 - **缩放**：`zoom=True` 或数据量大时自动出现底部滑块，滚轮可缩放。
 - **主题切换**：顶栏 ◐ 在 light / dark 之间实时切换，图表与页面一起变。
@@ -368,7 +370,7 @@ edv.show(...).save("dashboard.html")
 
 得到一个自包含 `.html`（约 1.4 MB / 50 张图，ECharts 内联），双击即可打开、离线可用。
 这也正是仓库根目录 `gallery.html` 的生成方式：`python tools/build_gallery.py`。
-画廊里 **68 张卡片 / 48 种图表**，每张卡片右上角「代码」按钮会展开生成该图的完整
+画廊里 **73 张卡片 / 49 种图表**，每张卡片右上角「代码」按钮会展开生成该图的完整
 Python 代码（由构建脚本自动录制，和实际出图代码完全一致），可一键复制。
 
 ---

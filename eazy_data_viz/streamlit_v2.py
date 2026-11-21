@@ -172,7 +172,8 @@ def component_html_placeholder():
 
 
 def render_dashboard(charts, *, title=None, desc=None, cols=None, theme=None,
-                     palette=None, height=None, key=None, on_select=None):
+                     palette=None, height=None, key=None, on_select=None,
+                     layout=None, direction=None, grid=None):
     """在 Streamlit 页面里用 components v2 渲染一张看板。
 
     参数
@@ -201,7 +202,8 @@ def render_dashboard(charts, *, title=None, desc=None, cols=None, theme=None,
             "可以改用 st.components.v1.html(dashboard(...).to_html(), height=...)。"
         )
     frag = _render.build_fragment(
-        charts, title=title, desc=desc, cols=cols, theme=theme, palette=palette
+        charts, title=title, desc=desc, cols=cols, theme=theme, palette=palette,
+        layout=layout, direction=direction, grid=grid,
     )
     data = {
         "html": frag["html"],

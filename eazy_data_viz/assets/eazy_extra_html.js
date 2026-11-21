@@ -107,14 +107,75 @@
   };
 
   // ------------------------------------------------------------------
-  // table 明细表
+  // table 表格：明细表 / groupby 汇总表
   // ------------------------------------------------------------------
+  var AGG_LABELS = {
+    sum: '求和', mean: '平均', count: '计数', max: '最大', min: '最小', median: '中位数'
+  };
+
+  // 汇总表：按 groupby.columns 分组，对 groupby.value 做 groupby.agg 聚合。
+  // 聚合只发生在渲染层（rows 已经过联动筛选），不改变 dataStore 里的原始数据。
+  function buildGroupedTable(spec, rows, kinds) {
+    var g = spec.groupby || {};
+    var dims = g.columns || [];
+    var measure = g.value || null;
+    var how = g.agg || (measure ? 'sum' : 'count');
+    var limit = Math.min(spec.limit || 100, 500);
+    var groups = U.groupBy(rows, dims, measure, how);
+    groups.sort(function (a, b) {
+      var av = a.value, bv = b.value;
+      if (av === null || av === undefined) return 1;
+      if (bv === null || bv === undefined) return -1;
+      return bv - av;
+    });
+    var numFmt = spec.fmt === 'compact' ? 'thousands' : spec.fmt;
+    var html = '<div class="eazy-table-wrap"><table class="eazy-table"><thead><tr>';
+    for (var c = 0; c < dims.length; c++) {
+      html += '<th>' + U.esc(dims[c]) + '</th>';
+    }
+    var head = measure ? measure : '记录数';
+    if (measure) head += '（' + (AGG_LABELS[how] || how) + '）';
+    html += '<th class="num">' + U.esc(head) + '</th>';
+    html += '</tr></thead><tbody>';
+    for (var i = 0; i < groups.length && i < limit; i++) {
+      var grp = groups[i];
+      html += '<tr>';
+      for (var d = 0; d < dims.length; d++) {
+        var kind = kinds[dims[d]];
+        var cell = grp.keys[d];
+        if (kind === 'time') cell = String(cell).slice(0, 16);
+        else cell = U.esc(U.catName(cell));
+        html += '<td>' + cell + '</td>';
+      }
+      var val = grp.value;
+      var text = (val === null || val === undefined) ? '—' : U.fmtValue(val, numFmt);
+      html += '<td class="num">' + text + '</td>';
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+    var more = '';
+    if (groups.length > limit) {
+      more = '共 ' + groups.length + ' 组，仅显示前 ' + limit + ' 组';
+    } else {
+      more = '共 ' + rows.length + ' 行，汇总为 ' + groups.length + ' 组';
+    }
+    if (rows.length > limit && groups.length <= limit) {
+      more = '基于 ' + rows.length + ' 行汇总，共 ' + groups.length + ' 组';
+    }
+    html += '<div class="eazy-table-more">' + more + '</div>';
+    return html;
+  }
+
   H['table'] = function (spec, data, state, theme) {
     var rows = U.filteredRows(spec, data, state);
     var cols = spec.columns || [];
+    var kinds = data.kinds || {};
+    if (spec.groupby) {
+      if (!rows.length) return '<div class="eazy-empty">当前条件下没有数据</div>';
+      return buildGroupedTable(spec, rows, kinds);
+    }
     if (!rows.length || !cols.length) return '<div class="eazy-empty">当前条件下没有数据</div>';
     var limit = Math.min(spec.limit || 100, 500);
-    var kinds = data.kinds || {};
     var html = '<div class="eazy-table-wrap"><table class="eazy-table"><thead><tr>';
     for (var c = 0; c < cols.length; c++) {
       var numCol = kinds[cols[c]] === 'num' || kinds[cols[c]] === 'time';

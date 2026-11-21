@@ -19,6 +19,7 @@ import shutil
 import sys
 
 from . import frame as _frame
+from . import layout as _layout
 from . import palette as _palette
 
 ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
@@ -156,6 +157,9 @@ def _script_tags(inline, prefix="eazy_assets"):
 # --------------------------------------------------------------------------
 def _card_height(spec):
     kind = spec.get("type")
+    if spec.get("absHeight"):
+        # 绝对高度：height 就是组件外框高度，标题 / toolbar 都算在框内。
+        return int(spec.get("height") or 380)
     head = 46 if (spec.get("title") or spec.get("subtitle")) else 8
     toolbar = 30 if (spec.get("drill") or spec.get("link")) else 0
     base = spec.get("height")
@@ -175,16 +179,22 @@ def _card_height(spec):
     return int(base or 380) + head + toolbar + 14
 
 
-def page_height(charts, cols=None, has_header=False, has_filters=False):
+def page_height(charts, cols=None, has_header=False, has_filters=False,
+                layout=None, direction=None, grid=None):
     """估算页面总高度，供 ``st.components.v1.html`` 使用。"""
     specs = [c.spec for c in charts]
     n = len(specs)
     if n == 0:
         return 200
-    cols = cols or (1 if n == 1 else 2)
-    rows = [specs[i: i + cols] for i in range(0, n, cols)]
-    total = sum(max(_card_height(s) for s in row) for row in rows)
-    total += 16 * max(0, len(rows) - 1)  # grid gap
+    plan = _prepare_layout(specs, layout=layout, direction=direction, grid=grid)
+    if plan is not None:
+        heights = [_card_height(s) for s in specs]
+        total = _layout.layout_height(plan, heights) + _layout.GAP
+    else:
+        cols = cols or (1 if n == 1 else 2)
+        rows = [specs[i: i + cols] for i in range(0, n, cols)]
+        total = sum(max(_card_height(s) for s in row) for row in rows)
+        total += 16 * max(0, len(rows) - 1)  # grid gap
     total += 40  # body padding
     if has_header:
         total += 60
@@ -261,6 +271,12 @@ html[data-theme=dark] .eazy-textbtn:hover{background:rgba(138,180,248,.12)}
 
 /* ---------- Card ---------- */
 .eazy-grid{display:grid;gap:16px;padding:16px 24px 0;align-items:start}
+.eazy-grid-free{grid-auto-rows:auto}
+/* 自由排列 A：方向 + 每行/列数量 */
+.eazy-flow{display:flex;gap:16px;padding:16px 24px 0;align-items:flex-start}
+.eazy-flow-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:16px}
+.eazy-flow-row{flex:1 1 0;min-width:0;display:flex;gap:16px}
+.eazy-flow-col>.eazy-card,.eazy-flow-row>.eazy-card{flex:0 0 auto}
 .eazy-section{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;
   margin:14px 2px -2px;font-family:"Google Sans",Roboto,sans-serif;
   font-size:16px;font-weight:500;letter-spacing:.1px;color:var(--pv-on-surface)}
@@ -271,6 +287,10 @@ html[data-theme=dark] .eazy-textbtn:hover{background:rgba(138,180,248,.12)}
   border:1px solid var(--pv-outline-var);border-radius:12px;padding:16px 18px 12px;
   box-shadow:0 1px 2px rgba(60,64,67,.08);transition:box-shadow .2s}
 .eazy-card:hover{box-shadow:0 1px 3px rgba(60,64,67,.16),0 4px 8px rgba(60,64,67,.08)}
+/* 绝对高度 / 等高列：外框高度已定，正文用 flex 撑满剩余空间（标题 / toolbar 不参与计算） */
+.eazy-card-fill{display:flex;flex-direction:column;box-sizing:border-box}
+.eazy-fill{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.eazy-fill>.eazy-chart,.eazy-fill>.eazy-kpi{flex:1 1 auto;min-height:0;width:100%}
 .eazy-card-head{margin:0 0 6px;display:flex;align-items:flex-start;gap:8px}
 .eazy-card-head>div{min-width:0;flex:1}
 .eazy-codebtn{margin-left:auto;flex:none;border:1px solid var(--pv-outline);background:transparent;
@@ -407,7 +427,14 @@ def _esc(text):
     return _html.escape("" if text is None else str(text))
 
 
-def _card_html(spec, index):
+def _card_html(spec, index, style=None, extra_height=0, box_height=None, fill=False):
+    """一张卡片的 HTML。
+
+    ``box_height``：给定时卡片外框就是这个像素高度（自由排列的网格模式
+    用它把整块网格铺成一个严丝合缝的矩形）；``fill=True`` 时卡片按
+    ``flex`` 拉伸填满所在列（方向模式的等高列）；``spec["absHeight"]``
+    表示用户传了 ``abs_height=True``，height 直接当外框高度。
+    """
     title = spec.get("title")
     subtitle = spec.get("subtitle")
     code = spec.get("code")
@@ -427,7 +454,16 @@ def _card_html(spec, index):
     # HTML 类组件（KPI/进度/瓦片/词云）按内容自适应高度，避免展开代码面板时压住正文；
     # table 需要固定高度才能内部滚动。
     AUTO_HEIGHT_TYPES = ("kpi", "group_kpi", "progress", "tile", "wordcloud")
-    if kind == "kpi":
+    natural = _card_height(spec) + extra_height
+    abs_height = bool(spec.get("absHeight"))
+    stretch = bool(fill or abs_height or box_height is not None)
+    if stretch:
+        # 拉伸模式：正文撑满卡片剩余空间，标题 / toolbar / 代码面板的高度不再需要手算。
+        inner = ('<div class="eazy-kpi" data-eazy-chart="%d"></div>' % index
+                 if kind == "kpi"
+                 else '<div class="eazy-chart" data-eazy-chart="%d"></div>' % index)
+        body = '<div class="eazy-fill">%s</div>' % inner
+    elif kind == "kpi":
         body = ('<div class="eazy-kpi" data-eazy-chart="%d" style="min-height:%dpx"></div>'
                 % (index, int(spec.get("height", 150))))
     elif kind in AUTO_HEIGHT_TYPES:
@@ -435,10 +471,10 @@ def _card_html(spec, index):
                 % (index, int(spec.get("height", 320))))
     elif kind in HTML_TYPES:
         body = ('<div class="eazy-chart" data-eazy-chart="%d" style="height:%dpx"></div>'
-                % (index, int(spec.get("height", 320))))
+                % (index, int(spec.get("height", 320)) + extra_height))
     else:
         body = ('<div class="eazy-chart" data-eazy-chart="%d" style="height:%dpx"></div>'
-                % (index, int(spec.get("height", 380))))
+                % (index, int(spec.get("height", 380)) + extra_height))
     code_block = ""
     if code:
         code_block = (
@@ -447,11 +483,128 @@ def _card_html(spec, index):
             '<button class="eazy-copybtn" type="button" data-eazy-copy="%d">复制</button></div>'
             '<pre><code>%s</code></pre></div>' % (index, index, _esc(code))
         )
+    if stretch:
+        if box_height is not None:
+            size_style = "height:%dpx" % int(box_height)
+        elif abs_height:
+            size_style = "height:%dpx" % (int(spec.get("height") or 380))
+        else:
+            size_style = "flex:1 1 %dpx;min-height:0" % natural
+        card_class = "eazy-card eazy-card-fill"
+    else:
+        size_style = "min-height:%dpx" % natural
+        card_class = "eazy-card"
     return (
-        '<section class="eazy-card" style="min-height:%dpx">%s'
+        '<section class="%s" style="%s%s">%s'
         '<div class="eazy-toolbar" data-eazy-toolbar="%d"></div>%s%s</section>'
-        % (_card_height(spec), head, index, body, code_block)
+        % (
+            card_class,
+            size_style,
+            (";" + style) if style else "",
+            head,
+            index,
+            body,
+            code_block,
+        )
     )
+
+
+def _grid_markup(specs, layout, cols):
+    """把卡片组装成网格容器（默认等宽网格 / 自由排列）。
+
+    ``layout`` 为 :func:`eazy_data_viz.layout.parse_layout` 的返回值；``None``
+    表示沿用等宽 ``cols`` 网格。
+    """
+    if layout is None:
+        parts, last_section = [], None
+        for i, spec in enumerate(specs):
+            sec = spec.get("section")
+            if sec and sec != last_section:
+                parts.append('<div class="eazy-section">%s</div>' % _esc(sec))
+                last_section = sec
+            parts.append(_card_html(spec, i))
+        return (
+            '<div class="eazy-grid" style="grid-template-columns:repeat(%d,minmax(0,1fr))">'
+            "%s</div>" % (cols, "\n".join(parts))
+        )
+
+    if layout["mode"] == "flow":
+        # 方向模式：外层一排「列」（或「行」），每列内部再纵向（横向）堆卡片。
+        cells = layout["cells"]
+        groups = {}
+        for i in range(len(specs)):
+            row, col = cells[i][0], cells[i][1]
+            key = col if layout["direction"] == "h" else row
+            groups.setdefault(key, []).append((row if layout["direction"] == "h" else col, i))
+        heights = [_card_height(s) for s in specs]
+        blocks = []
+        if layout["direction"] == "h":
+            # 各列拉到同样高：整块看板的下沿对齐，卡片按自然高度比例分摊多出来的空间。
+            totals = {}
+            for key, items in groups.items():
+                totals[key] = sum(heights[i] for _k, i in items) + _layout.GAP * (len(items) - 1)
+            target = int(round(max(totals.values()))) if totals else 0
+            for key in sorted(groups):
+                items = sorted(groups[key])
+                inner = "\n".join(
+                    # 传了 abs_height 的卡片保持用户要的框高，其余卡片拉伸填满列
+                    _card_html(specs[i], i, fill=not specs[i].get("absHeight"))
+                    for _k, i in items
+                )
+                blocks.append(
+                    '<div class="eazy-flow-col" style="height:%dpx">%s</div>' % (target, inner)
+                )
+        else:
+            # 行模式：同一行的卡片等高（行与行之间可以不同高）。
+            for key in sorted(groups):
+                items = sorted(groups[key])
+                row_h = int(round(max(heights[i] for _k, i in items)))
+                inner = "\n".join(
+                    _card_html(specs[i], i,
+                               box_height=None if specs[i].get("absHeight") else row_h)
+                    for _k, i in items
+                )
+                blocks.append(
+                    '<div class="eazy-flow-row" style="height:%dpx">%s</div>' % (row_h, inner)
+                )
+        return '<div class="eazy-flow">%s</div>' % "\n".join(blocks)
+
+    # 网格占位模式：每张卡片显式指定 grid-row / grid-column；
+    # 行高由 grid_row_heights 算好，让整块网格正好铺满一个矩形（没有缺角）。
+    heights = [_card_height(s) for s in specs]
+    raw_rows, _raw_boxes = _layout.grid_row_heights(layout, heights)
+    rows = [int(round(r)) for r in raw_rows]
+    parts = []
+    for i, spec in enumerate(specs):
+        row, col, row_span, col_span = layout["cells"][i]
+        style = "grid-column:%d / span %d;grid-row:%d / span %d" % (
+            col + 1, col_span, row + 1, row_span,
+        )
+        box = sum(rows[row:row + row_span]) + _layout.GAP * (row_span - 1)
+        parts.append(_card_html(spec, i, style=style, box_height=box))
+    return (
+        '<div class="eazy-grid eazy-grid-free" style="grid-template-columns:'
+        'repeat(%d,minmax(0,1fr));grid-template-rows:%s">%s</div>'
+        % (
+            layout["cols"],
+            " ".join("%dpx" % r for r in rows),
+            "\n".join(parts),
+        )
+    )
+
+
+def _prepare_layout(specs, layout=None, direction=None, grid=None):
+    """解析布局参数并做「section 不支持自定义排列」等前置校验。"""
+    plan = _layout.parse_layout(len(specs), layout=layout, direction=direction, grid=grid)
+    if plan is not None:
+        for i, spec in enumerate(specs):
+            if spec.get("section"):
+                raise ValueError(
+                    "自定义排列（layout / direction / grid）暂不支持 section 分节："
+                    "第 %d 张图设置了 section=%r。请改用 title / subtitle 区分，"
+                    "或去掉自由排列参数。" % (i + 1, spec.get("section"))
+                )
+    return plan
 
 
 #: 最近一次 v2 渲染失败的原因（调试用；成功时为 None）。
@@ -459,7 +612,7 @@ _LAST_STREAMLIT_ERROR = None
 
 
 def streamlit_show(charts, cols=2, title=None, desc=None, theme=None, palette=None,
-                   key=None, on_select=None):
+                   key=None, on_select=None, layout=None, direction=None, grid=None):
     """在 Streamlit 页面里渲染一张或多张图，返回实际使用的模式（``"v2"`` / ``"v1"``）。
 
     优先使用 ``st.components.v2``（无 iframe、高度按内容自适应、图表点击可回传
@@ -483,6 +636,9 @@ def streamlit_show(charts, cols=2, title=None, desc=None, theme=None, palette=No
                 palette=palette,
                 key=key,
                 on_select=on_select,
+                layout=layout,
+                direction=direction,
+                grid=grid,
             )
             _LAST_STREAMLIT_ERROR = None
             return "v2"
@@ -496,21 +652,27 @@ def streamlit_show(charts, cols=2, title=None, desc=None, theme=None, palette=No
         cols=cols,
         has_header=bool(title or desc),
         has_filters=any(c.spec.get("link") for c in charts),
+        layout=layout,
+        direction=direction,
+        grid=grid,
     )
     html = build_page(
         charts, inline=True, title=title, cols=cols, theme=theme, desc=desc,
-        palette=palette,
+        palette=palette, layout=layout, direction=direction, grid=grid,
     )
     components.html(html, height=height, scrolling=False)
     return "v1"
 
 
 def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None,
-               palette=None):
+               palette=None, layout=None, direction=None, grid=None):
     """把一组 Chart 组装成一个完整 HTML 文档字符串。
 
     ``palette`` 指定页面默认配色（google / antd / tableau / carbon / echarts /
     morandi / tailwind）；单图可以用 ``Chart.palette()`` 覆盖。
+
+    ``layout`` / ``direction`` / ``grid`` 是 1.5 的自由排列参数，见
+    :func:`eazy_data_viz.layout.parse_layout`。
     """
     if isinstance(charts, (list, tuple)):
         charts = list(charts)
@@ -524,6 +686,10 @@ def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None
     n = len(charts)
     cols = int(cols) if cols else (1 if n == 1 else min(2, n))
     cols = max(1, min(cols, 6))
+    plan = _prepare_layout([c.spec for c in charts], layout=layout,
+                           direction=direction, grid=grid)
+    if plan is not None:
+        cols = plan["cols"]
 
     # 数据去重：同一份 DataFrame 只嵌入一次
     data_store = {}
@@ -558,16 +724,10 @@ def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None
                    '<button class="eazy-textbtn" data-eazy-reset title="清除所有联动筛选">重置联动</button>'
                    '</div></header>' % "".join(opts))
 
-    card_parts, last_section = [], None
-    for _i, _s in enumerate(specs):
-        sec = _s.get("section")
-        if sec and sec != last_section:
-            card_parts.append('<div class="eazy-section">%s</div>' % _esc(sec))
-            last_section = sec
-        card_parts.append(_card_html(_s, _i))
-    cards = "\n".join(card_parts)
+    cards = _grid_markup(specs, plan, cols)
 
-    page = {"theme": theme, "palette": palette, "charts": specs, "links": []}
+    page = {"theme": theme, "palette": palette, "charts": specs, "links": [],
+            "layout": plan}
     maps = _map_payload(specs)
     cities = _cities_payload() if maps else {}
     payload = {"maps": _frame.to_json(maps) if maps else "{}",
@@ -591,9 +751,7 @@ def build_page(charts, inline=True, title=None, cols=None, theme=None, desc=None
 <div class="eazy-root">
 {header}
 {filters}
-<div class="eazy-grid" style="grid-template-columns:repeat({cols},minmax(0,1fr))">
 {cards}
-</div>
 </div>
 <script>window.EAZY_MAPS = {maps};window.EAZY_CITIES = {cities};window.EAZY_DATA = {data};window.EAZY_PAGE = {page};</script>
 {scripts}
@@ -648,7 +806,8 @@ def _scope_css(css):
     return out
 
 
-def build_fragment(charts, title=None, desc=None, cols=None, theme=None, palette=None):
+def build_fragment(charts, title=None, desc=None, cols=None, theme=None, palette=None,
+                   layout=None, direction=None, grid=None):
     """组装 components.v2 组件所需的三部分：HTML 片段、CSS、data。
 
     返回值是 dict：
@@ -704,14 +863,11 @@ def build_fragment(charts, title=None, desc=None, cols=None, theme=None, palette
                    '<button class="eazy-textbtn" data-eazy-reset title="清除所有联动筛选">重置联动</button>'
                    '</div></header>' % "".join(opts))
 
-    card_parts, last_section = [], None
-    for _i, _s in enumerate(specs):
-        sec = _s.get("section")
-        if sec and sec != last_section:
-            card_parts.append('<div class="eazy-section">%s</div>' % _esc(sec))
-            last_section = sec
-        card_parts.append(_card_html(_s, _i))
-    cards = "\n".join(card_parts)
+    plan = _prepare_layout(specs, layout=layout, direction=direction, grid=grid)
+    if plan:
+        cols = plan["cols"]
+
+    cards = _grid_markup(specs, plan, cols)
 
     filters = ""
     if has_filters:
@@ -719,10 +875,10 @@ def build_fragment(charts, title=None, desc=None, cols=None, theme=None, palette
                    '<span class="eazy-filters-label">联动筛选</span></div>')
 
     markup = ('<div class="eazy-root" data-theme="%s" data-palette="%s">%s'
-              '<div class="eazy-grid" style="grid-template-columns:repeat(%d,minmax(0,1fr))">'
-              '%s</div></div>' % (theme, palette, header + filters, cols, cards))
+              '%s</div>' % (theme, palette, header + filters, cards))
 
-    page = {"theme": theme, "palette": palette, "charts": specs, "links": []}
+    page = {"theme": theme, "palette": palette, "charts": specs, "links": [],
+            "layout": plan}
     maps = _map_payload(specs)
     cities = _cities_payload() if maps else {}
     return {
@@ -733,6 +889,7 @@ def build_fragment(charts, title=None, desc=None, cols=None, theme=None, palette
         "maps": maps,
         "cities": cities,
         "cols": cols,
+        "layout": plan,
         "has_filters": has_filters,
     }
 
@@ -740,7 +897,7 @@ class Dashboard:
     """多图看板：把多张图放进同一个 HTML 文档，联动/下钻才能跨图生效。"""
 
     def __init__(self, charts, cols=2, title=None, desc=None, theme=None, inline=True,
-                 palette=None):
+                 palette=None, layout=None, direction=None, grid=None):
         charts = list(charts)
         if not charts:
             raise ValueError("dashboard 至少需要一张图。")
@@ -751,6 +908,9 @@ class Dashboard:
         self.theme = theme
         self.palette = _palette.check(palette) if palette else _palette.current()
         self.inline = inline
+        self.layout = layout
+        self.direction = direction
+        self.grid = grid
 
     # ---- 展示 -----------------------------------------------------------
     def to_html(self, inline=None):
@@ -762,6 +922,9 @@ class Dashboard:
             cols=self.cols,
             theme=self.theme,
             palette=self.palette,
+            layout=self.layout,
+            direction=self.direction,
+            grid=self.grid,
         )
 
     def save(self, path, inline=None):
@@ -785,6 +948,9 @@ class Dashboard:
                 desc=self.desc,
                 theme=self.theme,
                 palette=getattr(self, "palette", None),
+                layout=self.layout,
+                direction=self.direction,
+                grid=self.grid,
             )
             self._print_warnings()
             return self

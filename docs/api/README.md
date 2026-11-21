@@ -48,13 +48,14 @@ chart.palette("tableau").save("examples/output/api-chart.html")
 | `sort` | 排序：`desc` / `asc` / `none` / `x`；不传时按图表类型自动（时间轴 `x`、`bar` 降序） | `None`（自动） |
 | `top_n` | 只保留前 N 项，其余合并为「其他」（「其他」不可点击下钻） | `None` |
 | `height` | 图表高度（像素），最小 120 | `380`（各图不同：KPI 150、gauge 260、calendar 300、pie/histogram 360、heatmap/combo/table 400、treemap 420、gantt/candlestick 420、sunburst/tree 460、地图 460） |
+| `abs_height` | `True` 时 `height` 变成**整个组件外框**的高度（含标题、副标题、联动工具条），正文自适应剩余空间——同一行里标题长短不一时框底能对齐 | `False`（`height` 只算正文） |
 | `theme` | `light` / `dark`。看板内以第一张图的主题为准，页面右上角可运行时切换 | `"light"` |
 | `legend` | 是否显示图例；图例可点选过滤系列 | `True`（部分图为 `False`，如 `waterfall`、`bullet`） |
 | `labels` | 是否在图形上直接显示数值标签 | `False`（`pie`/`funnel`/`gantt`/`geo_map` 等默认 `True`） |
 | `zoom` | 数据缩放条：`"auto"`（类目/数据点多时出现）/ `True` / `False` | `"auto"`（部分图为 `False`） |
 | `palette` | 单图配色库名，覆盖页面默认配色（地图函数暴露此参数） | `None`（跟随页面） |
 | `drill` | 下钻层级列名列表，如 `drill=["大区", "省份", "城市"]`；点击图形逐级下钻，面包屑返回 | `None` |
-| `link` | 联动组名：同一页内相同 `link` 的图互相筛选；要求组内使用同名维度列；KPI 传 `link` 后数字随筛选重算 | `None` |
+| `link` | 联动组名：同一页内相同 `link` 的图互相筛选；要求组内使用同名维度列；KPI 传 `link` 后数字随筛选重算。1.5 起可带方向：`link="g1"` 双向、`("g1", "out")` 单向出、`("g1", "in")` 单向进，也接受 `{"group": "g1", "direction": "out"}` | `None` |
 | `section` | 看板分区标题：`dashboard()` 在连续图表前插入分区，用于把页面切成几段 | `None` |
 | `max_rows` | 嵌入数据前最多保留多少行；超过时按行位置**均匀采样**（`np.linspace`），`None` 表示不采样；`table` 默认 200 | `200000` |
 
@@ -129,7 +130,7 @@ chart.palette("tableau").save("examples/output/api-chart.html")
 | [`radar`](radar.md) | 雷达图：多维评分对比 |
 | [`parallel`](parallel.md) | 平行坐标：多指标个体比较 |
 | [`quadrant`](quadrant.md) | 四象限散点：按中位数找重点客户 |
-| [`sankey`](sankey.md) | 桑基图：节点间流向与转化 |
+| [`sankey`](sankey.md) | 桑基图：`path=[...]` 多级流向与转化（两级也可用 `source`/`target`） |
 | [`graph`](graph.md) | 关系网络图：节点与边的关系 |
 | [`trend`](trend.md) | 趋势回归图：散点 + 拟合线 + R² |
 
@@ -137,7 +138,7 @@ chart.palette("tableau").save("examples/output/api-chart.html")
 
 | 函数 | 一句话用途 |
 | --- | --- |
-| [`table`](table.md) | 明细表：限行展示，可随联动过滤 |
+| [`table`](table.md) | 明细表 / 汇总表：`columns` 限行展示，`groupby` 按列汇总（汇总只在显示层，不影响联动数据） |
 | [`wordcloud`](wordcloud.md) | 词云：按数值大小排布的文本 |
 
 ### 地图与其它（4）
@@ -168,9 +169,11 @@ edv.dashboard(k, trend, region, detail, cols=2, title="经营驾驶舱",
               desc="2024 全年").save("examples/output/api-dashboard.html")
 ```
 
-* 函数：`edv.dashboard(*charts, cols=2, title=None, desc=None, theme=None, palette=None)`，返回 `Dashboard`，同样有 `to_html()` / `save()` / `show()`；也可以传一个图表列表。
+* 函数：`edv.dashboard(*charts, cols=2, title=None, desc=None, theme=None, palette=None,
+  layout=None, direction=None, grid=None)`，返回 `Dashboard`，同样有 `to_html()` / `save()` / `show()`；也可以传一个图表列表。
 * 简写：`edv.show(*charts, cols=2, ...)`；只有一张图时等同于 `Chart.show()`。
 * `cols` 为栅格列数（1–6）；带 `title`/`desc` 时出现页头、配色下拉、深色切换与「重置联动」按钮。
+* 等宽网格不够用时用自由排列：`direction="h"` + `layout=[1, 3]`（第一列 1 张、第二列 3 张，`"v"` 则按行算）是把页面切成非等宽列；`grid=(3, 3)` + `layout=[[2, 2], [1, 1]]` 是按格子占位（第一张占 2×2，第二张落到它的右上角）。两种写法与全部报错文案见 [15 · 自由排列](../guides/15-layout.md)。
 * 看板主题取第一张图的 `theme`，可在页头运行时切换；`palette` 参数指定整页配色。
 * 每张图可用 `section="分区名"` 分组，页面按图表顺序插入分区标题。
 * Streamlit 中 `Dashboard.show()` 会自动按 `page_height()` 计算 iframe 高度；若手动 `components.html(dash.to_html(), height=...)`，高度不足会出现裁剪（见 [12 · 常见问题](../guides/12-troubleshooting.md)）。

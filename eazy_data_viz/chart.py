@@ -38,6 +38,15 @@ __all__ = [
 AGGS = ("sum", "mean", "count", "max", "min", "median")
 FORMATS = ("compact", "thousands", "raw", "percent", "currency")
 
+# 联动方向别名（both=双向，out=单向出，in=单向进）
+_LINK_BOTH = frozenset(("both", "双", "双向", "all", "sync", "both-way"))
+_LINK_OUT = frozenset(
+    ("out", "outflow", "source", "出", "发起", "单向出", "只发起", "只出", "发送", "output")
+)
+_LINK_IN = frozenset(
+    ("in", "inflow", "sink", "进", "入", "接收", "单向进", "单向入", "只接收", "只进", "input")
+)
+
 # 各类图表里「必须是数值」的角色键；其余角色键一律按维度处理。
 _NUMERIC_ROLE_KEYS = {
     "bar": ("y",),
@@ -51,6 +60,12 @@ _NUMERIC_ROLE_KEYS = {
     "heatmap": ("value",),
     "box": ("y",),
     "treemap": ("value",),
+    "sankey": ("value",),
+    "sunburst": ("value",),
+    "tree": ("value",),
+    "graph": ("value",),
+    "theme_river": ("value",),
+    "table": ("value",),
 }
 
 _SEQ = [0]
@@ -215,6 +230,78 @@ _HEIGHT_DEFAULTS = {
 }
 
 
+def _parse_link(link):
+    """把 link 参数归一化成 (分组名, 方向)。
+
+    方向只有三种：
+
+    * ``both`` —— 双向联动（默认）；
+    * ``out``  —— 单向出：只有这张图能发起联动；
+    * ``in``   —— 单向进：这张图只接收联动，自己点击不联动。
+    """
+    if link is None or link is False:
+        return None, None
+
+    group = None
+    mode = None
+
+    if isinstance(link, str):
+        group = link
+    elif isinstance(link, (tuple, list)):
+        if len(link) > 2:
+            raise ValueError(
+                'link 元组最多两个元素（组名, 方向），例如 link=("g1", "out")，收到 %r。' % (link,)
+            )
+        if len(link) == 0:
+            raise ValueError('link 不能是空元组：至少给一个联动组名，例如 link="g1"。')
+        group = link[0]
+        if len(link) == 2:
+            mode = link[1]
+    elif isinstance(link, dict):
+        allowed = ("group", "name", "g", "direction", "mode", "dir")
+        unknown = [k for k in link if k not in allowed]
+        if unknown:
+            raise ValueError(
+                "link 字典只支持 group / name / direction / mode 四个键，收到未知键：%s。"
+                % "、".join(str(k) for k in unknown)
+            )
+        group = link.get("group", link.get("name", link.get("g")))
+        mode = link.get("direction", link.get("mode", link.get("dir")))
+        if group is None:
+            raise ValueError(
+                'link 字典需要 group 键（联动组名），例如 link={"group": "g1", "direction": "out"}。'
+            )
+    else:
+        raise ValueError(
+            'link 需要是字符串（联动组名）、("组名", "方向") 元组或者 {"group": ..., "direction": ...} 字典，收到 %r。'
+            % (link,)
+        )
+
+    if group is None or str(group).strip() == "":
+        raise ValueError('link 的分组名不能为空：给一个组名字符串，例如 link="g1"。')
+    group = str(group)
+
+    if mode is None:
+        mode = "both"
+    if not isinstance(mode, str):
+        raise ValueError(
+            'link 的方向只支持 "both"（双向）/ "out"（单向出）/ "in"（单向进），收到 %r。' % (mode,)
+        )
+    key = mode.strip().lower()
+    if key in _LINK_BOTH:
+        mode = "both"
+    elif key in _LINK_OUT:
+        mode = "out"
+    elif key in _LINK_IN:
+        mode = "in"
+    else:
+        raise ValueError(
+            'link 的方向只支持 "both"（双向）/ "out"（单向出）/ "in"（单向进），收到 %r。'
+            ' 别名可用：双向、单向出/发起、单向进/接收。' % (mode,)
+        )
+    return group, mode
+
+
 def _base_spec(
     kind,
     data,
@@ -228,6 +315,7 @@ def _base_spec(
     ylim,
     fmt,
     height,
+    abs_height=False,
     theme,
     agg,
     sort,
@@ -249,6 +337,8 @@ def _base_spec(
     if top_n is not None:
         if not isinstance(top_n, int) or isinstance(top_n, bool) or top_n < 1:
             raise ValueError("top_n 需要是 >=1 的整数（只显示前 N 项），收到 %r" % (top_n,))
+
+    link_group, link_mode = _parse_link(link)
 
     df = _frame.ensure_frame(data)
 
@@ -324,6 +414,7 @@ def _base_spec(
         "subtitle": subtitle,
         "theme": theme,
         "height": int(height if height is not None else _HEIGHT_DEFAULTS.get(kind, 380)),
+        "absHeight": bool(abs_height),
         "dataRef": ref,
         "roles": dict(roles),
         "agg": agg,
@@ -338,7 +429,8 @@ def _base_spec(
         "labels": bool(labels),
         "zoom": zoom,
         "drill": drill,
-        "link": link,
+        "link": link_group,
+        "linkMode": link_mode,
     }
     spec.update(extra)
     return spec, records, ref, {"warnings": warnings, "n_total": info["n_total"]}
@@ -376,8 +468,16 @@ _COMMON_DOC = """
         数据缩放条：auto 表示类目较多时自动出现。
     drill : list[str]
         下钻维度，例如 drill=["大区", "省份", "城市"]，点击图形逐级下钻。
-    link : str
+    link : str | tuple | dict
         联动组名。同一组内的图点击后会互相过滤（需要数据里有同名列）。
+        联动方向有三种写法：
+
+        * 双向（默认）：``link="g1"``，点哪张图都过滤另一张；
+        * 单向出：``link=("g1", "out")``，只有这张图能发起联动；
+        * 单向进：``link=("g1", "in")``，这张图只接收别人的过滤，自己点了不联动。
+
+        等价的字典写法：``link={"group": "g1", "direction": "out"}``。
+        方向别名：both/双向、out/单向出/发起、in/单向进/接收。
     max_rows : int
         单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。
 """
@@ -405,6 +505,7 @@ def bar(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     drill=None,
     link=None,
@@ -413,9 +514,10 @@ def bar(
     zoom="auto",
     max_rows=_frame.MAX_ROWS,
     percent=False,
+    yoy=False,
     section=None,
 ):
-    """柱状图 / 条形图（支持分组、堆叠、百分比、下钻、联动）。
+    """柱状图 / 条形图（支持分组、堆叠、百分比、同比、下钻、联动）。
 
     参数
     ----
@@ -426,12 +528,45 @@ def bar(
         数值列；不传则统计每个类目的行数（count）。
     color : str, 可选
         分组/图例列，例如 "地区"（会变成多条系列）。
+    yoy : bool, 默认 False
+        同比标记。打开后，如果图中恰好有 2 条 color 系列，就把
+        **类目值大的那条**当作本期、另一条当作上期，在每个柱子上标注
+        同比增长率、并在 tooltip 里给出对比说明。
+        例：``color="年份"``，数据里是 2025 / 2026 → 2026 同比 2025。
 
     示例
     ----
     >>> eazy_data_viz.bar(df, x="月份", y="销售额", color="地区", title="月度销售")
     >>> eazy_data_viz.bar(df, x="大区", y="销售额", horizontal=True, drill=["大区", "省份", "城市"])
+    >>> eazy_data_viz.bar(df, x="月份", y="销售额", color="年份", yoy=True)
     """
+    yoy_flag = None
+    if yoy:
+        if color is None:
+            raise ValueError(
+                'bar 的 yoy（同比）需要 color 参数：同比是按 color 列的两个取值对比的，'
+                '例如 color="年份"、数据里是 2025 / 2026 → 2026 同比 2025。'
+            )
+        df = _frame.ensure_frame(data)
+        _frame.require_column(df, color, "color（同比对比维度）")
+        kinds = [v for v in df[color].dropna().unique()]
+        if len(kinds) != 2:
+            yoy_flag = None
+            yoy_warning = (
+                "bar 打开了 yoy（同比），但 color 列 %r 有 %d 个取值（%s），"
+                "只有恰好 2 个取值时才做同比对比，本图按普通分组柱状图绘制。"
+                % (
+                    color,
+                    len(kinds),
+                    "、".join(str(k) for k in kinds[:4]) + ("…" if len(kinds) > 4 else ""),
+                )
+            )
+        else:
+            yoy_warning = None
+            yoy_flag = {"dim": str(color)}
+    else:
+        yoy_warning = None
+
     spec, records, ref, info = _base_spec(
         "bar",
         data,
@@ -444,6 +579,7 @@ def bar(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if y is None else agg),
         sort=sort,
@@ -457,8 +593,11 @@ def bar(
         stack=bool(stack),
         horizontal=bool(horizontal),
         percent=bool(percent) or None,
+        yoy=yoy_flag,
         section=section,
     )
+    if yoy_warning:
+        info.setdefault("warnings", []).append(yoy_warning)
     return Chart(spec, records, ref, info)
 
 
@@ -482,6 +621,7 @@ def line(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     drill=None,
     link=None,
@@ -511,6 +651,7 @@ def line(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort=sort,
@@ -550,6 +691,7 @@ def pie(
     subtitle=None,
     fmt="compact",
     height=360,
+    abs_height=False,
     theme="light",
     labels=True,
     link=None,
@@ -580,6 +722,7 @@ def pie(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if values is None else agg),
         sort=sort,
@@ -611,6 +754,7 @@ def scatter(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     link=None,
     legend=True,
@@ -634,6 +778,7 @@ def scatter(
         ylim=ylim,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort="none",
@@ -663,6 +808,7 @@ def histogram(
     ytitle="频数",
     fmt="compact",
     height=360,
+    abs_height=False,
     theme="light",
     labels=False,
     max_rows=_frame.MAX_ROWS,
@@ -692,6 +838,7 @@ def histogram(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg="count",
         sort="none",
@@ -722,6 +869,7 @@ def heatmap(
     ytitle=None,
     fmt="compact",
     height=400,
+    abs_height=False,
     theme="light",
     labels=False,
     max_rows=_frame.MAX_ROWS,
@@ -746,6 +894,7 @@ def heatmap(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort=sort,
@@ -771,6 +920,7 @@ def box(
     ytitle=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     max_rows=_frame.MAX_ROWS,
 ):
@@ -802,6 +952,7 @@ def box(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg="median",
         sort="none",
@@ -826,6 +977,7 @@ def funnel(
     agg="sum",
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     title=None,
     subtitle=None,
@@ -851,6 +1003,7 @@ def funnel(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=("count" if values is None else agg),
         sort="desc",
@@ -875,6 +1028,7 @@ def treemap(
     subtitle=None,
     fmt="compact",
     height=420,
+    abs_height=False,
     theme="light",
     max_rows=_frame.MAX_ROWS,
 ):
@@ -905,6 +1059,7 @@ def treemap(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort="desc",
@@ -929,6 +1084,7 @@ def gauge(
     fmt="raw",
     unit=None,
     height=260,
+    abs_height=False,
     theme="light",
     title=None,
     subtitle=None,
@@ -955,6 +1111,7 @@ def gauge(
         "subtitle": subtitle,
         "theme": theme,
         "height": int(height),
+        "absHeight": bool(abs_height),
         "dataRef": None,
         "roles": {},
         "agg": "sum",
@@ -998,6 +1155,7 @@ def kpi(
     prefix=None,
     accent=0,
     height=150,
+    abs_height=False,
     theme="light",
     title=None,
     subtitle=None,
@@ -1117,6 +1275,7 @@ def kpi(
                 % (info["n_total"], _frame.MAX_ROWS, records["n"])
             )
 
+    _link_group, _link_mode = _parse_link(link)
     spec = {
         "id": _next_id(),
         "type": "kpi",
@@ -1124,6 +1283,7 @@ def kpi(
         "subtitle": subtitle,
         "theme": theme,
         "height": int(height or 150),
+        "absHeight": bool(abs_height),
         "dataRef": ref,
         "roles": {"value": value} if value is not None else {},
         "agg": agg,
@@ -1138,7 +1298,8 @@ def kpi(
         "labels": False,
         "zoom": False,
         "drill": None,
-        "link": link,
+        "link": _link_group,
+        "linkMode": _link_mode,
         "value": static_value,
         "label": label,
         "delta": delta,
@@ -1169,6 +1330,7 @@ def combo(
     ytitle=None,
     fmt="compact",
     height=400,
+    abs_height=False,
     theme="light",
     zoom="auto",
     max_rows=_frame.MAX_ROWS,
@@ -1192,6 +1354,7 @@ def combo(
         ylim=None,
         fmt=fmt,
         height=height,
+        abs_height=abs_height,
         theme=theme,
         agg=agg,
         sort=None,

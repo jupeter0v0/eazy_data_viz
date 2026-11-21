@@ -84,6 +84,7 @@ EXAMPLES = {
     "slope": 'slope(df, x="月份", y="销售额", color="产品")',
     "treemap": 'treemap(df, path=["大区", "省份"], value="销售额")',
     "sunburst": 'sunburst(df, path=["大区", "省份"], value="销售额")',
+    "sankey": 'sankey(df, path=["大区", "渠道", "产品"], value="销售额")',
     "box": 'box(df, x="渠道", y="销售额")',
     "histogram": 'histogram(df, column="销售额", bins=24)',
     "area_pct": 'area_pct(df, x="月份", y="销售额", color="产品")',
@@ -209,7 +210,7 @@ def main():
     catalog = {
         "name": "eazy_data_viz",
         "version": getattr(eazy_data_viz, "__version__", "0"),
-        "summary": "pandas → 单文件 HTML 交互图表库（经营驾驶舱场景，Material Design 3，45 种图表，"
+        "summary": "pandas → 单文件 HTML 交互图表库（经营驾驶舱场景，Material Design 3，49 种图表，"
                    "客户端下钻/联动，Streamlit 兼容）",
         "install": "pip install -e .   # 或构建 wheel: python -m pip wheel . --no-deps",
         "quickstart": [

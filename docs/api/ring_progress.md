@@ -35,6 +35,7 @@ eazy_data_viz.ring_progress(
 | `max` | `int \| float` | `100` | 否 | 目标量（分母），必须大于 0 |
 | `fmt` | `str \| None` | `None` | 否 | 中心数字与 tooltip 的数值格式，None 等价 `"raw"` |
 | `height` | `int \| None` | `None` | 否 | 画布高度，None 等价 260，且必须 ≥120 |
+| `abs_height` | `bool` | `False` | 绝对高度：`height` 当整个外框高度 | 否 | 画布高度，None 等价 260，且必须 ≥120 |  |  |  |  |  |
 | `theme` | `str` | `"light"` | 否 | 主题：`light` / `dark` |
 | `title` | `str \| None` | `None` | 否 | 主标题，None 时用 `label`，再兜底「进度」 |
 
@@ -122,6 +123,12 @@ eazy_data_viz.ring_progress(
   - 和其它图混排时，让同一行的卡片高度接近，避免页面出现高低不齐的台阶。
 - **示例**：`ring_progress(72.5, height=300)`
 - **常见错误**：`height=100` → `ValueError: height 至少 120（像素），收到 100`
+
+### `abs_height` — 绝对高度：`height` 就是整个组件外框（`bool`，默认 `False`）
+
+- **作用**：默认 `height` 只算图表正文，标题 / 副标题 / 联动工具条会把卡片额外撑高，同一行里一张带长标题、一张带工具条的卡片底边就对不齐。打开 `abs_height=True` 后 `height` 表示**整个组件外框**（内边距、标题、工具条都算在里面），正文用剩余空间自适应。
+- **建议**：在 `dashboard` / `show` 里要「框和框严格对齐」时打开；单图导出或不在意卡片底边时保持默认。
+- **示例**：`abs_height=True, height=320`（配合 `dashboard(..., cols=2)` 看两张卡的底边）
 
 ### `theme` — 主题（默认 `"light"`）
 

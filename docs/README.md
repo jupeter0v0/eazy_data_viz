@@ -100,7 +100,7 @@ python -c "import eazy_data_viz as e; e.help()"
 * **图表函数 → `Chart`**：每个函数返回 `Chart`，三个方法：`to_html()` 拿完整 HTML 字符串、`save(path)` 写文件、`show()` 按环境自动显示（Streamlit / Jupyter / 脚本）。
 * **列名驱动**：`x` / `y` / `color` / `names` / `values` 等参数都传**列名字符串**，不传 Series。
 * **前端聚合**：Python 只做列校验、数据打包与少量预计算，分组聚合、下钻、联动、缩放全部在浏览器里完成，交互不触发 Python 重算。
-* **多图联动**：同组图传相同 `link="组名"`，并且使用同名列作为维度；只有放进同一个 `dashboard()` / `show()` 页面才能联动。
+* **多图联动**：同组图传相同 `link="组名"`，并且使用同名列作为维度；1.5 起可指定方向（`link=("组名", "out"/"in")` = 单向出/单向进），只有放进同一个 `dashboard()` / `show()` 页面才能联动。
 * **单文件交付**：默认把 ECharts 与地图资产内联进 HTML，约 1.2 MB 固定开销，之后按数据行数增长；体积与性能见 [13 · 性能与体积](guides/13-performance.md)。
 
 ## 仓库结构
@@ -108,7 +108,7 @@ python -c "import eazy_data_viz as e; e.help()"
 ```
 eazy_data_viz/          Python 包（chart.py / charts_extra.py / maps.py / frame.py / render.py + assets/）
 docs/                   本文档
-  guides/               15 篇教程
+  guides/               16 篇教程
   api/                  49 个函数参考 + 公共参数
   eazy_catalog.json     机器可读目录
 examples/               charts/ 单图示例、cockpit/ 看板、output/ 运行产物（gitignored）

@@ -149,7 +149,7 @@
 
 ## 12. 49 个图表函数一览
 
-按 `eazy_data_viz.__all__` 的分组顺序列出（`edv.help()` 里的「45 种」是旧文案，以本文与 `docs/api/README.md` 为准）。
+按 `eazy_data_viz.__all__` 的分组顺序列出（与 `edv.help()`、`docs/api/README.md` 一致）。
 
 ### 核心指标（7）
 

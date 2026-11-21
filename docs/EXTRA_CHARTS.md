@@ -48,6 +48,9 @@ EazyViz.htmlBuilders['progress'] = function (spec, data, state, theme) { return 
 ```
 注意：HTML 类里所有用户数据必须用 `U.esc()` 转义。
 
+`table` 有两种显示模式（1.5 起）：明细走 `spec.columns`（列名数组，原样展示 `U.filteredRows` 的结果）；汇总走 `spec.groupby = {columns, value, agg}`，
+在 `U.filteredRows` 之后用 `U.groupBy(rows, groupby.columns, groupby.value, groupby.agg)` 现算，因此**联动过滤会重算汇总、但不会改动 `data.rows`**，其他图仍拿到未聚合的原始行。
+
 ---
 
 ## 2. spec 通用字段（全部图表都有）
@@ -178,16 +181,26 @@ EazyViz.htmlBuilders['progress'] = function (spec, data, state, theme) { return 
 
 ### 3.18 `sunburst` 旭日图（文件 B）
 - Python: `sunburst(data, path, value=None, *, agg="sum", ...)`；roles `{path, value}`；path 是列名列表。
-- 行为：用 `U.rowsOf` + `U.groupBy` 建树（参考 eazy.js 里 `buildTreemapTree` 思路，层级递归），
-  `series:[{type:'sunburst', data: tree, radius:['12%','90%'], label:{...}}]`。
+- 行为：用 `U.rowsOf` + `U.groupBy` 建树（`buildTree`，层级递归），
+  `series:[{type:'sunburst', data: tree, radius:['12%','88%'], label:{position:'inside', ...}}]`，`nodeClick:'rootToNode'`。
+- 节点对象带 `nodeDim` / `nodeLayer` / `nodeValue`：点开一层后根节点会变、`treePathInfo` 变短，
+  点击联动靠这三个字段还原「第几级维度 + 该级真实值」，不再按路径长度推维度。
+- 环半径按 `path` 层数均分（`12% → 88%`，每层一等份），`path` 给到 4、5 级也不会画到画布外。
+- 标签策略：`position:'inside'`（文字始终落在自己那一环里，不会被甩到环外）+ 外层切向排列
+  （`rotate:'tangential'`，文字沿弧线铺开，窄扇形也不互相压住），并按「节点占比」隐藏过小的名字——
+  最外环 < 3.5%、倒数第二环 < 3%、更内层 < 1.5% 不画 label（仍可悬停看 tooltip、仍可点击）。
+  `labelLayout.hideOverlap` 只在 3 级及以上打开：1~2 级时标签本来就够放，打开反而会被判成互相压住而只剩一个。
 
 ### 3.19 `tree` 树图（文件 B）
 - Python: `tree(data, path, value=None, *, agg="sum", ...)`；roles 同上。
 - 行为：建同样的树，`series:[{type:'tree', layout:'orthogonal', orient:'LR', data:[tree]}]`，`symbolSize` 按值。
 
 ### 3.20 `sankey` 桑基图（文件 B）
-- Python: `sankey(data, source, target, value=None, *, agg="sum", ...)`；roles `{source, target, value}`。
-- 行为：`series:[{type:'sankey', data: nodes, links: links}]`；节点名 = 列值，颜色按层轮转 palette。
+- Python: `sankey(data, path=[...], value=None, *, agg="sum", ...)` 走多级；`sankey(data, source, target, value=None, ...)` 是两级写法的兼容入口（两者互斥）。roles 为 `{path: [...], value}`（两级时由 source/target 拼成 2 元 path）。
+- 行为：逐层 `U.groupBy(rows, [path[i], path[i+1]], value, agg)` 建边（`i = 0..len(path)-2`），只连相邻层；过滤空值、自环、非正数与非有限值（计入 `spec` 提示的丢弃数）。
+- 节点名做层级编码 `lv + '\u0001' + 列值`，避免不同层的同名值被 ECharts 合并成一个节点；label formatter 解码回原始值显示（`labelLayout.hideOverlap` 防重叠）。
+- 节点元信息写回 `EazyViz.nodeMaps[spec.id] = {唯一名: {dim, value, layer}}`，点击时由 `U.nodeInfoOf(spec, params)` 还原成真实维度列名与列值，因此多级桑基的联动传参是「第几级维度 + 该级真实值」，与旭日图一致。
+- 节点颜色按层轮转 palette；本图作为联动发起方时，同维度的其它节点 `itemStyle.opacity = 0.25` 高亮。
 
 ### 3.21 `graph` 关系图（文件 B）
 - Python: `graph(data, source, target, value=None, *, agg="sum", ...)`；roles 同 sankey。
