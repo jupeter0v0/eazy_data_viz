@@ -178,6 +178,85 @@ def component_html_placeholder():
     return _HTML_PLACEHOLDER
 
 
+_SKELETON_HTML = """
+<div class="eazy-skel">
+  <div class="eazy-skel-head">
+    <span class="eazy-skel-spin"></span>
+    <span class="eazy-skel-tip">正在渲染图表…</span>
+  </div>
+  <div class="eazy-skel-bar" style="width:34%"></div>
+  <div class="eazy-skel-grid">
+    <div class="eazy-skel-card"></div>
+    <div class="eazy-skel-card"></div>
+    <div class="eazy-skel-card"></div>
+    <div class="eazy-skel-card"></div>
+  </div>
+</div>
+<style>
+.eazy-skel{padding:10px 2px 6px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.eazy-skel-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;color:inherit;opacity:.75}
+.eazy-skel-spin{width:13px;height:13px;border-radius:50%;border:2px solid currentColor;
+  border-right-color:transparent;animation:eazy-skel-rot .8s linear infinite;display:inline-block}
+.eazy-skel-tip{font-size:12.5px;line-height:1}
+.eazy-skel-bar{height:14px;border-radius:7px;background:var(--eazy-skel-bg,rgba(125,145,180,.26))}
+.eazy-skel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:14px}
+.eazy-skel-card{height:150px;border-radius:12px;background:var(--eazy-skel-bg2,rgba(125,145,180,.18))}
+@keyframes eazy-skel-rot{to{transform:rotate(360deg)}}
+@keyframes eazy-skel-pulse{0%,100%{opacity:.5}50%{opacity:1}}
+.eazy-skel-bar,.eazy-skel-card{animation:eazy-skel-pulse 1.5s ease-in-out infinite}
+@media (max-width:820px){.eazy-skel-grid{grid-template-columns:1fr}.eazy-skel-card{height:120px}}
+</style>
+"""
+
+
+def _payload_signature(charts, options):
+    """按内容（数据指纹 + spec）算签名：rerun 后内容没变就能直接复用。"""
+    import hashlib
+
+    parts = []
+    for c in charts:
+        spec = getattr(c, "spec", None) or {}
+        clean = dict(spec)
+        clean.pop("id", None)
+        parts.append(json.dumps(clean, sort_keys=True, default=str, ensure_ascii=False))
+        parts.append(str(getattr(c, "ref", "") or ""))
+    parts.append(json.dumps(options, sort_keys=True, default=str, ensure_ascii=False))
+    return hashlib.sha1("\x00".join(parts).encode("utf-8")).hexdigest()
+
+
+def _placeholder():
+    """先放一个骨架屏占位，渲染完成后再替换；失败就返回 None 按普通方式渲染。"""
+    try:
+        import streamlit as st
+
+        holder = st.empty()
+        holder.markdown(_SKELETON_HTML, unsafe_allow_html=True)
+        return holder
+    except Exception:  # pragma: no cover - 非 Streamlit 环境
+        return None
+
+
+def _cached_payload(signature):
+    try:
+        import streamlit as st
+
+        store = st.session_state.get("_eazy_v2_payload")
+        if isinstance(store, dict) and store.get("sig") == signature:
+            return store.get("data")
+    except Exception:  # pragma: no cover - 非 Streamlit 环境
+        return None
+    return None
+
+
+def _store_payload(signature, data):
+    try:
+        import streamlit as st
+
+        st.session_state["_eazy_v2_payload"] = {"sig": signature, "data": data}
+    except Exception:  # pragma: no cover
+        pass
+
+
 def render_dashboard(charts, *, title=None, desc=None, cols=None, theme=None,
                      palette=None, height=None, key=None, on_select=None,
                      layout=None, direction=None, grid=None,
@@ -213,24 +292,39 @@ def render_dashboard(charts, *, title=None, desc=None, cols=None, theme=None,
             "当前环境不支持 Streamlit components v2（需要 streamlit>=1.50 左右的新版本）。"
             "可以改用 st.components.v1.html(dashboard(...).to_html(), height=...)。"
         )
-    frag = _render.build_fragment(
-        charts, title=title, desc=desc, cols=cols, theme=theme, palette=palette,
-        layout=layout, direction=direction, grid=grid,
-        hints=hints, card_style=card_style,
-    )
-    data = {
-        "html": frag["html"],
-        "page": frag["page"],
-        "data_store": frag["data_store"],
-        "maps": frag["maps"],
-        "cities": frag["cities"],
-        # 前端据此决定是否挂 setTriggerValue；False 时点击不产生任何 rerun。
+    signature = _payload_signature(charts, {
+        "title": title, "desc": desc, "cols": cols, "theme": theme, "palette": palette,
+        "layout": layout, "direction": direction, "grid": grid,
+        "hints": hints, "card_style": card_style,
+        # 是否挂了点击回调会影响 data["trigger"]，必须进签名，否则换个用法会拿到旧的
         "trigger": on_select is not None,
-    }
+    })
+    data = _cached_payload(signature)
+    if data is None:
+        frag = _render.build_fragment(
+            charts, title=title, desc=desc, cols=cols, theme=theme, palette=palette,
+            layout=layout, direction=direction, grid=grid,
+            hints=hints, card_style=card_style,
+        )
+        data = {
+            "html": frag["html"],
+            "page": frag["page"],
+            "data_store": frag["data_store"],
+            "maps": frag["maps"],
+            "cities": frag["cities"],
+            # 前端据此决定是否挂 setTriggerValue；False 时点击不产生任何 rerun。
+            "trigger": on_select is not None,
+        }
+        _store_payload(signature, data)
     renderer = _component()
     kwargs = {"data": data, "key": key}
     if on_select is not None:
         kwargs["on_select_change"] = on_select
     if height is not None:
         kwargs["height"] = int(height)
-    return renderer(**kwargs)
+    holder = _placeholder()
+    target = holder.container() if holder is not None else None
+    if target is None:
+        return renderer(**kwargs)
+    with target:
+        return renderer(**kwargs)

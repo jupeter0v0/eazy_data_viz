@@ -1,3 +1,40 @@
+## 1.5.7 — 2026-11-22
+
+### 性能：prepare 向量化（10~12 倍）
+
+- `frame.prepare()` 不再用逐元素 `Series.map(lambda)`：数值走 `to_numpy() + np.round().tolist()`、
+  时间走 `pd.to_datetime + dt.strftime`、布尔走 `np.where`、文本走 `astype(str).tolist()`，
+  只有超长文本（>120 字符）才逐条截断。
+- 实测 8 图看板：2,000 行 0.18 s → **0.04 s**；20,000 行 0.97 s → **0.08 s**；80,000 行 3.88 s → **0.34 s**。
+- 采样提前到转换之前：`max_rows` 生效时只转换采样后的行，不再先转全量。
+
+### 性能：整列缓存
+
+- 同一份 df 画多张图时，从第二张起复用已转换好的列（键含 `id(df)`、行数、`max_rows`、列名、
+  首尾行指纹；`weakref` 防 id 复用）。
+- 新增 `edv.clear_cache()` / `edv.cache_info()` / `edv.use_cache(False)`；`EAZY_NO_CACHE=1` 可全局关闭。
+
+### Streamlit：先显示再加载
+
+- `streamlit_dashboard()` 先画**骨架屏**（转圈 + 灰色卡片）再算数据，避免长时间空白。
+- 新增 **payload 复用**：按「spec + 数据指纹 + 页面参数」签名缓存 `build_fragment()` 的结果，
+  签名不变时跳过重新打包（8 图 6 行数据 0.4 s → 0.06 s）。
+- v1 回退路径（`components.v1.html`）也套了 `st.spinner`。
+
+### 新增 `edv.cached`
+
+- `@edv.cached` 一行给「读数据」函数加缓存：Streamlit 里等价 `st.cache_data`，
+  否则退回 `functools.lru_cache`。
+
+### 多核结论
+
+- 没有引入多线程 / 多进程 prepare：实测 6 线程 0.35 s vs 单线程 0.21 s（GIL + `astype(str)`），
+  多进程还要 pickle 整份 df。并行收益留在「读数据」层（`@edv.cached`、SQL 侧聚合）。
+
+### 测试
+
+- `tests/test_eazy.py` 新增 `t_prepare_cache()`、`t_cached_helper()`（PASS 51）。
+
 # Changelog
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。

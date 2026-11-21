@@ -68,7 +68,7 @@ from .render import Dashboard, dashboard
 from .render import streamlit_show as _streamlit_show
 from .streamlit_v2 import is_available as streamlit_available
 
-__version__ = "1.5.6"
+__version__ = "1.5.7"
 
 __all__ = [
     "Chart",
@@ -146,6 +146,10 @@ __all__ = [
     "AGGS",
     "FORMATS",
     "__version__",
+    "clear_cache",
+    "cache_info",
+    "use_cache",
+    "cached",
 ]
 
 
@@ -262,6 +266,68 @@ def streamlit_dashboard(charts: list, *, cols: int = 2, title: str | None = None
 # --------------------------------------------------------------------------
 # 配色库
 # --------------------------------------------------------------------------
+def clear_cache(all_caches: bool = False) -> None:
+    """清空图表数据缓存（默认只清 prepare 的列缓存）。
+
+    什么时候需要：**原地修改了同一个 DataFrame**（例如 ``df["x"] = ...``）后
+    重新出图，缓存可能还是旧内容 —— 调一次本函数即可。
+    ``all_caches=True`` 时连 ``st.cache_data`` 一起清（在 Streamlit 里）。
+    """
+    frame.clear_cache()
+    if all_caches:
+        try:
+            import streamlit as st
+
+            st.cache_data.clear()
+        except Exception:  # pragma: no cover - 非 Streamlit 环境
+            pass
+
+
+def cache_info() -> dict:
+    """当前数据缓存占用（条目数 / 单元格数），调试用。"""
+    return frame.cache_info()
+
+
+def use_cache(enabled: bool = True) -> bool:
+    """打开 / 关闭数据缓存（默认打开）。关闭后每张图都重新转换一遍。"""
+    return frame.use_cache(enabled)
+
+
+def cached(func: object = None, *, show_spinner: str | bool = "正在加载数据…",
+           ttl: float | None = None, max_entries: int | None = None) -> object:
+    """给「读数据」函数加 Streamlit 缓存（不在 Streamlit 里就退回 lru_cache）。
+
+    在 Streamlit 里，**每次交互都会重跑整个脚本**：``read_data()`` 每次都重新查库 /
+    读 Excel，这才是「加载很慢」的主要原因。把读数据函数包一层即可：
+    ::
+
+        @edv.cached          # 等价于 st.cache_data(show_spinner="正在加载数据…")
+        def read_data():
+            return pd.read_sql(...)
+
+        df = read_data()     # 第一次真读，之后命中缓存
+        edv.show(edv.kpi(df, value="金额"), ...)
+
+    缓存键是函数的参数；参数里有 DataFrame / 不可哈希对象时请自己加 ``key=``，
+    或改用 ``st.cache_data`` 的 ``hash_funcs``。
+    """
+
+    def wrap(fn):
+        try:
+            import streamlit as st
+
+            return st.cache_data(show_spinner=show_spinner, ttl=ttl,
+                                 max_entries=max_entries)(fn)
+        except Exception:  # pragma: no cover - 非 Streamlit 环境
+            import functools
+
+            return functools.lru_cache(maxsize=4)(fn)
+
+    if func is None:
+        return wrap
+    return wrap(func)
+
+
 def set_palette(name: str) -> str:
     """设置全局默认配色库（影响之后创建的图）。
 
@@ -447,7 +513,7 @@ KPI 卡片（驾驶舱指标头）
     eazy_data_viz.bar(...).palette("tableau")                # 单图覆盖
     eazy_data_viz.palettes()                                 # 列出全部 + 色板
     eazy_data_viz.dashboard(..., palette="morandi")          # 整个看板一套配色
-    * 页面右上角也有「配色：xxx」下拉框，运行时可切换
+    * 配色在参数里定：dashboard(..., palette="tableau") 或 .palette("antd")
 
 公用参数（几乎所有图都支持）
     title / subtitle / xtitle / ytitle / xlim / ylim / fmt / theme("light"/"dark")
@@ -462,7 +528,7 @@ KPI 卡片（驾驶舱指标头）
 * 联动：多张图传同一个 link="销售"，点任意一张图，其它图自动联动过滤；
         需要单向时写 link=("销售", "out")（只推）或 link=("销售", "in")（只接）
 * 看板：eazy_data_viz.dashboard(c1, c2, c3, cols=2, title="经营驾驶舱").show()
-* 右上角 ◐ 切换深色/浅色主题，↺ 一键清除所有联动筛选
+* 右下角 ◐ 切换深色/浅色主题，「重置」一键清除联动筛选 + 下钻 + 旭日放大
 
 单独导出 HTML / 在 Streamlit 中使用
 -----------------------------------
@@ -472,9 +538,24 @@ KPI 卡片（驾驶舱指标头）
     #   result = eazy_data_viz.streamlit_dashboard(c1, c2, c3, title="驾驶舱")
     #   旧版 Streamlit 自动回退：st.components.v1.html(dash.to_html(), height=...)
 
+性能 / 缓存（1.5.7）
+--------------------
+    @eazy_data_viz.cached          # 读数据只跑一次（等价 st.cache_data）
+    def read_data(): ...
+    eazy_data_viz.clear_cache()    # 原地改了 df 之后清一下
+    eazy_data_viz.cache_info()     # {'entries': 2, 'cells': 12000}
+    # prepare 已向量化：8 图看板 2 万行 0.97s -> 0.08s；Streamlit 先出骨架屏再渲染
+
 完整示例见 gallery：eazy_data_viz.gallery()
 """ % __version__
-    print(text)
+    import sys
+
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        # Windows 控制台常见 GBK：把打不出来的字符换成 ?，别让 help() 直接抛异常
+        enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+        print(text.encode(enc, "replace").decode(enc, "replace"))
     return text
 
 

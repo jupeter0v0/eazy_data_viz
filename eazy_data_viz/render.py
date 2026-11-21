@@ -820,11 +820,21 @@ def streamlit_show(charts: list, cols: int = 2, title: str | None = None,
         direction=direction,
         grid=grid,
     )
-    html = build_page(
-        charts, inline=True, title=title, cols=cols, theme=theme, desc=desc,
-        palette=palette, layout=layout, direction=direction, grid=grid,
-        hints=hints, card_style=card_style,
-    )
+    try:
+        import streamlit as _st
+
+        with _st.spinner("正在渲染图表…"):
+            html = build_page(
+                charts, inline=True, title=title, cols=cols, theme=theme, desc=desc,
+                palette=palette, layout=layout, direction=direction, grid=grid,
+                hints=hints, card_style=card_style,
+            )
+    except Exception:  # pragma: no cover - 非 Streamlit 环境
+        html = build_page(
+            charts, inline=True, title=title, cols=cols, theme=theme, desc=desc,
+            palette=palette, layout=layout, direction=direction, grid=grid,
+            hints=hints, card_style=card_style,
+        )
     components.html(html, height=height, scrolling=False)
     return "v1"
 

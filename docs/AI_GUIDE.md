@@ -1,6 +1,6 @@
 # eazy_data_viz 组件库说明书（给 AI 用）
 
-> 版本 1.5.6 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
+> 版本 1.5.7 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
 
 ## 0. 一句话
 
@@ -58,7 +58,7 @@ eazy_data_viz.dashboard(c1, c2, palette="morandi").save("x.html")      # 整页�
 eazy_data_viz.set_palette("carbon")                                     # 改全局默认
 ```
 
-## 4. 图表函数（按场景分组，共 50 个）
+## 4. 图表函数（按场景分组，共 54 个）
 
 ### 核心指标
 
@@ -443,11 +443,39 @@ eazy_data_viz.wordcloud(df, names="城市", values="销售额", top_n=20)
 | 函数 | 签名 | 说明 |
 |---|---|---|
 | `area` | `area(data: 'pd.DataFrame', x: 'str \| None', y: 'str \| None', color: 'str \| None' = None, **kwargs) -> 'Chart'` | 面积图 = ``line(..., area=True)``。 |
+| `cache_info` | `cache_info() -> 'dict'` | 当前数据缓存占用（条目数 / 单元格数），调试用。 |
+| `cached` | `cached(func: 'object' = None, *, show_spinner: 'str \| bool' = '正在加载数据…', ttl: 'float \| None' = None, max_entries: 'int \| None' = None) -> 'object'` | 给「读数据」函数加 Streamlit 缓存（不在 Streamlit 里就退回 lru_cache）。 |
+| `clear_cache` | `clear_cache(all_caches: 'bool' = False) -> 'None'` | 清空图表数据缓存（默认只清 prepare 的列缓存）。 |
+| `use_cache` | `use_cache(enabled: 'bool' = True) -> 'bool'` | 打开 / 关闭数据缓存（默认打开）。关闭后每张图都重新转换一遍。 |
 
 **`area`** — 面积图 = ``line(..., area=True)``。
 
 ```python
 eazy_data_viz.area(df, x="月份", y="销售额")
+```
+
+**`cache_info`** — 当前数据缓存占用（条目数 / 单元格数），调试用。
+
+```python
+eazy_data_viz.cache_info()
+```
+
+**`cached`** — 给「读数据」函数加 Streamlit 缓存（不在 Streamlit 里就退回 lru_cache）。
+
+```python
+eazy_data_viz.cached()
+```
+
+**`clear_cache`** — 清空图表数据缓存（默认只清 prepare 的列缓存）。
+
+```python
+eazy_data_viz.clear_cache()
+```
+
+**`use_cache`** — 打开 / 关闭数据缓存（默认打开）。关闭后每张图都重新转换一遍。
+
+```python
+eazy_data_viz.use_cache()
 ```
 
 

@@ -1082,6 +1082,68 @@ def t_footer_buttons():
     assert _render._appbar_html(None, None) == ""
 
 
+def t_prepare_cache():
+    """1.5.7：prepare 列缓存命中 / 失效 / 关闭。"""
+    from eazy_data_viz import frame as _f
+
+    _f.use_cache(True)
+    _f.clear_cache()
+    df = DF.copy()
+    roles = {"x": "大区", "y": "销售额"}
+
+    data1, ref1, _info1 = _f.prepare(df, roles)
+    info1 = _f.cache_info()
+    assert info1["entries"] == 1, info1
+    assert info1["cells"] > 0, info1
+
+    data2, ref2, _info2 = _f.prepare(df, roles)
+    assert ref2 == ref1, "同一份数据两次 prepare 的 ref 必须一致"
+    assert data2["rows"] is data1["rows"], "命中缓存时应共享同一份 rows（不重复转换）"
+    assert _f.cache_info()["entries"] == 1, "命中缓存不应新增条目"
+
+    # 原地改数据 → 指纹变化 → 必须重新转换
+    df.loc[df.index[0], "销售额"] = 999999.0
+    _data3, ref3, _info3 = _f.prepare(df, roles)
+    assert ref3 != ref1, "原地修改数据后 ref 必须变化"
+
+    # 关闭缓存：不写缓存
+    _f.use_cache(False)
+    _f.clear_cache()
+    _f.prepare(DF, roles)
+    assert _f.cache_info()["entries"] == 0, "关闭缓存后不应写缓存"
+    _f.use_cache(True)
+
+    # 清空
+    _f.prepare(DF, roles)
+    assert _f.cache_info()["entries"] >= 1
+    _f.clear_cache()
+    assert _f.cache_info()["entries"] == 0
+
+    # 公开入口
+    assert eazy_data_viz.cache_info()["entries"] == 0
+    eazy_data_viz.clear_cache()
+
+
+def t_cached_helper():
+    """1.5.7：edv.cached 把「读数据」包一层缓存，只算一次。"""
+    calls = []
+
+    @eazy_data_viz.cached
+    def load(n):
+        calls.append(n)
+        return n * 2
+
+    assert load(3) == 6
+    assert load(3) == 6
+    assert calls == [3], calls
+    load(4)
+    assert calls == [3, 4], calls
+
+    # 关缓存 / 开缓存 来回切不报错
+    assert eazy_data_viz.use_cache(False) is False
+    assert eazy_data_viz.use_cache(True) is True
+
+
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):
     check(name, fn)
 

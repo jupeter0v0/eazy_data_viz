@@ -1,6 +1,6 @@
 {
  "name": "eazy_data_viz",
- "version": "1.5.6",
+ "version": "1.5.7",
  "summary": "pandas → 单文件 HTML 交互图表库（经营驾驶舱场景，Material Design 3，45 种图表，客户端下钻/联动，Streamlit 兼容）",
  "install": "pip install -e .   # 或构建 wheel: python -m pip wheel . --no-deps",
  "quickstart": [
@@ -6106,6 +6106,77 @@
      "summary": "面积图 = ``line(..., area=True)``。",
      "doc": "面积图 = ``line(..., area=True)``。",
      "example": "eazy_data_viz.area(df, x=\"月份\", y=\"销售额\")"
+    },
+    {
+     "name": "cache_info",
+     "signature": "cache_info() -> 'dict'",
+     "params": [],
+     "summary": "当前数据缓存占用（条目数 / 单元格数），调试用。",
+     "doc": "当前数据缓存占用（条目数 / 单元格数），调试用。",
+     "example": "eazy_data_viz.cache_info()"
+    },
+    {
+     "name": "cached",
+     "signature": "cached(func: 'object' = None, *, show_spinner: 'str | bool' = '正在加载数据…', ttl: 'float | None' = None, max_entries: 'int | None' = None) -> 'object'",
+     "params": [
+      {
+       "name": "func",
+       "kind": "positional_or_keyword",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "show_spinner",
+       "kind": "keyword_only",
+       "default": "正在加载数据…",
+       "required": false
+      },
+      {
+       "name": "ttl",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "max_entries",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      }
+     ],
+     "summary": "给「读数据」函数加 Streamlit 缓存（不在 Streamlit 里就退回 lru_cache）。",
+     "doc": "给「读数据」函数加 Streamlit 缓存（不在 Streamlit 里就退回 lru_cache）。\n\n在 Streamlit 里，**每次交互都会重跑整个脚本**：``read_data()`` 每次都重新查库 /\n读 Excel，这才是「加载很慢」的主要原因。把读数据函数包一层即可：\n::\n\n    @edv.cached          # 等价于 st.cache_data(show_spinner=\"正在加载数据…\")\n    def read_data():\n        return pd.read_sql(...)\n\n    df = read_data()     # 第一次真读，之后命中缓存\n    edv.show(edv.kpi(df, value=\"金额\"), ...)\n\n缓存键是函数的参数；参数里有 DataFrame / 不可哈希对象时请自己加 ``key=``，\n或改用 ``st.cache_data`` 的 ``hash_funcs``。",
+     "example": "eazy_data_viz.cached()"
+    },
+    {
+     "name": "clear_cache",
+     "signature": "clear_cache(all_caches: 'bool' = False) -> 'None'",
+     "params": [
+      {
+       "name": "all_caches",
+       "kind": "positional_or_keyword",
+       "default": false,
+       "required": false
+      }
+     ],
+     "summary": "清空图表数据缓存（默认只清 prepare 的列缓存）。",
+     "doc": "清空图表数据缓存（默认只清 prepare 的列缓存）。\n\n什么时候需要：**原地修改了同一个 DataFrame**（例如 ``df[\"x\"] = ...``）后\n重新出图，缓存可能还是旧内容 —— 调一次本函数即可。\n``all_caches=True`` 时连 ``st.cache_data`` 一起清（在 Streamlit 里）。",
+     "example": "eazy_data_viz.clear_cache()"
+    },
+    {
+     "name": "use_cache",
+     "signature": "use_cache(enabled: 'bool' = True) -> 'bool'",
+     "params": [
+      {
+       "name": "enabled",
+       "kind": "positional_or_keyword",
+       "default": true,
+       "required": false
+      }
+     ],
+     "summary": "打开 / 关闭数据缓存（默认打开）。关闭后每张图都重新转换一遍。",
+     "doc": "打开 / 关闭数据缓存（默认打开）。关闭后每张图都重新转换一遍。",
+     "example": "eazy_data_viz.use_cache()"
     }
    ]
   }
@@ -6512,8 +6583,11 @@
   "box",
   "bullet",
   "bump",
+  "cache_info",
+  "cached",
   "calendar",
   "candlestick",
+  "clear_cache",
   "combo",
   "dumbbell",
   "funnel",
@@ -6552,6 +6626,7 @@
   "tree",
   "treemap",
   "trend",
+  "use_cache",
   "waterfall",
   "wordcloud"
  ]

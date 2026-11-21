@@ -12,6 +12,9 @@ from __future__ import annotations
 import hashlib
 import json
 import numbers
+import os
+import weakref
+from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -94,8 +97,63 @@ def _truncate_text(v, limit=120):
 # --------------------------------------------------------------------------
 # 单列转换
 # --------------------------------------------------------------------------
+def column_values(series, kind):
+    """把一列转成可安全 JSON 的 Python 列表（向量化，比逐元素 map 快 2~4 倍）。"""
+    if kind == KIND_NUM:
+        arr = series.to_numpy()
+        if arr.dtype.kind in ("i", "u"):
+            return arr.tolist()
+        vals = np.asarray(arr, dtype="float64")
+        mask = np.isnan(vals)
+        out = np.round(vals, 4).tolist()
+        if mask.any():
+            for i in np.flatnonzero(mask).tolist():
+                out[i] = None
+        return out
+
+    if kind == KIND_TIME:
+        dt = pd.to_datetime(series, errors="coerce")
+        midnight = dt.dt.normalize() == dt
+        fmt = "%Y-%m-%d" if bool(midnight.all()) else "%Y-%m-%d %H:%M"
+        texts = dt.dt.strftime(fmt).to_numpy(dtype=object)
+        out = texts.tolist()
+        null = pd.isna(texts)
+        if null.any():
+            for i in np.flatnonzero(null).tolist():
+                out[i] = None
+        return out
+
+    if kind == KIND_BOOL:
+        filled = series.fillna(False).astype(bool).to_numpy()
+        out = np.where(filled, "是", "否").tolist()
+        null = pd.isna(series).to_numpy(dtype=bool)
+        if null.any():
+            for i in np.flatnonzero(null).tolist():
+                out[i] = None
+        return out
+
+    # 类别 / 文本 / 时间间隔
+    s = series
+    if pd.api.types.is_timedelta64_dtype(s):
+        s = s.astype(str)
+    texts = s.astype(str)
+    out = texts.tolist()
+    if out:
+        try:
+            maxlen = int(texts.str.len().max())
+        except (TypeError, ValueError):
+            maxlen = 0
+        if maxlen > 120:
+            out = [_truncate_text(v) for v in out]
+    null = pd.isna(s).to_numpy(dtype=bool)
+    if null.any():
+        for i in np.flatnonzero(null).tolist():
+            out[i] = None
+    return out
+
+
 def convert_series(series, force_numeric=False):
-    """把一列转换成可安全 JSON 化的 pandas Series。"""
+    """把一列转换成可安全 JSON 化的 pandas Series（保留旧接口）。"""
     kind = column_kind(series)
 
     if force_numeric and kind not in (KIND_NUM, KIND_TIME, KIND_BOOL):
@@ -109,32 +167,73 @@ def convert_series(series, force_numeric=False):
                 "请先用 pd.to_numeric() 清洗，或换一列。" % (series.name, bad)
             )
 
-    if kind == KIND_NUM:
-        # 可空整型 / 浮点统一成 object，NaN -> None
-        out = series.astype(object)
-        return out.where(pd.notna(series), None)
-
-    if kind == KIND_TIME:
-        dt = pd.to_datetime(series, errors="coerce")
-        midnight = dt.dt.normalize() == dt
-        fmt = "%Y-%m-%d" if bool(midnight.all()) else "%Y-%m-%d %H:%M"
-        out = dt.dt.strftime(fmt).astype(object)
-        return out.where(dt.notna(), None)
-
-    if kind == KIND_BOOL:
-        out = series.map(lambda v: None if pd.isna(v) else ("是" if bool(v) else "否"))
-        return out.astype(object)
-
-    # 类别 / 文本 / 时间间隔
-    if pd.api.types.is_timedelta64_dtype(series):
-        series = series.astype(str)
-    out = series.map(lambda v: None if pd.isna(v) else _truncate_text(v)).astype(object)
-    return out
+    return pd.Series(column_values(series, kind), index=series.index, dtype=object)
 
 
 # --------------------------------------------------------------------------
-# 主入口
+# 列缓存：同一份 DataFrame 会被多张图反复 prepare
 # --------------------------------------------------------------------------
+_PREP_CACHE = OrderedDict()
+_PREP_CACHE_MAX_ENTRIES = 6
+_PREP_CACHE_MAX_CELLS = 4000000
+# 原地修改 DataFrame（同一个对象、改了中间几行）无法被自动发现：
+# 关掉缓存或用 clear_cache() 即可，见 use_cache()。
+_PREP_CACHE_ENABLED = os.environ.get("EAZY_NO_CACHE", "") not in ("1", "true", "yes")
+
+
+def use_cache(enabled=True):
+    """打开 / 关闭 prepare 的列缓存（默认打开）。返回当前状态。"""
+    global _PREP_CACHE_ENABLED
+    _PREP_CACHE_ENABLED = bool(enabled)
+    if not enabled:
+        _PREP_CACHE.clear()
+    return _PREP_CACHE_ENABLED
+
+
+def clear_cache():
+    """清空 prepare 的列缓存（原地改了 DataFrame 但对象没换时可用）。"""
+    _PREP_CACHE.clear()
+
+
+def _fingerprint(df):
+    """便宜的「内容指纹」：形状 + 首尾两行，用于发现原地修改。"""
+    try:
+        head = df.iloc[0].tolist()
+    except (IndexError, TypeError):
+        head = None
+    try:
+        tail = df.iloc[-1].tolist()
+    except (IndexError, TypeError):
+        tail = None
+    return (len(df), tuple(map(str, df.columns)), repr(head)[:240], repr(tail)[:240])
+
+
+def cache_info():
+    """返回缓存条目数与占用单元格数（调试用）。"""
+    cells = sum(int(e.get("n") or 0) * len(e.get("lists") or ()) for e in _PREP_CACHE.values())
+    return {"entries": len(_PREP_CACHE), "cells": cells}
+
+
+def _cache_get(key, df):
+    entry = _PREP_CACHE.get(key)
+    if entry is None:
+        return None
+    ref = entry.get("df")
+    if ref is None or ref() is not df:
+        _PREP_CACHE.pop(key, None)
+        return None
+    _PREP_CACHE.move_to_end(key)
+    return entry
+
+
+def _cache_put(key, df, entry):
+    entry["df"] = weakref.ref(df)
+    _PREP_CACHE[key] = entry
+    _PREP_CACHE.move_to_end(key)
+    while len(_PREP_CACHE) > _PREP_CACHE_MAX_ENTRIES:
+        _PREP_CACHE.popitem(last=False)
+
+
 def prepare(df, roles, max_rows=MAX_ROWS, max_cols=MAX_COLS,
             numeric_roles=None, dimension_roles=None):
     if max_rows is not None:
@@ -152,10 +251,9 @@ def prepare(df, roles, max_rows=MAX_ROWS, max_cols=MAX_COLS,
         角色名 -> 列名，例如 ``{"x": "月份", "y": "销售额", "color": "地区"}``。
         这决定了列的顺序（角色列排最前），也用于类型强制（y 必须是数值）。
     numeric_roles : 可迭代的列名, 可选
-        必须按数值处理的列。图表函数会按图表类型传入
-        （例如热力图的 y 是分类维度、饼图的 value 是数值）。
+        必须按数值处理的列。
     dimension_roles : 可迭代的列名, 可选
-        必须按维度（分类）处理的列，哪怕它本身是数字（例如年份 2023）。
+        必须按维度（分类）处理的列。
     """
     df = ensure_frame(df)
     if len(df) == 0:
@@ -169,7 +267,6 @@ def prepare(df, roles, max_rows=MAX_ROWS, max_cols=MAX_COLS,
             role_cols.extend([c for c in v if c is not None])
         else:
             role_cols.append(v)
-    # 去重并保持顺序
     seen, ordered_roles = set(), []
     for c in role_cols:
         if c not in seen:
@@ -179,8 +276,6 @@ def prepare(df, roles, max_rows=MAX_ROWS, max_cols=MAX_COLS,
     for c in ordered_roles:
         require_column(df, c, "")
 
-    # 列顺序：始终按 DataFrame 原始列顺序，保证"同一份数据 + 多张图"能命中同一个
-    # data_ref（多图共享同一份嵌入数据，页面体积不随图数增长）。列数超限时才让角色列优先。
     all_cols = list(df.columns)
     dropped = []
     if len(all_cols) > max_cols:
@@ -206,43 +301,64 @@ def prepare(df, roles, max_rows=MAX_ROWS, max_cols=MAX_COLS,
         numeric_roles = {roles.get("y"), roles.get("y2"), roles.get("value"), roles.get("size")}
     numeric_roles = set(c for c in numeric_roles if c is not None) - dim_set
 
-    out = pd.DataFrame(index=df.index)
-    for c in use_cols:
-        out[c] = convert_series(df[c], force_numeric=(c in numeric_roles))
-
     n_total = len(df)
-    # max_rows=None 表示不采样（全部行嵌入）；否则超过上限时均匀采样。
-    # 均匀采样比截断更能代表整体分布，同时保持行顺序。
+    idx = None
     if max_rows is not None and n_total > max_rows:
         idx = np.linspace(0, n_total - 1, max_rows).astype(np.int64)
-        out = out.iloc[idx]
 
-    # 数值列四舍五入到 4 位小数：图表精度足够，同时显著减小嵌入 JSON 体积
-    # （浮点原始 repr 常有 15+ 位有效数字，200k 行时能省下几 MB）。
-    for c in use_cols:
-        if c in numeric_roles or column_kind(df[c]) == KIND_NUM:
+    key = (id(df), n_total, max_rows, tuple(use_cols))
+    entry = _cache_get(key, df) if _PREP_CACHE_ENABLED else None
+    stamp = _fingerprint(df) if entry is not None else None
+    if entry is not None and entry.get("stamp") != stamp:
+        _PREP_CACHE.pop(key, None)
+        entry = None
+    if entry is None:
+        view = df if idx is None else df.iloc[idx]
+        lists, kinds_raw, orders = [], {}, {}
+        for c in use_cols:
+            k = column_kind(view[c])
+            kinds_raw[c] = k
+            lists.append(column_values(view[c], k))
             try:
-                out[c] = out[c].map(lambda v: round(v, 4) if isinstance(v, float) else v)
-            except (TypeError, ValueError):
+                if isinstance(view[c].dtype, pd.CategoricalDtype) and view[c].cat.ordered:
+                    orders[str(c)] = [str(x) for x in view[c].cat.categories]
+            except (AttributeError, TypeError):
                 pass
+        entry = {"lists": lists, "kinds": kinds_raw, "orders": orders,
+                 "n": len(view), "rows": None, "ref": None,
+                 "stamp": _fingerprint(df)}
+        if _PREP_CACHE_ENABLED and len(view) * len(use_cols) <= _PREP_CACHE_MAX_CELLS:
+            _cache_put(key, df, entry)
 
-    out = out.astype(object).where(pd.notna(out), None)
-    rows = out.values.tolist()
+    lists = entry["lists"]
+    kinds_raw = entry["kinds"]
+    orders = entry["orders"]
+    n = entry["n"]
+
+    # 被强制成数值的文本列：只重算这一列，且不复用缓存的 rows（避免污染）
+    forced = False
+    for pos, c in enumerate(use_cols):
+        if c in numeric_roles and kinds_raw.get(c) not in (KIND_NUM, KIND_TIME, KIND_BOOL):
+            view = df if idx is None else df.iloc[idx]
+            lists = list(entry["lists"])
+            lists[pos] = convert_series(view[c], force_numeric=True).tolist()
+            forced = True
+
+    if forced:
+        rows = [list(t) for t in zip(*lists)]
+    else:
+        rows = entry.get("rows")
+        if rows is None:
+            rows = [list(t) for t in zip(*lists)]
+            entry["rows"] = rows
 
     kinds = {}
     measures, dims = [], []
-    orders = {}
     for c in use_cols:
-        k = column_kind(df[c])
+        k = kinds_raw[c]
         if c in numeric_roles:
             k = KIND_NUM
         kinds[str(c)] = k
-        # 有序分类列（pd.Categorical(ordered=True)）的类目顺序交给前端排序用
-        try:
-            if isinstance(df[c].dtype, pd.CategoricalDtype) and df[c].cat.ordered:
-                orders[str(c)] = [str(x) for x in df[c].cat.categories]
-        except (AttributeError, TypeError):
-            pass
         if k == KIND_NUM and c not in dim_set:
             measures.append(str(c))
         else:
@@ -255,10 +371,16 @@ def prepare(df, roles, max_rows=MAX_ROWS, max_cols=MAX_COLS,
         "measures": measures,
         "kinds": kinds,
         "orders": orders,
-        "n": int(len(out)),
+        "n": int(n),
         "n_total": int(n_total),
     }
-    ref = data_ref(data)
+    if forced:
+        ref = data_ref(data)
+    else:
+        ref = entry.get("ref")
+        if ref is None:
+            ref = data_ref(data)
+            entry["ref"] = ref
     return data, ref, {
         "truncated": bool(max_rows is not None and n_total > max_rows),
         "n_total": n_total,

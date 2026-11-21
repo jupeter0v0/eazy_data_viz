@@ -190,6 +190,29 @@ edv.dashboard(k, trend, region, detail, cols=2, title="经营驾驶舱",
 * 分类列：`object/string/category`，用于 `x` / `names` / `color` / `drill`；有序 `Categorical` 会保留类别顺序；
 * 布尔列：显示为「是 / 否」；混入 `None` 后退化为分类列。
 
+## 缓存与性能辅助（1.5.7）
+
+| 函数 | 说明 |
+| --- | --- |
+| `cached(func=None, *, show_spinner="正在加载数据…", ttl=None, max_entries=None)` | 给「读数据」函数加缓存：在 Streamlit 里等价 `st.cache_data`，否则退回 `functools.lru_cache` |
+| `clear_cache(all_caches=False)` | 清图表数据缓存（原地改了 df 之后调用）；`all_caches=True` 连 `st.cache_data` 一起清 |
+| `cache_info()` | 返回 `{"entries": n, "cells": n}`，排查「为什么没命中缓存」 |
+| `use_cache(enabled=True)` | 打开 / 关闭列缓存（调试数据问题时用） |
+
+```python
+import eazy_data_viz as edv
+
+@edv.cached
+def read_data():
+    return pd.read_sql(sql, conn)      # 只跑一次
+
+df = read_data()
+edv.show(edv.kpi(df, value="金额"), edv.bar(df, x="月份", y="金额"), cols=2)
+print(edv.cache_info())                # {'entries': 2, 'cells': 12000}
+```
+
+细节见 [07 · Streamlit 集成](../guides/07-streamlit.md) 与 [13 · 性能与体积](../guides/13-performance.md)。
+
 ## 相关
 
 * [教程总目录](../guides/README.md) · [文档总入口](../README.md)

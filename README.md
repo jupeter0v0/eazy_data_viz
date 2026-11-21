@@ -485,7 +485,7 @@ python tests/js_test_15.py    # 前端：1.5 新增（多级桑基 / 汇总表 /
 python tests/e2e_test.py      # 端到端：模拟真人点击，验证 show / dashboard 的联动链路
 ```
 
-当前状态：`PASS 49` + 地图 `PASS 33`；前端 `JS PASS 137`、`JS PASS 154`；端到端 `E2E PASS 42`，全部 0 失败。
+当前状态：`PASS 51` + 地图 `PASS 33`；前端 `JS PASS 137`、`JS PASS 154`；端到端 `E2E PASS 42`，全部 0 失败。
 
 ---
 

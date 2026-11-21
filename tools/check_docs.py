@@ -27,6 +27,8 @@ NON_CHART = {
     "set_palette", "palettes", "palette", "render", "maps",
     # Streamlit 集成入口，文档在 guides/07-streamlit.md
     "streamlit_dashboard", "streamlit_available",
+    # 缓存与性能辅助，文档在 docs/api/README.md「缓存与性能辅助」与 guides/07、13
+    "cached", "clear_cache", "cache_info", "use_cache",
 }
 
 
