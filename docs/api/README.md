@@ -58,7 +58,7 @@ chart.palette("tableau").save("examples/output/api-chart.html")
 | `drill` | 下钻层级列名列表，如 `drill=["大区", "省份", "城市"]`；点击图形逐级下钻，面包屑返回 | `None` |
 | `link` | 联动组名与方向：`"g1"`（双向）/ `("g1", "out")`（单向出）/ `("g1", "in")`（单向进）/ `{"group": "g1", "direction": "out"}`；同一页内相同组名的图互相筛选，要求组内使用同名维度列 | `None` |
 | `section` | 看板分区标题：`dashboard()` 在连续图表前插入分区，用于把页面切成几段 | `None` |
-| `max_rows` | 嵌入数据前最多保留多少行；超过时按行位置**均匀采样**（`np.linspace`），`None` 表示不采样；`table` 默认 200 | `200000` |
+| `max_rows` | 嵌入数据前最多保留多少行；超过时按行位置**均匀采样**（`np.linspace`），`None` 表示不采样；`table` 默认 200 | `2000000` |
 
 两个高频约定：
 

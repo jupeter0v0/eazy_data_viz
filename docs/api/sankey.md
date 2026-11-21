@@ -183,7 +183,7 @@ eazy_data_viz.sankey(
   ```
 - **报错**：方向写错：`ValueError: link 的方向只支持 "both"（双向）/ "out"（单向出）/ "in"（单向进），收到 'up'。`；字典键写错：`ValueError: link 字典只支持 group / name / direction / mode 四个键，收到未知键：groupby。`
 
-### `max_rows` — 嵌入前端的最大行数（`int`，默认 `200000`）
+### `max_rows` — 嵌入前端的最大行数（`int`，默认 `2000000`）
 
 - **作用**：Python 侧只把前 `max_rows` 行数据嵌入 HTML，超过时按均匀间隔抽样，并把提示写入 `chart.warnings["warnings"]`。抽样只发生在“嵌入”阶段。
 - **建议**：多级桑基的行数会放大成多份流量，建议先用 Python 聚合成“边表”再传入，可显著减小 HTML 体积。

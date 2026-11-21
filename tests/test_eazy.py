@@ -104,6 +104,55 @@ def t_kpi():
     assert s["type"] == "kpi"
 
 
+def t_kpi_exact():
+    import pandas as pd
+
+    """1.5.2：KPI 卡片默认按千分位精确显示，和 pandas 的合计逐个数字对得上。"""
+    df = pd.DataFrame({
+        "年": ["2026年"] * 4 + ["2025年"] * 4,
+        "月": ["1月", "2月", "3月", "4月"] * 2,
+        "金额": [1000000.11, 1200000.22, 900000.33, 1012274.65,
+                 1500000.0, 1400000.0, 1600000.0, 1663012.23],
+    })
+    c = eazy_data_viz.kpi(df, value="金额", label="销售额")
+    assert c.spec["fmt"] == "thousands", c.spec["fmt"]
+    sub = df[df["年"] == "2026年"]
+    assert abs(sub["金额"].sum() - 4112275.31) < 1e-6, sub["金额"].sum()
+    c2 = eazy_data_viz.kpi(data=sub, value="金额", label="2026 销售额")
+    assert c2.spec["fmt"] == "thousands"
+    c3 = eazy_data_viz.kpi(df, value="金额", fmt="compact")
+    assert c3.spec["fmt"] == "compact", "显式 fmt 不能被默认值覆盖"
+
+
+def t_sort_column():
+    import pandas as pd
+
+    """1.5.2：sort 可以传一列列名，按这一列排序类目（'年-月' 排 '1月…12月'）。"""
+    df = pd.DataFrame({
+        "年-月": ["2025-03", "2025-01", "2025-02", "2025-12", "2025-11", "2025-10"],
+        "月": ["3月", "1月", "2月", "12月", "11月", "10月"],
+        "金额": [3, 1, 2, 12, 11, 10],
+    })
+    c = eazy_data_viz.bar(df, x="月", y="金额", sort="年-月")
+    assert c.spec["sort"] == "年-月", c.spec["sort"]
+    assert c.spec["sortRank"] == ["1月", "2月", "3月", "10月", "11月", "12月"], c.spec["sortRank"]
+    for tok in ("desc", "asc", "x", "none"):
+        cc = eazy_data_viz.bar(df, x="月", y="金额", sort=tok)
+        assert cc.spec["sort"] == tok and cc.spec["sortRank"] is None, tok
+    try:
+        eazy_data_viz.bar(df, x="月", y="金额", sort="没有这一列")
+    except ValueError as e:
+        assert "不是可用的排序方式" in str(e), str(e)
+    else:
+        raise AssertionError("sort=不存在的列 应该报错")
+    try:
+        eazy_data_viz.bar(df, x="月", y="金额", sort=123)
+    except ValueError as e:
+        assert "sort 需要是字符串" in str(e), str(e)
+    else:
+        raise AssertionError("sort=123 应该报错")
+
+
 def t_combo():
     s = _spec(eazy_data_viz.combo(DF, x="月份", bar="销售额", line="利润"))
     assert s["roles"]["y"] == "销售额" and s["roles"]["y2"] == "利润"
@@ -276,19 +325,28 @@ def t_dashboard_palette():
 
 
 def t_max_rows_default():
-    """默认 max_rows 必须是 20 万（用户数据 45622 行不能被采样）。"""
+    """默认 max_rows 是 200 万（1.5.2 起；此前是 20 万）。"""
+    import inspect
     import pandas as _pd
     from eazy_data_viz import frame as _frame
-    assert _frame.MAX_ROWS == 200000, _frame.MAX_ROWS
+    assert _frame.MAX_ROWS == 2000000, _frame.MAX_ROWS
+    for fn in (eazy_data_viz.bar, eazy_data_viz.line, eazy_data_viz.sankey, eazy_data_viz.sunburst):
+        dflt = inspect.signature(fn).parameters["max_rows"].default
+        assert dflt == 2000000, (fn.__name__, dflt)
+    assert inspect.signature(eazy_data_viz.table).parameters["max_rows"].default == 200
     df = _pd.DataFrame({"x": ["a"] * 45622, "y": list(range(45622))})
     ch = eazy_data_viz.bar(df, x="x", y="y")
     assert len(ch.data["rows"]) == 45622, len(ch.data["rows"])
     assert not ch.warnings["warnings"], ch.warnings
-    # 超过上限才采样
+    # 25 万行没有超过 200 万的上限 → 不采样
     df2 = _pd.DataFrame({"x": ["a"] * 250000, "y": list(range(250000))})
     ch2 = eazy_data_viz.bar(df2, x="x", y="y")
-    assert len(ch2.data["rows"]) == 200000, len(ch2.data["rows"])
-    assert ch2.warnings["warnings"] and "采样" in ch2.warnings["warnings"][0], ch2.warnings
+    assert len(ch2.data["rows"]) == 250000, len(ch2.data["rows"])
+    assert not ch2.warnings["warnings"], ch2.warnings
+    # 显式给一个更小的上限才会采样
+    ch2b = eazy_data_viz.bar(df2, x="x", y="y", max_rows=200000)
+    assert len(ch2b.data["rows"]) == 200000, len(ch2b.data["rows"])
+    assert ch2b.warnings["warnings"] and "采样" in ch2b.warnings["warnings"][0], ch2b.warnings
     # max_rows=None 不采样
     ch3 = eazy_data_viz.bar(df2, x="x", y="y", max_rows=None)
     assert len(ch3.data["rows"]) == 250000, len(ch3.data["rows"])

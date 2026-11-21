@@ -125,7 +125,7 @@ eazy_data_viz.sparkline(
 - **示例**：`edv.sparkline(df, x="月份", y="销售额", group="产品", theme="dark")`
 - **报错**：`theme="blue"`：`ValueError: theme 只支持 "light" / "dark"，收到 'blue'`
 
-### `max_rows` — 嵌入前端的最大行数（`int`，默认 `200000`）
+### `max_rows` — 嵌入前端的最大行数（`int`，默认 `2000000`）
 
 - **作用**：Python 侧只把前 `max_rows` 行（默认 20000）的数据嵌入 HTML，超过时按均匀间隔抽样，并把提示写入 `chart.warnings["warnings"]`。`table` 特殊：默认 200，且最终最多嵌入 200 行。抽样只发生在“嵌入”阶段，不影响函数内已经算好的统计（如相关系数、回归系数）。
 - **建议**：前端交互图保持默认 20000 即可；超大表用 `table(max_rows=...)` 控制体积。 需要完整数据时导出 Excel/CSV，不要让 HTML 承担全量数据。 抽样后 tooltip 的明细行数会变少，但聚合图的总量不受影响。

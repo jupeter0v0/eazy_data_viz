@@ -287,7 +287,7 @@ edv.bullet(df, x="产品", actual="销售额", target="销售额目标").save(
 
 `bullet` / `target` / `dumbbell` 是「宽表友好」的少数派：它们直接吃两列数值列，不用 melt。
 
-## 8. 大数据量：`max_rows` 默认 200000，采样是均匀的
+## 8. 大数据量：`max_rows` 默认 2000000，采样是均匀的
 
 本库在 Python 侧只做校验与数据嵌入，聚合全部在浏览器里完成，所以行数直接决定 HTML 体积。`max_rows` 控制**嵌入前**的采样：
 

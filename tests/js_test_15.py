@@ -272,6 +272,38 @@ TEST_JS = r"""
     ok('table15-spec', ct.spec.groupby && ct.spec.groupby.agg === 'sum', JSON.stringify(ct.spec.groupby));
   });
 
+  // 1.5.2：同比方向（系列名不是纯数字时按名字里的数字定本期）+ sort 传列名
+  steps.push(function () {
+    var core = core0;
+    ok('yoy15-name-order', core.util.nameOrder('2026年') === 2026 &&
+       core.util.nameOrder('第2季度') === 2, String(core.util.nameOrder('2026年')));
+    var p1 = core.util.yoyPlan(['2025年', '2026年'], { '2025年': 900, '2026年': 100 });
+    ok('yoy15-plan-name', p1.current === '2026年' && p1.base === '2025年', JSON.stringify(p1));
+    var p2 = core.util.yoyPlan(['华东', '华南'], { '华东': 100, '华南': 900 });
+    ok('yoy15-plan-total', p2.current === '华南', JSON.stringify(p2));
+
+    // sortRank：Python 按「年-月」算好的类目顺序，前端照抄排序
+    var sp = JSON.parse(JSON.stringify(cy.spec));
+    sp.sort = '年-月';
+    sp.sortRank = ['3月', '1月', '2月'];
+    sp.roles = { x: '月份', y: '销售额' };
+    sp.legend = false;
+    sp.yoy = null;
+    var opt2 = core.buildOption(sp, cy.data, { filters: {}, drill: [], legendSel: null },
+                               core.util.themeFor('light', 'google'));
+    var ax = (opt2.xAxis instanceof Array) ? opt2.xAxis[0] : opt2.xAxis;
+    var cats = (ax && ax.data) || [];
+    ok('yoy15-sort-rank', cats.join(',') === '3月,1月,2月', cats.join(','));
+    var sp2 = JSON.parse(JSON.stringify(sp));
+    sp2.sortRank = null;
+    sp2.sort = 'desc';
+    var opt3 = core.buildOption(sp2, cy.data, { filters: {}, drill: [], legendSel: null },
+                                core.util.themeFor('light', 'google'));
+    var ax3 = (opt3.xAxis instanceof Array) ? opt3.xAxis[0] : opt3.xAxis;
+    var cats3 = (ax3 && ax3.data) || [];
+    ok('yoy15-sort-desc', cats3.join(',') === '1月,2月,3月', cats3.join(','));
+  });
+
   steps.push(function () {
     var oy = cy.ec.getOption();
     var labeled = (oy.series || []).filter(function (s) {

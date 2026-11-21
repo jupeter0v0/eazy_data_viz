@@ -62,7 +62,7 @@ def lollipop(
 | `zoom` | `bool \| str` | `'auto'` | 否 | 缩放条（本图不支持） |
 | `drill` | `str \| list[str]` | `None` | 否 | 逐级下钻维度 |
 | `link` | `str` | `None` | 否 | 联动组名（同组图表互相筛选） |
-| `max_rows` | `int` | `200000` | 否 | 最大参与绘制行数（None 不采样） |
+| `max_rows` | `int` | `2000000` | 否 | 最大参与绘制行数（None 不采样） |
 
 ## 参数详解
 

@@ -41,7 +41,7 @@ eazy_data_viz.kpi(
 | `value` | `str \| float` | `None` | 否 | 要聚合的数值列 |
 | `agg` | `str` | `'sum'` | 否 | 聚合方式，默认 sum |
 | `label` | `str` | `None` | 否 | 指标名 |
-| `fmt` | `str` | `None` | 否 | 数字格式，默认 compact |
+| `fmt` | `str` | `None` | 否 | 数字格式，默认 thousands（4,112,275.31） |
 | `delta` | `float \| None` | `None` | 否 | 涨跌幅（比例或绝对值） |
 | `delta_label` | `str \| None` | `None` | 否 | 涨跌幅口径，如同比/环比 |
 | `inverse` | `bool` | `False` | 否 | 越小越好时下降显绿 |
@@ -92,8 +92,8 @@ eazy_data_viz.kpi(
 
 ### `fmt` — 数字格式（`str`，默认 `None`）
 
-- **作用**：`None` 时按 compact 处理；可选 compact（163万）、thousands（1,630,000）、raw、percent（12.8%）、currency（¥1,630,000.00）。 percent 只加 % 号不乘 100；currency 固定两位小数。 传入非法值会报错（kpi 会校验 fmt，但仅在非 None 时）。
-- **建议**：金额用 currency 或 compact；百分比指标用 percent。 需要完整数字用 thousands。
+- **作用**：`None` 时按 thousands 处理（精确保留小数、千分位分隔，和 `df[...].sum()` 逐个数字对得上）；可选 compact（163万）、thousands（1,630,000）、raw、percent（12.8%）、currency（¥1,630,000.00）。 percent 只加 % 号不乘 100；currency 固定两位小数。 传入非法值会报错（kpi 会校验 fmt，但仅在非 None 时）。
+- **建议**：默认的 thousands 最不容易被误会成算错；金额很大又嫌长时用 compact（411万）或 `unit="万"`；百分比指标用 percent。
 - **示例**：`fmt="currency"`
 - **报错**：`fmt="money"` → `ValueError: fmt='money' 不支持，可选：compact, thousands, raw, percent, currency`
 
@@ -236,8 +236,8 @@ chart.save("examples/output/kpi_1.html")
 ```
 
 **输出**：
-- 卡片显示 1500 行销售额的 sum（compact 格式，例如 163万）。
-- 默认 `agg="sum"`、`fmt="compact"`、`height=150`；无 label 时数值上方为空。
+- 卡片显示 1500 行销售额的 sum（默认 thousands 格式，例如 1,630,000）。
+- 默认 `agg="sum"`、`fmt="thousands"`、`height=150`；无 label 时数值上方为空。
 - `spec["rows"]` 为 1500（DataFrame 模式走数据管线），link 为空不可联动。
 
 **验证**：卡片数值 == `df["销售额"].sum()`；`chart.spec["agg"] == "sum"`。
@@ -271,7 +271,7 @@ df = edv.sample_df()
 
 chart = edv.kpi(
     df, value="销售额",
-    label="销售额", fmt="compact",
+    label="销售额", fmt="thousands",
     delta=0.128, delta_label="同比",
     hint="较去年同期",
 )

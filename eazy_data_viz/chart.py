@@ -38,6 +38,50 @@ __all__ = [
 AGGS = ("sum", "mean", "count", "max", "min", "median")
 FORMATS = ("compact", "thousands", "raw", "percent", "currency")
 
+# sort 的保留取值；其它字符串按「列名」处理（按该列在每个类目下的最小值排序）。
+_SORT_TOKENS = ("asc", "desc", "x", "none", "byvalue", "byvalue_asc")
+
+
+def _parse_sort(sort):
+    """把 sort 归一化成 (token, rank_col)。
+
+    * ``None`` / "asc" / "desc" / "x" / "none" → 原样返回，rank_col 为 None
+    * 其它字符串 → 当作列名，rank_col = 该列（按它排序类目）
+    * 非字符串 → 报错
+    """
+    if sort is None:
+        return None, None
+    if not isinstance(sort, str):
+        raise ValueError(
+            'sort 需要是字符串："desc" / "asc" / "x" / "none"，或者一列列名'
+            '（按这一列排序类目，例如 sort="年-月"），收到 %r。' % (sort,)
+        )
+    token = sort.strip()
+    if not token:
+        raise ValueError(
+            'sort 不能是空字符串：用 "desc" / "asc" / "x" / "none"，'
+            '或者一列列名（例如 sort="年-月"）。'
+        )
+    if token.lower() in _SORT_TOKENS:
+        return token.lower(), None
+    return token, token
+
+
+def _sort_rank(df, x_col, by_col):
+    """按 by_col 在每个 x 类目下的最小值排出一份类目顺序。"""
+    if x_col is None or x_col not in df.columns or by_col not in df.columns:
+        return None
+    try:
+        grp = df.groupby(x_col, dropna=False)[by_col].min()
+    except (TypeError, ValueError):
+        return None
+    try:
+        grp = grp.sort_values(kind="mergesort")
+    except (TypeError, ValueError):
+        grp = grp.astype(str).sort_values(kind="mergesort")
+    return [str(k) for k in grp.index]
+
+
 # 联动方向别名（both=双向，out=单向出，in=单向进）
 _LINK_BOTH = frozenset(("both", "双", "双向", "all", "sync", "both-way"))
 _LINK_OUT = frozenset(
@@ -435,7 +479,34 @@ def _base_spec(
             else:
                 sort = "none"
 
+    sort, sort_rank_col = _parse_sort(sort)
+    sort_rank = None
+    if sort_rank_col is not None:
+        xcol = roles.get("x")
+        if isinstance(xcol, (list, tuple)):
+            xcol = xcol[0] if xcol else None
+        _sdf = _frame.ensure_frame(data)
+        if sort_rank_col not in _sdf.columns:
+            raise ValueError(
+                'sort=%r 不是可用的排序方式：它既不是 "desc" / "asc" / "x" / "none"，'
+                "也不是数据里的一列（现有列：%s）。"
+                % (sort_rank_col, "、".join(str(c) for c in list(_sdf.columns)[:12]))
+            )
+        sort_rank = _sort_rank(_sdf, xcol, sort_rank_col)
+        if sort_rank is None:
+            warnings_rank = (
+                "sort=%r 想按这一列排类目，但横轴列 %r 无法与它组合，已按默认顺序排列。"
+                % (sort_rank_col, xcol)
+            )
+            sort_rank = None
+        else:
+            warnings_rank = None
+    else:
+        warnings_rank = None
+
     warnings = []
+    if warnings_rank:
+        warnings.append(warnings_rank)
     if info["truncated"]:
         warnings.append(
             "数据 %d 行，超过 max_rows=%d，已均匀采样 %d 行用于绘图。"
@@ -460,6 +531,7 @@ def _base_spec(
         "agg": agg,
         "fmt": fmt or "compact",
         "sort": sort,
+        "sortRank": sort_rank,
         "topN": top_n,
         "xtitle": xtitle,
         "ytitle": ytitle,
@@ -497,7 +569,11 @@ _COMMON_DOC = """
     agg : str
         聚合方式：sum(默认) / mean / count / max / min / median。
     sort : str
-        类目排序："desc"(默认) / "asc" / "none"(保持数据顺序)。
+        类目排序：
+            * "desc"(默认) / "asc" / "none"(保持数据顺序) / "x"(横轴列顺序)
+            * **一列列名**：按这一列在每个类目下的最小值排序。最适合
+              横轴是"1月…12月"这类文本、想按时间先后排的场景：
+              ``bar(df, x="月", y="金额", sort="年-月")``。
     top_n : int
         只保留前 N 个类目，其余合并为"其他"。
     legend : bool
@@ -519,7 +595,7 @@ _COMMON_DOC = """
         等价的字典写法：``link={"group": "g1", "direction": "out"}``。
         方向别名：both/双向、out/单向出/发起、in/单向进/接收。
     max_rows : int
-        单图最多嵌入行数，默认 200000（超出自动均匀采样；传 None 表示不采样）。
+        单图最多嵌入行数，默认 2000000（200 万行；超出自动均匀采样；传 None 表示不采样）。
 """
 
 
@@ -1227,7 +1303,8 @@ def kpi(
     label : str
         指标名（显示在数值上方）。
     fmt : str
-        数字格式：compact（默认，163万）/ thousands / raw / percent / currency（¥）。
+        数字格式：thousands（默认，4,112,275）/ compact（411万）/ raw / percent / currency（¥）。
+        卡片要和 pandas / SQL 的合计逐个数字对得上时用默认值；想紧凑用 compact。
     delta : float
         同比环比：0.128 显示 ▲12.8%；传 12.8 这类绝对值时按原样显示。
     delta_label : str
@@ -1333,7 +1410,7 @@ def kpi(
         "dataRef": ref,
         "roles": {"value": value} if value is not None else {},
         "agg": agg,
-        "fmt": fmt or "compact",
+        "fmt": fmt or "thousands",
         "sort": None,
         "topN": None,
         "xtitle": None,

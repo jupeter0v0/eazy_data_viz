@@ -512,6 +512,19 @@
     };
   }
 
+  // 按 Python 端算好的类目顺序（spec.sortRank）排序：
+  // sort="年-月" 这类「按另一列排」的写法，Python 会算好每个类目的代表值顺序。
+  function listRanker(list) {
+    if (!list || !list.length) return null;
+    var map = {};
+    for (var i = 0; i < list.length; i++) map[String(list[i])] = i;
+    return function (a, b) {
+      var ia = map[String(a)], ib = map[String(b)];
+      if (ia === undefined || ib === undefined) return 0;
+      return ia - ib;
+    };
+  }
+
   function setAxisName(axis, name, theme, isX, gap) {
     if (!name) return axis;
     axis.name = name;
@@ -692,9 +705,25 @@
   // 规则：图中恰好 2 条 color 系列时，类目值大的那条当"本期"、小的当"上期"。
   // 例：color="年份"，2026 vs 2025 → 2026 同比 2025。
   // 系列名不是数字时（如"华东"/"华南"），退化为总和大的当本期。
+  // 系列名里的第一个数字：'2026年' -> 2026、'第2季度' -> 2、'2026-06' -> 2026。
+  // 用户常常把年份写成 '2025年 / 2026年'（不是纯数字），直接 num() 解析失败，
+  // 这时只能退化成「合计大的算本期」——数据里 2026 只到 8 月时 2026 合计更小，
+  // 同比方向就会反。所以先按名字里的数字定大小，再退回合计。
+  function nameOrder(v) {
+    var m = String(v === null || v === undefined ? '' : v).match(/-?\d+(?:\.\d+)?/);
+    return m ? parseFloat(m[0]) : null;
+  }
+
   function yoyPlan(seriesNames, seriesTotals) {
     var a = seriesNames[0], b = seriesNames[1];
     var na = num(a), nb = num(b);
+    if (na === null || nb === null || na === nb) {
+      var oa = nameOrder(a), ob = nameOrder(b);
+      if (oa !== null && ob !== null && oa !== ob) {
+        na = oa;
+        nb = ob;
+      }
+    }
     var cur;
     if (na !== null && nb !== null && na !== nb) {
       cur = (na > nb) ? a : b;
@@ -757,6 +786,8 @@
       cats.sort(function (a, b) { return (totals[a] || 0) - (totals[b] || 0); });
     } else if (spec.sort === 'x') {
       cats.sort(catRanker(data, xdim) || compareCatX);
+    } else if (spec.sortRank) {
+      cats.sort(listRanker(spec.sortRank) || compareCatX);
     }
 
     var otherCats = [];
@@ -956,6 +987,7 @@
     g1.forEach(function (g) { if (cats.indexOf(g.keys[0]) < 0) cats.push(g.keys[0]); v1[g.keys[0]] = g.value; });
     g2.forEach(function (g) { if (cats.indexOf(g.keys[0]) < 0) cats.push(g.keys[0]); v2[g.keys[0]] = g.value; });
     if (spec.sort === 'x') cats.sort(catRanker(data, xdim) || compareCatX);
+    else if (spec.sortRank) cats.sort(listRanker(spec.sortRank) || compareCatX);
 
     var catAxis = makeCategoryAxis(spec, cats, theme);
     var leftAxis = makeValueAxis(spec, theme, null);
@@ -2565,7 +2597,8 @@
       makeValueAxis: makeValueAxis, tooltipBox: tooltipBox, axisTooltip: axisTooltip,
       sourceSelection: sourceSelection, dimItem: dimItem, emptyOption: emptyOption,
       linkMode: linkMode, canSendLink: canSendLink, canRecvLink: canRecvLink,
-      yoyPlan: yoyPlan, yoyGrowth: yoyGrowth, yoyItem: yoyItem,
+      yoyPlan: yoyPlan,
+    nameOrder: nameOrder, yoyGrowth: yoyGrowth, yoyItem: yoyItem,
       nodeInfoOf: nodeInfoOf,
       THEME: THEME, FONT: FONT, SEP: SEP,
       PALETTES: PALETTES, themeFor: themeFor, mixColor: mixColor,
