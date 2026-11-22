@@ -60,7 +60,7 @@ class Switch(dict):
         return "switch(%s)" % body
 
 
-def switch(**kwargs) -> Switch:
+def switch(**kwargs: str) -> Switch:
     """声明「指标名 → 列名」的切换映射。
 
     参数

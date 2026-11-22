@@ -37,7 +37,7 @@ chart.palette("tableau").save("examples/output/api-chart.html")
 | 参数 | 含义 | 默认值 |
 | --- | --- | --- |
 | `data` | 第一个位置参数，`pandas.DataFrame`（也接受 Series / dict / list）；`gauge` / `ring_progress` 这类单值图不需要 | 必填（单值图除外） |
-| `x` / `y` | 列名字符串：`x` 是维度（分类或时间），`y` 是度量；`y=None` 时按 `count` 统计行数 | `bar`/`line` 的 `x` 必填；`y` 可省略 |
+| `x` / `y` | 列名字符串：`x` 是维度（分类或时间），`y` 是度量；`y=None` 时按 `count` 统计行数。**单个列名的角色都能接 `edv.switch(...)`** 做指标切换（`y` / `value` / `values` / `names` / `size` / `spark`） | `bar`/`line` 的 `x` 必填；`y` 可省略 |
 | `color` | 分组列名，多个系列/多条线/堆叠色 | `None` |
 | `size` | 气泡/散点大小列名（`scatter`、`map_bubble`） | `None` |
 | `title` / `subtitle` | 标题 / 副标题；不传时按图表类型自动生成，如「销售额 按 大区」「销售额 趋势」 | `None`（自动） |

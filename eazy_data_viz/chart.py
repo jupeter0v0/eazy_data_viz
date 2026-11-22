@@ -18,6 +18,7 @@ import webbrowser
 from . import compare as _compare
 from . import frame as _frame
 from . import metric as _metric
+from .metric import Switch
 
 __all__ = [
     "Chart",
@@ -634,7 +635,7 @@ _COMMON_DOC = """
 def bar(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None = None,
+    y: str | None | Switch = None,
     color: str | None = None,
     *,
     agg: str = "sum",
@@ -749,7 +750,7 @@ def bar(
 def line(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None,
+    y: str | None | Switch,
     color: str | None = None,
     *,
     agg: str = "sum",
@@ -820,7 +821,7 @@ def line(
 def area(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None,
+    y: str | None | Switch,
     color: str | None = None,
     **kwargs,
 ) -> Chart:
@@ -831,8 +832,8 @@ def area(
 
 def pie(
     data: pd.DataFrame,
-    names: str | None,
-    values: str | None = None,
+    names: str | None | Switch,
+    values: str | None | Switch = None,
     *,
     donut: bool = False,
     agg: str = "sum",
@@ -892,9 +893,9 @@ def pie(
 def scatter(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None,
+    y: str | None | Switch,
     color: str | None = None,
-    size: str | None = None,
+    size: str | None | Switch = None,
     *,
     agg: str = "sum",
     title: str | None = None,
@@ -1009,8 +1010,8 @@ def histogram(
 def heatmap(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None,
-    value: str | None,
+    y: str | None | Switch,
+    value: str | None | Switch,
     *,
     agg: str = "sum",
     sort: str | None = None,
@@ -1064,7 +1065,7 @@ def heatmap(
 def box(
     data: pd.DataFrame,
     x: str | None = None,
-    y: str | None = None,
+    y: str | None | Switch = None,
     *,
     title: str | None = None,
     subtitle: str | None = None,
@@ -1122,8 +1123,8 @@ def box(
 
 def funnel(
     data: pd.DataFrame,
-    names: str | None,
-    values: str | None = None,
+    names: str | None | Switch,
+    values: str | None | Switch = None,
     *,
     agg: str = "sum",
     fmt: str = "compact",
@@ -1172,7 +1173,7 @@ def funnel(
 def treemap(
     data: pd.DataFrame,
     path: str | list[str] | None,
-    value: str | None,
+    value: str | None | Switch,
     *,
     agg: str = "sum",
     title: str | None = None,
@@ -1227,7 +1228,7 @@ def treemap(
 
 
 def gauge(
-    value: str | None,
+    value: str | None | Switch,
     *,
     label: str | None = None,
     min: float | None = 0,
@@ -1289,7 +1290,7 @@ def gauge(
 
 def kpi(
     data: pd.DataFrame = None,
-    value: str | None = None,
+    value: str | None | Switch = None,
     *,
     agg: str = "sum",
     label: str | None = None,

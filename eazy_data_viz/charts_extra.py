@@ -32,6 +32,7 @@ import numpy as np
 import pandas as pd
 
 from . import frame as _frame
+from .metric import Switch
 from .chart import (
     AGGS,
     Chart,
@@ -379,7 +380,7 @@ def _num_or_none(value):
 def waterfall(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None = None,
+    y: str | None | Switch = None,
     *,
     agg: str = "sum",
     total: bool = None,
@@ -528,7 +529,7 @@ def bullet(
 def lollipop(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None = None,
+    y: str | None | Switch = None,
     *,
     agg: str = "sum",
     sort: str | None = None,
@@ -596,7 +597,7 @@ def dumbbell(
     data: pd.DataFrame,
     x: str | None,
     y1: str | None,
-    y2: str | None,
+    y2: str | None | Switch,
     *,
     labels: bool = None,
     series_names: list[str] | None = None,
@@ -671,7 +672,7 @@ def dumbbell(
 def pareto(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None = None,
+    y: str | None | Switch = None,
     *,
     agg: str = "sum",
     top_n: int | None = None,
@@ -744,7 +745,7 @@ def pareto(
 def slope(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None,
+    y: str | None | Switch,
     color: str | None = None,
     *,
     group: str | None = None,
@@ -843,7 +844,7 @@ def slope(
 def bump(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None,
+    y: str | None | Switch,
     *,
     group: str | None,
     agg: str = "sum",
@@ -910,7 +911,7 @@ def bump(
 def radar(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None = None,
+    y: str | None | Switch = None,
     color: str | None = None,
     *,
     max: float | None = None,
@@ -981,8 +982,8 @@ def radar(
 # ==========================================================================
 def rose(
     data: pd.DataFrame,
-    names: str | None,
-    values: str | None = None,
+    names: str | None | Switch,
+    values: str | None | Switch = None,
     *,
     donut: bool = False,
     agg: str = "sum",
@@ -1121,7 +1122,7 @@ def parallel(
 def pictorial(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None = None,
+    y: str | None | Switch = None,
     *,
     symbol: str | None = "circle",
     agg: str = "sum",
@@ -1274,7 +1275,7 @@ def target(
 def trend(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None,
+    y: str | None | Switch,
     color: str | None = None,
     *,
     title: str | None = None,
@@ -1365,8 +1366,8 @@ def trend(
 def quadrant(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None,
-    size: str | None = None,
+    y: str | None | Switch,
+    size: str | None | Switch = None,
     color: str | None = None,
     *,
     quad_labels: list[str] | None = None,
@@ -1530,7 +1531,7 @@ def matrix(
 def sparkline(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None,
+    y: str | None | Switch,
     *,
     group: str | None,
     agg: str = "sum",
@@ -1639,7 +1640,7 @@ def ring_progress(
 def sunburst(
     data: pd.DataFrame,
     path: str | list[str] | None,
-    value: str | None = None,
+    value: str | None | Switch = None,
     *,
     agg: str = "sum",
     sort: str | None = "desc",
@@ -1706,7 +1707,7 @@ def sunburst(
 def tree(
     data: pd.DataFrame,
     path: str | list[str] | None,
-    value: str | None = None,
+    value: str | None | Switch = None,
     *,
     agg: str = "sum",
     sort: str | None = "desc",
@@ -1772,7 +1773,7 @@ def sankey(
     data: pd.DataFrame,
     source: str | None = None,
     target: str | None = None,
-    value: str | None = None,
+    value: str | None | Switch = None,
     *,
     path: str | list[str] | None = None,
     agg: str = "sum",
@@ -1868,7 +1869,7 @@ def graph(
     data: pd.DataFrame,
     source: str | None,
     target: str | None,
-    value: str | None = None,
+    value: str | None | Switch = None,
     *,
     agg: str = "sum",
     sort: str | None = None,
@@ -1933,7 +1934,7 @@ def theme_river(
     data: pd.DataFrame,
     x: str | None,
     color: str | None,
-    value: str | None = None,
+    value: str | None | Switch = None,
     *,
     agg: str = "sum",
     sort: str | None = None,
@@ -1998,7 +1999,7 @@ def theme_river(
 def calendar(
     data: pd.DataFrame,
     date: str | None,
-    value: str | None = None,
+    value: str | None | Switch = None,
     *,
     agg: str = "sum",
     sort: str | None = "x",
@@ -2217,8 +2218,8 @@ def candlestick(
 # ==========================================================================
 def pyramid(
     data: pd.DataFrame,
-    names: str | None,
-    values: str | None = None,
+    names: str | None | Switch,
+    values: str | None | Switch = None,
     *,
     agg: str = "sum",
     sort: str | None = "asc",
@@ -2280,7 +2281,7 @@ def pyramid(
 def area_pct(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None,
+    y: str | None | Switch,
     color: str | None = None,
     *,
     agg: str = "sum",
@@ -2349,7 +2350,7 @@ def area_pct(
 def bar_pct(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None,
+    y: str | None | Switch,
     color: str | None = None,
     *,
     agg: str = "sum",
@@ -2421,7 +2422,7 @@ def bar_pct(
 def progress(
     data: pd.DataFrame,
     x: str | None = None,
-    y: str | None = None,
+    y: str | None | Switch = None,
     *,
     max: float | None = None,
     agg: str = "sum",
@@ -2485,8 +2486,8 @@ def progress(
 
 def tile(
     data: pd.DataFrame,
-    names: str | None = None,
-    values: str | None = None,
+    names: str | None | Switch = None,
+    values: str | None | Switch = None,
     *,
     agg: str = "sum",
     sort: str | None = None,
@@ -2823,8 +2824,8 @@ def _parse_cloud_shape(shape):
 
 def wordcloud(
     data: pd.DataFrame,
-    names: str | None = None,
-    values: str | None = None,
+    names: str | None | Switch = None,
+    values: str | None | Switch = None,
     *,
     agg: str = "sum",
     sort: str | None = None,
@@ -2894,8 +2895,8 @@ def wordcloud(
 
 def group_kpi(
     data: pd.DataFrame = None,
-    names: str | None = None,
-    values: str | None = None,
+    names: str | None | Switch = None,
+    values: str | None | Switch = None,
     *,
     items: list | None = None,
     agg: str = "sum",
