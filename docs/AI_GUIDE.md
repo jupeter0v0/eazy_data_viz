@@ -1,6 +1,6 @@
 # eazy_data_viz 组件库说明书（给 AI 用）
 
-> 版本 1.6.4 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
+> 版本 1.6.5 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
 
 ## 0. 一句话
 

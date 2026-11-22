@@ -1485,6 +1485,30 @@ def t_colors():
         raise AssertionError("scatter 不该接受 colors")
 
 
+def t_sort_rank_natural():
+    """1.6.5：sort=<列名> 排类目时用自然序，'1月' < '2月' < '10月'。"""
+    import pandas as pd
+
+    df = pd.DataFrame({
+        "月份": ["1月", "2月", "10月", "11月"],
+        "序": [1.0, 2.0, 10.0, 11.0],
+        "销售": [1.0, 2.0, 3.0, 4.0],
+    })
+    want = ["1月", "2月", "10月", "11月"]
+
+    c = eazy_data_viz.bar(df, "月份", "销售", sort="月份")
+    assert c.spec["sortRank"] == want, c.spec["sortRank"]
+
+    c2 = eazy_data_viz.bar(df, "月份", "销售", sort="序")
+    assert c2.spec["sortRank"] == want, c2.spec["sortRank"]
+
+    c3 = eazy_data_viz.line(df, "月份", "销售", sort="月份")
+    assert c3.spec["sortRank"] == want, c3.spec["sortRank"]
+
+    # 纯数字列仍按数值排（不是字典序）
+    df2 = pd.DataFrame({"n": ["2", "10", "1"], "v": [1.0, 2.0, 3.0]})
+    assert eazy_data_viz.bar(df2, "n", "v", sort="n").spec["sortRank"] == ["1", "2", "10"]
+
 def t_follow_order():
     """1.6.4：follow() 的图默认钉住类目顺序，显式 sort 才跟着指标重排。"""
     import json

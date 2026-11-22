@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 import tempfile
 import webbrowser
@@ -70,14 +71,42 @@ def _parse_sort(sort):
     return token, token
 
 
+_NAT_RE = re.compile(r"(\d+(?:\.\d+)?)")
+
+
+def _natural_key(v):
+    """把 '1月' / '10月' / '2026-3' 这类字符串拆成可比较的自然序键。
+
+    纯字符串比较会把 '10月' 排在 '2月' 前面（用户排序里最常见的坑），
+    这里按「文字段 + 数字段」切分，数字段按数值比。
+    """
+    s = str(v)
+    parts = []
+    for piece in _NAT_RE.split(s):
+        if piece == "":
+            continue
+        if _NAT_RE.fullmatch(piece):
+            parts.append((1, float(piece), ""))
+        else:
+            parts.append((0, 0.0, piece))
+    return parts
+
+
 def _sort_rank(df, x_col, by_col):
-    """按 by_col 在每个 x 类目下的最小值排出一份类目顺序。"""
+    """按 by_col 在每个 x 类目下的最小值排出一份类目顺序。
+
+    数值列按数值排；文本列按自然序排（'1月' < '2月' < '10月'）。
+    """
     if x_col is None or x_col not in df.columns or by_col not in df.columns:
         return None
     try:
         grp = df.groupby(x_col, dropna=False)[by_col].min()
     except (TypeError, ValueError):
         return None
+    vals = list(grp.values)
+    if vals and all(isinstance(v, str) for v in vals):
+        order = sorted(range(len(vals)), key=lambda i: _natural_key(vals[i]))
+        return [str(grp.index[i]) for i in order]
     try:
         grp = grp.sort_values(kind="mergesort")
     except (TypeError, ValueError):
@@ -702,9 +731,13 @@ _COMMON_DOC = """
             * 用 ``y=follow()`` 的图（KPI 卡片切指标）：不传 sort 时，顺序是按
               **页面打开时的那个指标**排一次就固定住，之后切卡片只改柱高、
               不再重排左右位置；想让它每次跟着当前指标重排，显式写 sort="desc"。
-            * **一列列名**：按这一列在每个类目下的最小值排序。最适合
-              横轴是"1月…12月"这类文本、想按时间先后排的场景：
-              ``bar(df, x="月", y="金额", sort="年-月")``。
+            * **一列列名**：按这一列在每个类目下的最小值排序，文本按自然序
+              （"1月" < "2月" < "10月"）。最适合横轴是"1月…12月"这类文本、
+              想按时间先后排的场景：``bar(df, x="月", y="金额", sort="年-月")``。
+            * 有 ``color`` 时，**系列（图例/柱子分组）的左右顺序与 sort 无关**：
+              默认跟着 color 列自己的顺序（声明顺序 → 数字/年份升序 → 数据出现
+              顺序），所以切指标、切联动条件都不会让"2025/2026"忽左忽右；
+              只有显式写 sort="desc" / "asc" 才会按合计大小排系列。
     top_n : int
         只保留前 N 个类目，其余合并为"其他"。
     legend : bool

@@ -544,6 +544,34 @@
     };
   }
 
+  // 系列的默认顺序：跟「color 列自己的顺序」走，而不是按合计大小排。
+  // 原因：按合计排会让图例/柱子左右位置随着「当前指标」跳（2025 忽左忽右），
+  // 用户看到的是「同一张图换了个指标就换了图」。合计排序只有显式 sort="desc"/"asc" 才做。
+  function seriesRanker(data, dim, names) {
+    var rank = catRanker(data, dim);
+    if (rank) return rank;                       // 声明过顺序的分类列
+    var kind = ((data && data.kinds) || {})[dim];
+    if (kind === 'time') return compareCatX;     // 日期/年月：按自然序
+    if (kind === 'num') {
+      return function (a, b) {
+        var na = num(a), nb = num(b);
+        if (na === null || nb === null) return 0;
+        return na - nb;
+      };
+    }
+    // 文本但值里带数字（'2025年' / '第2季度'）：按数字升序
+    var hasNum = false;
+    for (var i = 0; i < names.length; i++) {
+      if (nameOrder(names[i]) !== null) { hasNum = true; break; }
+    }
+    if (!hasNum) return null;                    // 普通文本：保持 df 里的出现顺序
+    return function (a, b) {
+      var na = nameOrder(a), nb = nameOrder(b);
+      if (na === null || nb === null) return 0;
+      return na - nb;
+    };
+  }
+
   function setAxisName(axis, name, theme, isX, gap) {
     if (!name) return axis;
     axis.name = name;
@@ -888,12 +916,10 @@
     // 柱子的左右位置保持稳定。显式传了 sort= 时以用户为准（sortUser）。
     var pinOrder = !!spec.follow && !spec.sortUser;
     if (pinOrder) {
-      if (!spec.pinCats) {
-        cats.sort(function (a, b) { return (totals[b] || 0) - (totals[a] || 0); });
-        spec.pinCats = cats.slice();
-      } else {
-        cats.sort(listRanker(spec.pinCats) || compareCatX);
-      }
+      // 直接记下「这一次默认排序的结果」（时间轴还是时间轴、排行榜还是排行榜），
+      // 之后每次渲染按这份名单还原，切指标不再重排。
+      if (!spec.pinCats) spec.pinCats = cats.slice();
+      else cats.sort(listRanker(spec.pinCats) || compareCatX);
     }
 
     var otherCats = [];
@@ -917,12 +943,13 @@
     var seriesNames;
     if (cdim) {
       seriesNames = seriesOrder.slice();
-      if (spec.sort !== 'none') {
+      var _explicitSort = spec.sortUser && (spec.sort === 'desc' || spec.sort === 'asc');
+      if (_explicitSort) {
         seriesNames.sort(function (a, b) { return (seriesTotals[b] || 0) - (seriesTotals[a] || 0); });
-      }
-      if (pinOrder) {
-        if (!spec.pinSeries) spec.pinSeries = seriesNames.slice();
-        else seriesNames.sort(listRanker(spec.pinSeries) || compareCatX);
+        if (spec.sort === 'asc') seriesNames.reverse();
+      } else if (spec.sort !== 'none') {
+        var _sr = seriesRanker(data, cdim, seriesNames);
+        if (_sr) seriesNames.sort(_sr);
       }
     } else {
       seriesNames = [ydim || '记录数'];
