@@ -254,6 +254,8 @@ class Chart:
         if open_browser is None:
             open_browser = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
         print("[eazy_data_viz] 已生成图表：%s" % path)
+        for _w in (self.warnings or {}).get("warnings") or []:
+            print("[eazy_data_viz 提示] %s" % _w)
         if open_browser:
             webbrowser.open("file://" + path.replace("\\", "/"))
         return self
@@ -456,9 +458,21 @@ def _base_spec(
             _frame.require_column(df, d, "下钻维度", "drill 里的每一列都必须是 df 的列名。")
         if roles.get("x") is None:
             roles["x"] = drill[0]
-        elif roles["x"] != drill[0]:
-            # x="大区" + drill=["产品","渠道"] → 自动补全为 ["大区","产品","渠道"]
-            drill = [roles["x"]] + drill
+        else:
+            _xcol = str(roles["x"])
+            if drill[0] != _xcol:
+                # x="大区" + drill=["产品","渠道"] → 自动补全为 ["大区","产品","渠道"]
+                drill = [_xcol] + [d for d in drill if d != _xcol]
+        # drill 里重复的列会让下钻多出一层空路径，这里保持顺序去重；
+        # 地图例外：_drill_dims() 会故意把 region 复制一层来启用「单层点击聚焦」，
+        # 去重会把这个语义抹掉（1.6.2）。
+        if kind not in ("geo_map", "map_bubble", "map_flow"):
+            _seen_d, _dedup_d = set(), []
+            for _d in drill:
+                if _d not in _seen_d:
+                    _seen_d.add(_d)
+                    _dedup_d.append(_d)
+            drill = _dedup_d
         roles["_extra"] = drill
 
     # 按图表类型决定哪些角色是数值、哪些是维度：
@@ -505,7 +519,14 @@ def _base_spec(
     )
 
 
-    if roles.get("x") is None and kind in ("bar", "line", "area", "scatter", "heatmap"):
+    if extra.get("percent") and roles.get("color") is None:
+        raise ValueError(
+            "percent=True（百分比堆叠）需要 color 参数：它按 color 把每个 x 的各个系列"
+            "归一化到 100%，没有 color 就没有可堆叠的系列。"
+            "想看单系列的构成请用 pie() / funnel() / treemap()。"
+        )
+
+    if roles.get("x") is None and kind in ("bar", "line", "area", "scatter", "heatmap", "combo"):
         raise ValueError(
             "缺少 x：请用 x=\"列名\" 指定横轴（分类/时间）列。"
         )
@@ -532,7 +553,11 @@ def _base_spec(
         xcol = roles.get("x")
         if isinstance(xcol, (list, tuple)):
             xcol = xcol[0] if xcol else None
-        _sdf = _frame.ensure_frame(data)
+        # sort 的排序列可能是 edv.column() 登记的表达式列（例如「订单均价=金额/订单数」），
+        # 这种列只在被引用时才算得出来，这里显式 materialize 一次（1.6.2）。
+        _sdf = df if sort_rank_col in df.columns else _frame.ensure_frame(data)
+        if sort_rank_col in _metric._COLUMNS and sort_rank_col not in _sdf.columns:
+            _sdf, _ = _metric.materialize(_sdf, [sort_rank_col])
         if sort_rank_col not in _sdf.columns:
             raise ValueError(
                 'sort=%r 不是可用的排序方式：它既不是 "desc" / "asc" / "x" / "none"，'
@@ -1321,7 +1346,7 @@ def kpi(
     inverse: bool = False,
     target: str | None = None,
     target_label: str | None = None,
-    spark: bool = None,
+    spark: str | None = None,
     spark_x: str | None = None,
     compare: dict | None = None,
     metric: str | None = None,
@@ -1380,9 +1405,9 @@ def kpi(
         （最后一期 vs 上一期，需要 ``period`` 或 ``spark_x``）；有 period 列时
         基期只取本期已有的那些期，做同期对齐。
     metric : str
-        指标名（1.6）：``value=edv.switch(sale="金额", qty="数量")`` 时用
-        ``metric="sale"`` 指定默认指标；点击这张卡片会把看板里所有用到同一个
-        switch 的图表切到对应列，不触发 Python 重算。
+        指标名（1.6.1）：给这张卡片起个标识，例如 ``metric="sale"``。点击卡片
+        等于「选中这个口径」，看板里所有把度量写成 ``edv.follow()`` 的图会切到
+        这一列（同时用 ``edv.column()`` 登记的聚合方式），不触发 Python 重算。
     hint : str
         底部小字说明，例如 "2024 全年 · 含税"。
     unit : str
@@ -1434,8 +1459,8 @@ def kpi(
 
     if isinstance(data, (int, float)) and not isinstance(data, bool) and value is None:
         static_value = float(data)
-        if label is None:
-            label = title
+        # 不回填 label：卡片头渲染 title，读数上方渲染 label，回填会让同一个词出现两次
+        spark = None  # 静态数值没有行数据，画不出走势
     else:
         if data is None:
             raise ValueError(
@@ -1544,8 +1569,8 @@ def kpi(
 def combo(
     data: pd.DataFrame,
     x: str | None,
-    bar: str | list[str] | None = None,
-    line: str | list[str] | None = None,
+    bar: str | None = None,
+    line: str | None = None,
     *,
     agg: str | None = None,
     title: str | None = None,
@@ -1567,6 +1592,20 @@ def combo(
     """
     if bar is None or line is None:
         raise ValueError("combo 需要同时指定 bar=\"数值列\" 和 line=\"数值列\"。")
+    for _name, _val in (("bar", bar), ("line", line)):
+        if isinstance(_val, (list, tuple)):
+            raise ValueError(
+                "combo 的 %s 只能是一列：柱子、折线各一条。要画多列请用 "
+                "bar(color=...) 或 line(color=...)，例如 "
+                "bar(df, x=\"月\", y=\"金额\", color=\"产品\")。" % _name
+            )
+    for _name, _val in (("bar", bar), ("line", line)):
+        if isinstance(_val, (list, tuple)):
+            raise ValueError(
+                "combo 的 %s 只能是一列：柱子、折线各一条。要画多列请用 "
+                "bar(color=...) 或 line(color=...)，例如 "
+                "bar(df, x=\"月\", y=\"金额\", color=\"产品\")。" % _name
+            )
     roles = {"x": x, "y": bar, "y2": line}
     spec, records, ref, info = _base_spec(
         "combo",

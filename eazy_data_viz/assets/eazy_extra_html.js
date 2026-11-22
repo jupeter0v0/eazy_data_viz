@@ -369,6 +369,8 @@
     html += '</table></div>';
     if (rows.length > limit) {
       html += '<div class="eazy-table-more">共 ' + rows.length + ' 行，仅显示前 ' + limit + ' 行</div>';
+    } else {
+      html += '<div class="eazy-table-more">共 ' + rows.length + ' 行</div>';
     }
     return html;
   };
@@ -470,13 +472,30 @@
     var isImage = shape && shape.type === 'image' && shape.src;
     function finish(imgEl) {
       var data = mctx.getImageData(0, 0, MW, MH).data;
+      var totalPx = MW * MH, ii, nAlpha = 0, nDark = 0, nLight = 0;
+      var mode = 'alpha';
+      if (isImage) {
+        for (ii = 0; ii < totalPx; ii++) {
+          if (data[ii * 4 + 3] < 128) continue;
+          nAlpha += 1;
+          var lum0 = data[ii * 4] * 0.299 + data[ii * 4 + 1] * 0.587 + data[ii * 4 + 2] * 0.114;
+          if (lum0 < 246) nDark += 1;
+          if (lum0 > 12) nLight += 1;
+        }
+        // 深色形状 + 白底 → 认暗像素；浅色/白色 logo → 认亮像素；透明底 → 认 alpha
+        if (nAlpha && nDark >= totalPx * 0.02 && nDark < nAlpha * 0.98) mode = 'dark';
+        else if (nAlpha && nLight >= totalPx * 0.02) mode = 'light';
+        else if (nAlpha) mode = 'light';
+      }
       done(function inside(px, py) {
         var x = px | 0, y = py | 0;
         if (x < 0 || y < 0 || x >= MW || y >= MH) return false;
         var i = (y * MW + x) * 4;
         if (data[i + 3] < 128) return false;
         if (!isImage) return true;
-        return (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) < 246;
+        var lum = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+        if (mode === 'dark') return lum < 246;
+        return lum > 12;
       }, MW, MH, imgEl);
     }
     if (isImage) {

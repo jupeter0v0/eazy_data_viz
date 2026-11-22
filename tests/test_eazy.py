@@ -1324,6 +1324,96 @@ def t_follow_column():
     eazy_data_viz.reset_columns()
 
 
+def _raised(exc, fn, *args, **kwargs):
+    """调用 fn 并返回异常对象；没抛就断言失败。"""
+    try:
+        fn(*args, **kwargs)
+    except exc as err:
+        return err
+    raise AssertionError("%s 应该抛 %s" % (getattr(fn, "__name__", fn), exc.__name__))
+
+
+def t_audit_162():
+    """1.6.2 审计修复的回归：这些坑以前会静默出错。"""
+    import numpy as np
+    import pandas as pd
+
+    # 1) percent=True 必须给 color（原来会把所有柱子清零）
+    bar = eazy_data_viz.bar
+    msg = _raised(ValueError, bar, DF, "月份", "销售额", percent=True)
+    assert "percent=True" in str(msg) and "color" in str(msg), msg
+    ok = bar(DF, "月份", "销售额", color="大区", percent=True)
+    assert ok.spec["percent"] is True
+
+    # 2) 重复列名给出可执行的中文报错（原来是 AttributeError）
+    dup = pd.DataFrame([[1, 2]], columns=["a", "a"])
+    msg = _raised(ValueError, bar, dup, "a", "a")
+    assert "重复的列名" in str(msg), msg
+
+    # 3) ±inf 不再让页面崩（转成缺失）
+    infdf = pd.DataFrame({"x": ["a", "b"], "y": [1.0, float("inf")]})
+    chart = bar(infdf, "x", "y")
+    rows = chart.data["rows"]
+    assert rows[1][1] is None, rows
+
+    # 4) 时间列的秒不再被吃掉
+    tdf = pd.DataFrame({
+        "t": pd.to_datetime(["2026-01-01 08:00:01", "2026-01-01 08:00:02"]),
+        "y": [1.0, 2.0],
+    })
+    chart = bar(tdf, "t", "y")
+    a, b = chart.data["rows"][0][0], chart.data["rows"][1][0]
+    assert a != b and "08:00:01" in a and "08:00:02" in b, (a, b)
+
+    # 5) 带小数的极小数不被四舍五入成 0
+    sdf = pd.DataFrame({"x": ["a"], "y": [1.23456e-05]})
+    chart = bar(sdf, "x", "y")
+    assert chart.data["rows"][0][1] != 0, chart.data["rows"]
+
+    # 6) sort 可以用 edv.column() 的表达式列
+    cdf = pd.DataFrame({"大区": ["A", "B"], "金额": [10.0, 20.0], "订单数": [2.0, 5.0]})
+    eazy_data_viz.reset_columns()
+    eazy_data_viz.column(金额="sum", 订单数="sum", 订单均价="金额/订单数")
+    chart = bar(cdf, "大区", "金额", sort="订单均价")
+    assert chart.spec["sortRank"] == ["B", "A"], chart.spec["sortRank"]
+    eazy_data_viz.reset_columns()
+
+    # 7) drill 已含 x 时不再重复前置
+    chart = bar(DF, "大区", "销售额", drill=["大区", "渠道"])
+    assert chart.spec["drill"] == ["大区", "渠道"], chart.spec["drill"]
+
+    # 8) combo 缺 x 直接报错；bar/line 只能各一列
+    combo = eazy_data_viz.combo
+    msg = _raised(ValueError, combo, DF, None, "销售额", line="销售额")
+    assert "x" in str(msg), msg
+    msg = _raised(ValueError, combo, DF, "月份", ["销售额"], line="销售额")
+    assert "只能是一列" in str(msg), msg
+
+    # 9) 静态 KPI 不再把 title 复制成 label
+    k = eazy_data_viz.kpi(42, title="累计销售")
+    assert k.spec["label"] is None and k.spec["spark"] is None, k.spec
+
+    # 10) 汇总表 + total 时给出提示（不再静默忽略）
+    chart = eazy_data_viz.table(
+        DF, groupby={"columns": ["大区"], "value": "销售额"}, total=True,
+    )
+    notes = " ".join(chart.warnings.get("warnings") or [])
+    assert "汇总表模式下" in notes, chart.warnings
+
+    # 11) 旭日图 sort/top_n 不生效时给出提示
+    chart = eazy_data_viz.sunburst(DF, ["大区", "渠道"], value="销售额", sort="asc")
+    notes = " ".join(chart.warnings.get("warnings") or [])
+    assert "不生效" in notes, chart.warnings
+
+    # 12) 缓存：改中间行也要让缓存失效
+    cdf = pd.DataFrame({"x": list("abc"), "y": [1.0, 2.0, 3.0]})
+    a = bar(cdf, "x", "y")
+    cdf.loc[1, "y"] = 99.0
+    b = bar(cdf, "x", "y")
+    assert a.spec["dataRef"] != b.spec["dataRef"], (a.spec["dataRef"], b.spec["dataRef"])
+    assert b.data["rows"][1][1] == 99.0, b.data["rows"]
+
+
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):
 
     check(name, fn)

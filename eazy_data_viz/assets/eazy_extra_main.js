@@ -39,15 +39,16 @@
     }
     sortRecs(recs, spec, data, xdim);
 
-    var cats = [], bases = [], deltas = [], cums = [], colors = [];
+    var cats = [], bases = [], deltas = [], cums = [], colors = [], vals = [];
     var cum = 0;
     for (var k = 0; k < recs.length; k++) {
       var d = Number(recs[k].value) || 0;
-      var start = cum;
-      cum += d;
       cats.push(recs[k].name);
-      bases.push(start);
+      // 负增量要从本层顶端往下画：base 取 [cum, cum+d] 的较小端
+      bases.push(Math.min(cum, cum + d));
       deltas.push(Math.abs(d));
+      vals.push(d);
+      cum += d;
       cums.push(cum);
       colors.push(d < 0 ? theme.palette[3] : theme.palette[1]);
     }
@@ -55,6 +56,7 @@
       cats.push('合计');
       bases.push(0);
       deltas.push(Math.abs(cum));
+      vals.push(cum);
       cums.push(cum);
       colors.push(theme.palette[0]);
     }
@@ -103,8 +105,7 @@
           label: {
             show: !!spec.labels, position: 'top', color: theme.subtext, fontSize: 11,
             formatter: function (p) {
-              var d = cums[p.dataIndex] - (p.dataIndex ? cums[p.dataIndex - 1] : 0);
-              return U.fmtValue(d, spec.fmt);
+              return U.fmtValue(vals[p.dataIndex], spec.fmt);
             }
           }
         }
@@ -211,6 +212,14 @@
     var tip = U.tooltipBox(theme);
     tip.trigger = 'axis';
     tip.axisPointer = { type: 'shadow' };
+    // 棒身是 bar、端点是 scatter，两条 series 同名同值：axis 默认会把它们各列一行，
+    // 这里只输出一次（1.6.2）。
+    tip.formatter = function (ps) {
+      var p0 = (ps && ps.length) ? ps[0] : null;
+      if (!p0) return '';
+      var label = U.axisTitle(spec.ytitle, spec.roles.y) || '值';
+      return tipHead(p0.name) + tipRow(label, U.fmtValue(p0.value, spec.fmt));
+    };
 
     return {
       grid: U.makeGrid(theme, { legend: false }),

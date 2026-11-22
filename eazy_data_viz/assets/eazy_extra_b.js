@@ -304,6 +304,9 @@
     var root = {
       name: '全部',
       value: total,
+      nodeDim: null,
+      nodeLayer: -1,
+      nodeValue: '全部',
       itemStyle: { color: palAt(theme, 0) },
       children: tree
     };
@@ -415,7 +418,9 @@
         if (sv === null || sv === undefined || sv === '' ||
             tv === null || tv === undefined || tv === '') { dropped++; continue; }
         var v = Number(g.value);
-        if (!isFinite(v) || v <= 0 || sv === tv) { dropped++; continue; }
+        // 节点按「层 + 值」唯一命名，相邻层同名是不同节点：不能按值判自环，
+        // 否则「上级=华东 → 下级=华东」这类回流会被整条丢掉（1.6.2 修复）。
+        if (!isFinite(v) || v <= 0) { dropped++; continue; }
         v = Math.round(v * 1000) / 1000;
         var sn = register(lv + NODE_SEP + sv, dims[lv], sv, lv);
         var tn = register((lv + 1) + NODE_SEP + tv, dims[lv + 1], tv, lv + 1);
@@ -476,8 +481,9 @@
             return tipHead(labelOf(d.source) + ' → ' + labelOf(d.target)) +
               tipRow(vcol || '记录数', U.fmtValue(d.value, spec.fmt));
           }
+          var mi = nodeInfo[p.name] || {};
           return tipHead(labelOf(p.name)) +
-            tipRow(dimOf(p.name) + ' · 关联总量', U.fmtValue(totals[p.name] || 0, spec.fmt));
+            tipRow(mi.dim || dimOf(p.name) + ' · 流量', U.fmtValue(mi.value === undefined ? 0 : mi.value, spec.fmt));
         };
         return tip;
       })(),
@@ -519,6 +525,7 @@
     var vcol = measureCol(spec);
     var groups = U.groupBy(rows, [sdim, tdim], vcol, aggHow(spec));
     var totals = {}, order = [], rawLinks = [], maxLink = 0, i;
+    var srcNames = {}, tgtNames = {};   // 节点出现在哪一侧（决定点击时回传哪个维度）
 
     function touch(name) {
       if (totals[name] === undefined) { totals[name] = 0; order.push(name); }
@@ -532,6 +539,8 @@
       if (!isFinite(v) || v <= 0 || s === t) continue;
       touch(s);
       touch(t);
+      srcNames[s] = 1;
+      tgtNames[t] = 1;
       totals[s] += v;
       totals[t] += v;
       if (v > maxLink) maxLink = v;
@@ -562,6 +571,20 @@
         }
       });
     }
+    // 关系图节点的维度：出现在 source 侧按 source 维度，否则按 target 维度。
+    // 没有这份映射时 onChartClick 拿不到 dim，整张图的联动会静默失效（1.6.2 修复）。
+    var gInfo = {};
+    if (!EazyViz.nodeMaps) EazyViz.nodeMaps = {};
+    for (i = 0; i < nodes.length; i++) {
+      var gn = nodes[i].name;
+      var gdim = srcNames[gn] ? sdim : tdim;
+      nodes[i].nodeDim = gdim;
+      nodes[i].nodeLayer = srcNames[gn] ? 0 : 1;
+      nodes[i].nodeValue = gn;
+      gInfo[gn] = { dim: gdim, value: gn, layer: nodes[i].nodeLayer };
+    }
+    EazyViz.nodeMaps[spec.id || spec.type] = gInfo;
+
     var links = [];
     for (i = 0; i < rawLinks.length; i++) {
       var rl = rawLinks[i];

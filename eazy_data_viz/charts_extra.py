@@ -251,7 +251,12 @@ def _coerce_numeric(data, pairs, agg=None):
             )
         conv = pd.to_numeric(df[col], errors="coerce")
         total = int(conv.notna().sum())
-        if total == 0 or conv.notna().mean() < 0.99:
+        if total == 0:
+            raise TypeError(
+                "%s列 %r 里没有可用的数值（整列为空或全是文本）。"
+                "请先清洗这一列，或换一列。" % (role, col)
+            )
+        if conv.notna().mean() < 0.99:
             bad = df[col].dropna().head(3).tolist()
             raise TypeError(
                 "%s列 %r 需要是数值类型（当前是文本，例如 %r）。"
@@ -797,7 +802,10 @@ def slope(
         arms = [str(p) for p in _as_list(period)]
     else:
         arms = []
-        for v in df[color].dropna().tolist():
+        _ck_ind = _frame.column_kind(df[color])
+        for v in _frame.column_values(df[color], _ck_ind):
+            if v is None:
+                continue
             s = str(v)
             if s not in arms:
                 arms.append(s)
@@ -966,7 +974,7 @@ def radar(
         height=height,
         abs_height=abs_height,
         theme=theme,
-        agg=("count" if (y is None and agg != "unique") else agg),
+        agg=("count" if (y is None and agg != "unique") else (agg or "mean")),
         sort=sort,
         top_n=top_n,
         legend=legend,
@@ -1417,7 +1425,8 @@ def quadrant(
         ymid = 0.0
 
     if quad_labels is None:
-        quad_labels = ["高值·高值", "低值·高值", "低值·低值", "高值·低值"]
+        # 顺序与前端一致：[左上, 右上, 左下, 右下]
+        quad_labels = ["低值·高值", "高值·高值", "低值·低值", "高值·低值"]
     else:
         quad_labels = [str(v) for v in _as_list(quad_labels)]
         if len(quad_labels) != 4:
@@ -1701,7 +1710,14 @@ def sunburst(
         link=link,
         max_rows=max_rows,
     )
-    return Chart(spec, records, ref, info)
+    _is_sun = spec.get("type") == "sunburst"
+    chart = Chart(spec, records, ref, info)
+    if sort not in (None, "desc") or top_n is not None:
+        info.setdefault("warnings", []).append(
+            "%s 的层级排序固定为「子节点按值从大到小」，sort=%r / top_n=%r 不生效；"
+            "要控制顺序请先对数据聚合排序后再画。" % ("sunburst" if _is_sun else "tree", sort, top_n)
+        )
+    return chart
 
 
 # ==========================================================================
@@ -1766,7 +1782,14 @@ def tree(
         link=link,
         max_rows=max_rows,
     )
-    return Chart(spec, records, ref, info)
+    _is_sun = spec.get("type") == "sunburst"
+    chart = Chart(spec, records, ref, info)
+    if sort not in (None, "desc") or top_n is not None:
+        info.setdefault("warnings", []).append(
+            "%s 的层级排序固定为「子节点按值从大到小」，sort=%r / top_n=%r 不生效；"
+            "要控制顺序请先对数据聚合排序后再画。" % ("sunburst" if _is_sun else "tree", sort, top_n)
+        )
+    return chart
 
 
 # ==========================================================================
@@ -2641,7 +2664,7 @@ def table(
     link: str | tuple | dict | None = None,
     max_rows: int | None = None,
     total: bool = False,
-    index: str | None = False,
+    index: bool = False,
     bar: str | list[str] | None = None,
     stripe: bool = True,
 ) -> Chart:
@@ -2661,6 +2684,9 @@ def table(
 
     汇总只发生在**显示层**：联动筛选后表格里显示的是「筛选后数据的汇总」，
     后台数据与其它图表的联动值不受影响。
+
+    ``total=True`` 的合计行只累加**当前显示的那些行**（受 ``limit`` 限制），不是
+    整份数据的合计；要全量合计请用 ``groupby`` 汇总表，或先自己 ``df.sum()``。
 
     展示 ``limit`` 行（上限 200）；嵌入多少行由 ``max_rows`` 决定——默认明细表嵌 200 行，
     汇总表（``groupby``）嵌入全部行，因为汇总必须基于完整数据，否则数字会和 pandas 对不上。
@@ -2776,6 +2802,11 @@ def table(
         bar=(list(bar_cols) if bar_cols else None),
         stripe=stripe,
     )
+    if group is not None and (total or index or bar_cols):
+        info.setdefault("warnings", []).append(
+            "汇总表模式下 total / index / bar 不生效：汇总表每行已经是一个分组，"
+            "没有可加合计或行号的明细行（1.6.2 起会提示，不再静默忽略）。"
+        )
     if group is not None and info.get("n_total", 0) > 50000 and not info.get("truncated"):
         est = info["n_total"] * max(1, len(records.get("cols") or [])) * 12 / 1000000.0
         info.setdefault("warnings", []).append(
@@ -2937,7 +2968,7 @@ def group_kpi(
 
     三种用法：
 
-    * ``group_kpi(df)`` —— 每个数值列一张卡片（按列自动取总量）；
+    * ``group_kpi(df)`` —— 每个数值列一张卡片（按列自动取总量，默认只取前 6 项，用 ``top_n`` 调整）；
     * ``group_kpi(df, names="大区", values="销售额")`` —— 每个类目一张卡片；
     * ``group_kpi(items=[{"label": "总销售额", "value": 123, "delta": 0.12}])``
       —— 完全手工指定（``delta`` 是百分比小数，>0 显示上涨）。

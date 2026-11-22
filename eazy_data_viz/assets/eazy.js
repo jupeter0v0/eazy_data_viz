@@ -880,7 +880,8 @@
       if (cat === '其他') {
         var s = 0, has = false;
         for (var k = 0; k < otherCats.length; k++) {
-          var ov = map[otherCats[k] + SEP + sname];
+          // 有 color 时键是 "类目\u0001系列"，没有 color 时是 "类目\u0001"
+          var ov = map[otherCats[k] + SEP + (cdim ? sname : '')];
           if (ov !== null && ov !== undefined) { s += ov; has = true; }
         }
         return has ? s : null;
@@ -911,7 +912,8 @@
         var val = valueOf(cats[ci], name);
         if (spec.percent && val !== null && val !== undefined) {
           var ct = catTotals[cats[ci]] || 0;
-          val = ct ? (val / ct * 100) : 0;
+          // 没有 color 时没有"堆叠组"，保持原值（清零会让整张图变成 0 柱）
+          val = ct ? (val / ct * 100) : val;
         }
         if (spec.percent && val !== null) val = Math.round(val * 10) / 10;
         if (isBar) {
@@ -2364,7 +2366,10 @@
     if (!p || !spec) return null;
     // 旭日 / 树：节点自带层级（点过之后 rootToNode 会重设根，treePathInfo 会变短，
     // 只能用建树时写好的 nodeDim / nodeLayer 才不会传错维度）。
-    if (p.data && p.data.nodeDim !== undefined && p.data.nodeDim !== null) {
+    if (p.data && p.data.nodeDim !== undefined) {
+      // nodeDim === null 表示「这一层没有可联动的维度」（树 / 旭日的合成根，名字通常是「全部」）：
+      // 显式返回 null，避免继续走 treePathInfo 兜底把根当成第一层维度去筛别的图（1.6.2 修复）。
+      if (p.data.nodeDim === null) return null;
       return {
         dim: p.data.nodeDim,
         value: (p.data.nodeValue !== undefined && p.data.nodeValue !== null)
@@ -2416,6 +2421,8 @@
     var spec = c.spec;
     var info = nodeInfoOf(spec, p);
     if (!info && (spec.type === 'sankey' || spec.type === 'graph')) return;  // 桑基的连线没有维度
+    // 树 / 旭日的合成根（nodeDim 显式为 null）没有维度可联动，点了不该筛别的图（1.6.2 修复）
+    if (!info && p.data && p.data.nodeDim === null) return;
     var xdim = info ? info.dim : currentXDim(spec, c.state);
     if (!xdim || p.name === null || p.name === undefined) return;
     var value = info ? info.value : String(p.name);

@@ -155,7 +155,7 @@
       cats.push(recs[i].name);
       v1.push(recs[i].value1);
       v2.push(recs[i].value2);
-      bases.push(a);
+      bases.push(Math.min(a, b));
       diffs.push(Math.abs(b - a));
     }
 
@@ -822,7 +822,7 @@
       t = U.num(t);
       cats.push(recs[i].name);
       actual.push(recs[i].value);
-      targets.push(t === null ? 0 : t);
+      targets.push(t);
     }
 
     var tip = tipAxis(theme);
@@ -830,10 +830,12 @@
       var p = ps && ps.length ? ps[0] : null;
       if (!p) return '';
       var idx = p.dataIndex;
-      var a = actual[idx] || 0, tg = targets[idx] || 0;
-      var rate = tg ? (a / tg * 100) : null;
+      var a = actual[idx] || 0;
+      var tg = (targets[idx] === null || targets[idx] === undefined) ? null : targets[idx];
+      var rate = (tg === null || !tg) ? null : (a / tg * 100);
       var html = head(cats[idx]) +
-        row('实际', U.fmtValue(a, spec.fmt)) + row('目标', U.fmtValue(tg, spec.fmt));
+        row('实际', U.fmtValue(a, spec.fmt)) +
+        row('目标', tg === null ? '—' : U.fmtValue(tg, spec.fmt));
       if (rate !== null) html += row('达成率', rate.toFixed(1) + '%');
       return html;
     };
@@ -887,8 +889,9 @@
     }
     if (!pts.length) return U.emptyOption(theme);
 
-    var fit = spec.fit;
-    if (!fit || !U.isNum(fit.slope)) fit = linfit(pts);
+    // 先按当前（可能已被联动过滤的）点重新拟合；算不出来才退回 Python 给的全量基线
+    var fit = linfit(pts);
+    if (!fit || !U.isNum(fit.slope)) fit = spec.fit;
     if (!fit) fit = { slope: 0, intercept: pts[0].y, r2: null };
 
     var minX = pts[0].x, maxX = pts[0].x;
@@ -1086,7 +1089,7 @@
       var rv = values[i] || [];
       for (j = 0; j < labels.length; j++) {
         var v = U.num(rv[j]);
-        points.push([j, i, v === null ? 0 : v]);
+        points.push([j, i, v]);
       }
     }
 
@@ -1105,8 +1108,9 @@
     var tip = tipItem(theme);
     tip.formatter = function (p) {
       var d = p.data || [0, 0, 0];
+      var cv = (d[2] === null || d[2] === undefined || d[2] !== d[2]) ? null : Number(d[2]);
       return head(labels[d[0]] + ' × ' + labels[d[1]]) +
-        row('相关系数', Number(d[2]).toFixed(2));
+        row('相关系数', cv === null ? '—（该列为常量）' : cv.toFixed(2));
     };
 
     var heatGrid = U.makeGrid(theme, { legend: false, rightExtra: 56 });
@@ -1128,7 +1132,11 @@
         type: 'heatmap', data: points,
         label: {
           show: spec.labels !== false, color: theme.text, fontSize: 10,
-          formatter: function (p) { return Number(p.data[2]).toFixed(2); }
+          formatter: function (p) {
+            var v = p.data[2];
+            if (v === null || v === undefined || v !== v) return '—';
+            return Number(v).toFixed(2);
+          }
         },
         itemStyle: { borderColor: theme.bg, borderWidth: 1 },
         emphasis: { itemStyle: { borderColor: theme.text, borderWidth: 1 } }

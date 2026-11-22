@@ -121,6 +121,15 @@ _ADMIN_SUFFIXES = (
 )
 
 # 需要从名称里直接抹掉的空白 / 间隔符号（中英文混排时避免 "W. Sahara" 匹配不上）
+# 常见简称 → 标准短名（与 assets/eazy_map.js 的 CHINA_ALIAS 保持一致）
+_REGION_ALIASES = {
+    "内蒙": "内蒙古",
+    "广西省": "广西",
+    "新疆省": "新疆",
+    "西藏省": "西藏",
+    "宁夏省": "宁夏",
+}
+
 _SPACES = ("\u3000", " ", "\t", "\r", "\n", "·", "・", ".", "。", "—", "-")
 
 
@@ -401,6 +410,9 @@ def normalize_region(name: str | None) -> str:
     if name is None:
         return ""
     s = str(name).strip()
+    _alias = _REGION_ALIASES.get(s)
+    if _alias is not None:
+        s = _alias
     for ch in _SPACES:
         if ch in s:
             s = s.replace(ch, "")

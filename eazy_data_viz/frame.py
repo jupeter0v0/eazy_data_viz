@@ -38,6 +38,17 @@ KIND_BOOL = "bool"
 def ensure_frame(data):
     """把用户传来的 data 统一成 DataFrame。"""
     if isinstance(data, pd.DataFrame):
+        if data.columns.has_duplicates:
+            dup = []
+            seen = set()
+            for c in data.columns:
+                if repr(c) in seen and str(c) not in dup:
+                    dup.append(str(c))
+                seen.add(repr(c))
+            raise ValueError(
+                "数据里有重复的列名：%s。请先去掉重复列，"
+                "例如 df = df.loc[:, ~df.columns.duplicated()]。" % "、".join(dup)
+            )
         return data
     if isinstance(data, pd.Series):
         return data.to_frame()
@@ -114,7 +125,15 @@ def column_values(series, kind):
             return arr.tolist()
         vals = np.asarray(arr, dtype="float64")
         mask = np.isnan(vals)
-        out = np.round(vals, 4).tolist()
+        # 大数保留 4 位小数；小于 1 的数保留 6 位（1.23456e-05 不会被抹成 0）
+        small = np.abs(vals) < 1
+        rounded = np.where(small, np.round(vals, 6), np.round(vals, 4))
+        # ±inf 不是合法 JSON：按缺失处理，避免整页 to_json 抛异常
+        inf = ~np.isfinite(vals)
+        if inf.any():
+            rounded = np.where(inf, np.nan, rounded)
+            mask = mask | inf
+        out = rounded.tolist()
         if mask.any():
             for i in np.flatnonzero(mask).tolist():
                 out[i] = None
@@ -122,8 +141,20 @@ def column_values(series, kind):
 
     if kind == KIND_TIME:
         dt = pd.to_datetime(series, errors="coerce")
-        midnight = dt.dt.normalize() == dt
-        fmt = "%Y-%m-%d" if bool(midnight.all()) else "%Y-%m-%d %H:%M"
+        valid = dt.notna()
+        if bool(valid.any()):
+            mid = pd.Series(False, index=dt.index)
+            mid.loc[valid] = dt.loc[valid].dt.normalize() == dt.loc[valid]
+            sec = pd.Series(0, index=dt.index)
+            sec.loc[valid] = dt.loc[valid].dt.second
+            if bool(mid.all()):
+                fmt = "%Y-%m-%d"
+            elif bool((sec == 0).all()):
+                fmt = "%Y-%m-%d %H:%M"
+            else:
+                fmt = "%Y-%m-%d %H:%M:%S"
+        else:
+            fmt = "%Y-%m-%d"
         texts = dt.dt.strftime(fmt).to_numpy(dtype=object)
         out = texts.tolist()
         null = pd.isna(texts)
@@ -171,6 +202,11 @@ def convert_series(series, force_numeric=False):
             kind = KIND_NUM
         else:
             bad = series.dropna().head(5).tolist()
+            if not bad:
+                raise TypeError(
+                    "列 %r 里没有可用的数值（整列为空或全是文本）。"
+                    "请先清洗这一列，或换一列。" % (series.name,)
+                )
             raise TypeError(
                 "列 %r 需要是数值类型，但当前是文本类型（例如 %r）。"
                 "请先用 pd.to_numeric() 清洗，或换一列。" % (series.name, bad)
@@ -205,16 +241,20 @@ def clear_cache():
 
 
 def _fingerprint(df):
-    """便宜的「内容指纹」：形状 + 首尾两行，用于发现原地修改。"""
+    """内容指纹：形状 + 每列哈希，用于发现原地修改（改中间行也能发现）。"""
+    digest = 0
     try:
-        head = df.iloc[0].tolist()
-    except (IndexError, TypeError):
-        head = None
-    try:
-        tail = df.iloc[-1].tolist()
-    except (IndexError, TypeError):
-        tail = None
-    return (len(df), tuple(map(str, df.columns)), repr(head)[:240], repr(tail)[:240])
+        hashed = pd.util.hash_pandas_object(df, index=False)
+        digest = int(hashed.sum())
+        if len(df) > 1:
+            digest = (digest * 1000003 + int(hashed.iloc[0]) + int(hashed.iloc[-1])) % (2 ** 61 - 1)
+    except (TypeError, ValueError, AttributeError):
+        # 混合了不可哈希的对象列时退回形状 + 首尾行
+        try:
+            digest = hash(repr(df.iloc[0].tolist()) + repr(df.iloc[-1].tolist()))
+        except (IndexError, TypeError):
+            digest = 0
+    return (len(df), tuple(map(str, df.columns)), digest)
 
 
 def cache_info():
@@ -245,13 +285,6 @@ def _cache_put(key, df, entry):
 
 def prepare(df, roles, max_rows=MAX_ROWS, max_cols=MAX_COLS,
             numeric_roles=None, dimension_roles=None):
-    if max_rows is not None:
-        if isinstance(max_rows, bool) or not isinstance(max_rows, numbers.Integral):
-            raise TypeError(
-                "max_rows 需要是正整数（如 50000），或 None 表示不采样；收到 %r。" % (max_rows,))
-        if max_rows < 1:
-            raise ValueError("max_rows 需要 >= 1，或传 None 表示不采样；收到 %r。" % (max_rows,))
-        max_rows = int(max_rows)
     """把 DataFrame 压成 ``{"cols": [...], "rows": [[...]], ...}``。
 
     参数
@@ -264,6 +297,13 @@ def prepare(df, roles, max_rows=MAX_ROWS, max_cols=MAX_COLS,
     dimension_roles : 可迭代的列名, 可选
         必须按维度（分类）处理的列。
     """
+    if max_rows is not None:
+        if isinstance(max_rows, bool) or not isinstance(max_rows, numbers.Integral):
+            raise TypeError(
+                "max_rows 需要是正整数（如 50000），或 None 表示不采样；收到 %r。" % (max_rows,))
+        if max_rows < 1:
+            raise ValueError("max_rows 需要 >= 1，或传 None 表示不采样；收到 %r。" % (max_rows,))
+        max_rows = int(max_rows)
     df = ensure_frame(df)
     if len(df) == 0:
         raise ValueError("数据为空（0 行），无法绘图。")

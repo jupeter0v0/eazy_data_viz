@@ -65,7 +65,7 @@
     "荷兰": "Netherlands", "瑞士": "Switzerland", "奥地利": "Austria",
     "波兰": "Poland", "葡萄牙": "Portugal", "希腊": "Greece",
     "乌克兰": "Ukraine", "哈萨克斯坦": "Kazakhstan", "蒙古": "Mongolia",
-    "缅甸": "Myanmar", "柬埔寨": "Cambodia", "老挝": "Laos",
+    "缅甸": "Myanmar", "柬埔寨": "Cambodia", "老挝": "Lao PDR",
     "尼泊尔": "Nepal", "孟加拉国": "Bangladesh", "斯里兰卡": "Sri Lanka",
     "阿联酋": "United Arab Emirates", "卡塔尔": "Qatar", "科威特": "Kuwait",
     "尼日利亚": "Nigeria", "肯尼亚": "Kenya", "埃塞俄比亚": "Ethiopia",
