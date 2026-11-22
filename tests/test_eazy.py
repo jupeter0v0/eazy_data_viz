@@ -1544,6 +1544,103 @@ def t_follow_order():
     json.dumps(c.spec, allow_nan=False)
 
 
+def t_kpi_derived():
+    """1.7：派生指标（客单价 / 吨均价）= 多个指标各自聚合后再相除。"""
+    import json as _json
+    import pandas as pd
+
+    df = pd.DataFrame({
+        "月份": ["1月", "2月", "1月", "2月"],
+        "大区": ["华东", "华东", "华北", "华北"],
+        "销售额": [1000.0, 2000.0, 500.0, 500.0],
+        "订单数": [10, 20, 5, 5],
+        "数量": [1.0, 2.0, 3.0, 4.0],
+        "客户名称": ["甲", "乙", "甲", "丙"],
+    })
+
+    # 1) 两个指标 + expr：客单价 = 销售额 / 订单数
+    c = eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"},
+                          expr="销售额 / 订单数", label="客单价", hint=None)
+    assert c.spec["kpi"]["expr"] == "销售额 / 订单数", c.spec["kpi"]
+    assert c.spec["kpi"]["rpn"] == [["v", 0], ["v", 1], ["/"]], c.spec["kpi"]["rpn"]
+    assert [m["name"] for m in c.spec["kpi"]["metrics"]] == ["销售额", "订单数"]
+    assert c.spec["roles"] == {"metrics": ["销售额", "订单数"]}, c.spec["roles"]
+    assert c.spec["value"] is None and c.spec["compute"]["measure"] is None
+    assert c.spec["metricSel"] is None
+    # 卡片本身不再有单列口径；只有 metrics 参与数据准备
+    assert "value" not in c.spec["roles"]
+    assert c.data["kinds"]["销售额"] == "num"
+
+    # 2) 不写 expr：两个指标默认「分子 / 分母」，一个指标默认就是它自己
+    c2 = eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "单量": "订单数"})
+    assert c2.spec["kpi"]["expr"] == "销售额 / 单量", c2.spec["kpi"]["expr"]
+    c2b = eazy_data_viz.kpi(df, metrics={"销售额": "销售额"})
+    assert c2b.spec["kpi"]["expr"] == "销售额" and c2b.spec["kpi"]["rpn"] == [["v", 0]]
+
+    # 3) 分母是「某列的去重数」：客户数用 unique，文本列不强制转数值
+    c3 = eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "客户数": ("客户名称", "unique")},
+                           expr="销售额 / 客户数")
+    assert c3.spec["kpi"]["metrics"][1]["agg"] == "unique"
+    assert c3.spec["roles"]["metrics"] == ["销售额", "客户名称"], c3.spec["roles"]
+    assert c3.data["kinds"]["客户名称"] != "num", c3.data["kinds"]
+
+    # 4) 分母是「行数」：count 不需要列
+    c4 = eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "单数": "count"},
+                           expr="销售额 / 单数")
+    assert c4.spec["kpi"]["metrics"][1] == {"name": "单数", "col": None, "agg": "count"}
+    assert c4.spec["roles"]["metrics"] == ["销售额"]
+
+    # 5) edv.column 登记过的公式列：value= 直接触发派生（联动时按比率重算）
+    eazy_data_viz.column(客单价="销售额 / 订单数")
+    try:
+        c5 = eazy_data_viz.kpi(df, value="客单价")
+        assert c5.spec["kpi"]["expr"] == "销售额 / 订单数", c5.spec["kpi"]
+        assert c5.spec["kpi"]["rpn"] == [["v", 0], ["v", 1], ["/"]]
+        assert c5.spec["roles"]["metrics"] == ["销售额", "订单数"]
+    finally:
+        eazy_data_viz.reset_columns()
+
+    # 6) 派生 + 走势：只给 spark_x（y 留空），每期各自重算
+    c6 = eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "单量": "count"},
+                           expr="销售额 / 单量", spark_x="月份")
+    assert c6.spec["spark"] == {"x": "月份", "y": None, "agg": "sum"}, c6.spec["spark"]
+
+    # 7) 派生 + 动态对比（compare 在联动过滤后的行集上重新算）
+    c7 = eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "单量": "count"},
+                           expr="销售额 / 单量", spark_x="月份",
+                           compare={"大区": ["华东", "华北"]})
+    assert c7.spec["compare"]["dim"] == "大区"
+
+    # 8) spec 可 JSON 序列化，前端拿到的是 rpn 而不是公式字符串执行
+    _json.dumps(c.spec, allow_nan=False)
+    assert "rpn" in _json.dumps(c.spec)
+
+    # 9) 报错：都必须是能看懂的中文
+    bad = [
+        (lambda: eazy_data_viz.kpi(df, value="销售额", metrics={"销售额": "销售额"}), "二选一"),
+        (lambda: eazy_data_viz.kpi(df, metrics=None, expr="销售额 / 订单数"), "expr 需要配合 metrics"),
+        (lambda: eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "单数": "count"},
+                                   expr="销售额 / 单数", metric="sale"), "metric="),
+        (lambda: eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "单量": "订单数",
+                                                "数量": "数量"}), "需要用 expr"),
+        (lambda: eazy_data_viz.kpi(df, metrics={"销售额": "销售额"}, expr="销售额 / 客单价"), "无法识别"),
+        (lambda: eazy_data_viz.kpi(df, metrics={"销售额": "销售额"}, expr="(销售额"), "括号不配对"),
+        (lambda: eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"},
+                                   expr="销售额 % 订单数"), "无法识别"),
+        (lambda: eazy_data_viz.kpi(df, metrics={"销售额": "销售额"}, expr="销售额 2"), "公式结构不完整"),
+        (lambda: eazy_data_viz.kpi(df, metrics={"销售额": ("大区", "sum")}), "文本列"),
+        (lambda: eazy_data_viz.kpi(df, metrics={"销售额": "不存在的列"}), "不存在"),
+        (lambda: eazy_data_viz.kpi(df, metrics={"销售额": "销售额"}, expr=""), "字符串公式"),
+    ]
+    for fn, word in bad:
+        try:
+            fn()
+        except (ValueError, KeyError) as err:  # 列不存在沿用 require_column 的 KeyError
+            assert word in str(err), (word, str(err))
+        else:
+            raise AssertionError("派生指标的错误分支没有报错：%s" % word)
+
+
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):
 
     check(name, fn)

@@ -227,7 +227,10 @@ def main():
         "conventions": {
             "data": "第一参数永远是 pandas.DataFrame（除 gauge/ring_progress 这类单值图）",
             "columns": "x/y/color/names/values 等参数都传【列名字符串】，不要传 Series 或 JSON",
-            "agg": ["sum", "mean", "count", "max", "min", "median"],
+            "agg": ["sum", "mean", "count", "unique", "max", "min", "median"],
+            "derived": 'kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"}, '
+                       'expr="销售额 / 订单数") 由其它指标算出的比率（客单价 / 吨均价 / 人均）；'
+                       "分母可用 count 汇总或某列 unique 数，联动后按筛选结果重算",
             "fmt": ["compact", "thousands", "raw", "percent", "currency"],
             "theme": ["light", "dark"],
             "return": "所有图表函数返回 eazy_data_viz.Chart（.to_html() / .save(path) / .show()）",
@@ -265,6 +268,7 @@ def write_markdown(f, cat):
         ("列参数", conv["columns"]),
         ("返回值", conv["return"]),
         ("聚合 agg", "`" + "` `".join(conv["agg"]) + "`"),
+        ("派生指标", conv["derived"]),
         ("格式 fmt", "`" + "` `".join(conv["fmt"]) + "`"),
         ("主题", "`light` / `dark`（页面级），配色见 palette"),
         ("多图联动", conv["dashboard"] + "；`link=\"g1\"` 同组联动"),
@@ -316,6 +320,7 @@ def write_markdown(f, cat):
     w("| 你想表达 | 用哪个 |\n|---|---|\n")
     decide = [
         ("一个总数 + 同比", "`kpi`"),
+        ("客单价 / 吨均价 / 人均（由其它指标算）", "`kpi` + `metrics=` / `expr=`"),
         ("一组总数（4~8 个）", "`group_kpi`"),
         ("完成率 / 目标达成", "`gauge` / `ring_progress` / `bullet` / `target` / `progress`"),
         ("随时间变化", "`line`（可 `area=True` / `step=True`）"),
@@ -341,6 +346,9 @@ def write_markdown(f, cat):
     w('eazy_data_viz.kpi(df, value="销售额", label="全年销售额", delta=0.128, delta_label="同比",\n')
     w('         target=2000000, spark="销售额", spark_x="月份", hint="2024 全年 · 含税",\n')
     w('         link="g1").show()\n')
+    w("# 派生指标：由其它指标算出来的比率，联动后按筛选结果重算\n")
+    w('eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"},\n')
+    w('         expr="销售额 / 订单数", label="客单价", fmt="currency", link="g1").show()\n')
     w("```\n\n")
     w("| 参数 | 作用 |\n|---|---|\n")
     w("| `data` / `value` / `agg` | 传 df + 列名（参与联动过滤）或直接传一个数字 |\n")
@@ -349,6 +357,9 @@ def write_markdown(f, cat):
     w("| `delta` / `delta_label` / `inverse` | 同比环比；`inverse=True` 时下降变绿（成本类指标） |\n")
     w("| `target` / `target_label` | 目标值 → 右上角徽标 + 达成率进度条 |\n")
     w("| `spark` / `spark_x` | 迷你走势线（按 spark_x 聚合 spark 列） |\n")
+    w("| `metrics` / `expr` | 派生指标：`metrics` 声明分子分母（列名 / `(列, 聚合)` / `\"单量\": \"count\"`），"
+      "`expr` 用 `+ - * /` 写公式 |\n")
+    w("| `compare` / `metric` | 动态同比/环比；`metric=` 让卡片当选择器驱动 `follow()` 图 |\n")
     w("| `accent` | 强调色序号（取当前配色的第 N 个颜色） |\n\n")
 
     w("## 7. 交互能力\n\n")

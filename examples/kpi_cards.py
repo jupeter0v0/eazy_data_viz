@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""KPI 卡片全用法：目标达成、迷你走势、反向指标、联动重算。
+"""KPI 卡片全用法：目标达成、迷你走势、反向指标、联动重算、派生指标（客单价）。
 
     python examples/kpi_cards.py
 """
@@ -53,9 +53,20 @@ def main():
         edv.kpi(df, value="销售额", label="销售额（联动重算）", link="g1",
                 hint="点击下方任意图形，本卡随筛选条件变化"),
 
+        # 8) 派生指标：客单价 = 销售额 ÷ 订单数（先各自聚合，再相除）
+        edv.kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"},
+                expr="销售额 / 订单数", label="客单价", fmt="currency",
+                link="g1", spark_x="月份", accent=3,
+                hint="销售额合计 ÷ 订单数合计；联动后按筛选结果重算"),
+
+        # 9) 分母是 unique 数：品类均摊销售额（换成客户号即人均消费）
+        edv.kpi(df, metrics=[("销售额", "sum"), ("产品", "unique")],
+                expr="销售额 / 产品", label="品类均摊销售额", fmt="currency",
+                accent=4, hint="销售额 ÷ 在售品类数（unique）"),
+
         cols=4,
         title="KPI 卡片全用法",
-        desc="目标达成率 / 迷你走势 / 同比环比 / 反向指标 / 联动重算",
+        desc="目标达成率 / 迷你走势 / 同比环比 / 反向指标 / 联动重算 / 派生比率",
     )
     path = os.path.join(OUT, "kpi_cards.html")
     cards.save(path)

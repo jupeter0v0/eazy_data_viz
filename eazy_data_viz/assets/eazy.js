@@ -1719,6 +1719,74 @@
     return { cur: curV, base: baseV, rate: rateOf(curV, baseV), label: last, baseLabel: prev };
   }
 
+  // 派生指标（1.7.0）：metrics 里每个零件按联动后的行集各自聚合，
+  // 再按 Python 编好的 RPN 做四则运算。除零 / 空值 -> null（显示 "-"）。
+  function kpiMetricValues(spec, rows) {
+    var mets = (spec.kpi && spec.kpi.metrics) || [];
+    var out = [], i;
+    for (i = 0; i < mets.length; i++) {
+      var m = mets[i];
+      if (m.agg === 'count') {
+        out.push(rows && rows.length ? rows.length : null);
+      } else {
+        out.push(aggValue(rows, m.col, m.agg || 'sum'));
+      }
+    }
+    return out;
+  }
+
+  function kpiEvalRPN(rpn, vals) {
+    if (!rpn || !rpn.length) return null;
+    var stack = [], i;
+    for (i = 0; i < rpn.length; i++) {
+      var item = rpn[i], kind = item[0];
+      if (kind === 'n') { stack.push(Number(item[1])); continue; }
+      if (kind === 'v') {
+        var idx = Number(item[1]);
+        var vv = (idx >= 0 && idx < vals.length) ? vals[idx] : null;
+        stack.push(vv === null || vv === undefined ? null : Number(vv));
+        continue;
+      }
+      var b = stack.length ? stack.pop() : null;
+      var a = stack.length ? stack.pop() : null;
+      if (a === null || b === null || !isFinite(a) || !isFinite(b)) {
+        stack.push(null);
+        continue;
+      }
+      if (kind === '+') stack.push(a + b);
+      else if (kind === '-') stack.push(a - b);
+      else if (kind === '*') stack.push(a * b);
+      else stack.push(b === 0 ? null : a / b);
+    }
+    var res = stack.length ? stack[0] : null;
+    return (res === null || res === undefined || !isFinite(res)) ? null : res;
+  }
+
+  function kpiDerived(spec, rows) {
+    if (!spec || !spec.kpi || !spec.kpi.rpn) return null;
+    return kpiEvalRPN(spec.kpi.rpn, kpiMetricValues(spec, rows));
+  }
+
+  // 派生指标的环比：每个期各自重算一次（不是两条曲线相除）
+  function kpiMomDerived(rows, period, spec) {
+    if (!period || !rows || !rows.length) return null;
+    var buckets = {}, order = [], i;
+    for (i = 0; i < rows.length; i++) {
+      var k = String(catName(rows[i][period]));
+      if (!Object.prototype.hasOwnProperty.call(buckets, k)) {
+        buckets[k] = [];
+        order.push(k);
+      }
+      buckets[k].push(rows[i]);
+    }
+    if (order.length < 2) return null;
+    order.sort(compareCatX);
+    var last = order[order.length - 1], prev = order[order.length - 2];
+    var curV = kpiDerived(spec, buckets[last]);
+    var baseV = kpiDerived(spec, buckets[prev]);
+    return { cur: curV, base: baseV, rate: rateOf(curV, baseV), label: last, baseLabel: prev };
+  }
+
   function computeKpi(spec, data, state) {
     var measure = (spec.roles && spec.roles.value) ||
       (spec.compute && spec.compute.measure) || null;
@@ -1730,6 +1798,26 @@
     };
     if (spec.value !== null && spec.value !== undefined) {
       out.cur = num(spec.value);
+      return out;
+    }
+    if (spec.kpi && spec.kpi.rpn) {
+      var cmpD = spec.compare;
+      if (!cmpD || !cmpD.dim) {
+        out.cur = kpiDerived(spec, filteredRows(spec, data, state));
+        return out;
+      }
+      var curDRows = compareRows(spec, data, state, 'cur');
+      var baseDRows = periodAligned(
+        curDRows, compareRows(spec, data, state, 'base'), cmpD.period);
+      out.cur = kpiDerived(spec, curDRows);
+      out.base = kpiDerived(spec, baseDRows);
+      out.hasBase = out.base !== null && out.base !== undefined;
+      out.rate = rateOf(out.cur, out.base);
+      out.mom = kpiMomDerived(curDRows, cmpD.period, spec);
+      out.hasMom = !!(out.mom && out.mom.rate !== null);
+      out.dim = cmpD.dim;
+      out.curLabel = String(cmpD.cur);
+      out.baseLabel = String(cmpD.baseLabel || cmpD.base);
       return out;
     }
     var cmp = spec.compare;
@@ -1827,9 +1915,28 @@
   // 迷你走势的点（按 x 排序）
   function kpiSparkPoints(spec, data, state) {
     var sp = spec.spark;
-    if (!sp || !sp.y) return [];
+    if (!sp || !sp.x) return [];
     var rows = filteredRows(spec, data, state);
     if (!rows.length) return [];
+    if (spec.kpi && spec.kpi.rpn) {
+      var buckets = {}, order = [], i, kk;
+      for (i = 0; i < rows.length; i++) {
+        var lbl = catName(rows[i][sp.x]);
+        kk = '$' + String(lbl);
+        if (!Object.prototype.hasOwnProperty.call(buckets, kk)) {
+          buckets[kk] = { x: lbl, rows: [] };
+          order.push(kk);
+        }
+        buckets[kk].rows.push(rows[i]);
+      }
+      var ptsD = [];
+      for (i = 0; i < order.length; i++) {
+        ptsD.push({ x: buckets[order[i]].x,
+                    v: kpiDerived(spec, buckets[order[i]].rows) });
+      }
+      ptsD.sort(function (a, b) { return compareCatX(a.x, b.x); });
+      return ptsD;
+    }
     var g = groupBy(rows, [sp.x], sp.y, sp.agg || spec.agg || 'sum');
     var pts = [];
     for (var i = 0; i < g.length; i++) pts.push({ x: g[i].keys[0], v: g[i].value });
@@ -1916,6 +2023,17 @@
     // 换算单位（万 / 亿 / 百万）和文字后缀（ 单 / ℃ / %）都由 fmtValue 拼好
     var txt = fmtValue(val, spec.fmt, spec);
     if (spec.prefix) txt = spec.prefix + txt;
+    // 派生指标：hover 数值能看到分子分母各自是多少（口径自查用）
+    var valTitle = '';
+    if (spec.kpi && spec.kpi.rpn) {
+      var mv = kpiMetricValues(spec, filteredRows(spec, data, state));
+      var mets = spec.kpi.metrics || [];
+      var bits = [], bi;
+      for (bi = 0; bi < mets.length; bi++) {
+        bits.push(mets[bi].name + '=' + fmtValue(mv[bi], spec.fmt, spec));
+      }
+      valTitle = ' title="' + esc(bits.join(' · ')) + '"';
+    }
 
     var html = '<div class="eazy-kpi' + (ms ? ' eazy-kpi-selectable' : '') +
       (selected ? ' is-selected' : '') + '" style="--eazy-accent:' + accent + '"' +
@@ -1931,7 +2049,7 @@
     }
     html += '</div>';
 
-    html += '<div class="eazy-kpi-main"><span class="eazy-kpi-value">' + esc(txt) + '</span>';
+    html += '<div class="eazy-kpi-main"><span class="eazy-kpi-value"' + valTitle + '>' + esc(txt) + '</span>';
     if (cmpOn) {
       var momMode = spec.compare.mode === 'mom';
       var rateUse = momMode ? (kres.mom ? kres.mom.rate : null) : kres.rate;
@@ -1959,6 +2077,10 @@
     html += '</div>';
 
     var hint = spec.hint;
+    if (!hint && spec.kpi && spec.kpi.expr) {
+      hint = '= ' + spec.kpi.expr;
+      if (spec.link && EazyViz.hints) hint += ' · 联动组 ' + spec.link + ' · 点同组图表筛选';
+    }
     if (!hint && spec.link && EazyViz.hints) hint = '联动组 ' + spec.link + ' · 点同组图表筛选';
     if (hint) html += '<div class="eazy-kpi-hint">' + esc(hint) + '</div>';
 
@@ -2381,6 +2503,14 @@
     if (!c.ec) {
       c.ec = global.echarts.init(c.el, null, { renderer: 'canvas' });
       c.ec.on('click', function (p) { onChartClick(c, p); });
+      // 旭日图放大后，ECharts 自己没有「点回去」的手势（视图根不画扇区，
+      // 点圆心等于点空白）。这里补一个：放大状态下点空白即退回全量视图。
+      c.ec.getZr().on('click', function (ev) {
+        if (c.spec.type !== 'sunburst' || !c.zoomPath || !c.zoomPath.length) return;
+        if (ev && ev.target) return;   // 点在扇区上：交给上面的 ec click
+        c.zoomPath = [];
+        renderChart(c);
+      });
       c.ec.on('legendselectchanged', function (e) {
         c.state.legendSel = e.selected;
       });
@@ -2445,7 +2575,7 @@
         var series = c.ec.getModel().getSeriesByIndex(0);
         var root = series.getData().tree.root;
         var node = findNodeByPath(root, path);
-        if (node && node !== root) {
+        if (node && node !== root && node.children && node.children.length) {
           c.ec.dispatchAction({ type: 'sunburstRootToNode', targetNode: node });
         }
       } catch (e) { /* 节点已不存在时忽略 */ }
@@ -2533,6 +2663,21 @@
         }
       }
       if (!zp.length && p.name !== undefined && p.name !== null) zp = [String(p.name)];
+      // 最外层的叶子节点没有下一层：rootToNode 到它会让整张图只剩空白，
+      // 所以点叶子时放大到父层（单层旭日则直接不放大），联动筛选照旧。
+      var pathDims = (spec.roles && spec.roles.path) || [];
+      // 已经放大过一层时，treePathInfo 是「相对当前视图根」的：补上视图根前缀，
+      // 否则 zoomPath 变成相对路径，重画时按根找不到节点，图就弹回整棵树。
+      var wantLen = (p.data && p.data.nodeLayer !== undefined) ? p.data.nodeLayer + 1 : zp.length;
+      if (zp.length < wantLen && c.zoomPath && c.zoomPath.length) {
+        zp = c.zoomPath.slice(0, Math.max(0, wantLen - zp.length)).concat(zp);
+      }
+      var leafKids = p.data && p.data.children;
+      var leafLayer = (p.data && p.data.nodeLayer !== undefined)
+        ? p.data.nodeLayer : zp.length - 1;
+      var isLeaf = (leafKids && !leafKids.length)
+        || (!leafKids && pathDims.length > 0 && leafLayer >= pathDims.length - 1);
+      if (isLeaf) zp = zp.slice(0, Math.max(0, zp.length - 1));
       c.zoomPath = zp;
     }
 
@@ -3031,7 +3176,8 @@
       catColor: catColor, paintItem: paintItem,
       THEME: THEME, FONT: FONT, SEP: SEP,
       PALETTES: PALETTES, themeFor: themeFor, mixColor: mixColor,
-      kpiValue: kpiValue, kpiSparkPoints: kpiSparkPoints, kpiSparkSVG: kpiSparkSVG
+      kpiValue: kpiValue, kpiSparkPoints: kpiSparkPoints, kpiSparkSVG: kpiSparkSVG,
+      kpiDerived: kpiDerived, kpiMetricValues: kpiMetricValues, kpiEvalRPN: kpiEvalRPN
     },
     groupBy: groupBy,
     filteredRows: filteredRows,
@@ -3072,6 +3218,10 @@
     PALETTES: PALETTES,
     clearAllLinks: clearAllLinks,
     resetAll: resetAll,
+    kpiValue: kpiValue,
+    kpiDerived: kpiDerived,
+    kpiMetricValues: kpiMetricValues,
+    kpiEvalRPN: kpiEvalRPN,
     kpiSparkPoints: kpiSparkPoints,
     kpiSparkSVG: kpiSparkSVG,
     renderToolbar: renderToolbar,

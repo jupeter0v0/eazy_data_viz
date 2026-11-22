@@ -69,7 +69,7 @@ from .render import Dashboard, dashboard
 from .render import streamlit_show as _streamlit_show
 from .streamlit_v2 import is_available as streamlit_available
 
-__version__ = "1.6.5"
+__version__ = "1.7.1"
 
 __all__ = [
     "Chart",
@@ -501,6 +501,20 @@ eazy_data_viz · pandas 交互式图表库（经营驾驶舱版）  v%s
     # 卡片外框：默认 plain（透明无框）；还有 card（实心）/ glass（液态玻璃）
     eazy_data_viz.show(..., card_style="glass")
 
+1.7 新增（派生指标：由其它指标算出来的比率）
+
+    # 客单价 = 销售额合计 ÷ 订单数合计；联动后按筛选结果重算（前端）
+    eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"},
+                      expr="销售额 / 订单数", label="客单价", fmt="currency", link="g1")
+    # 分母可以是 count 汇总（数行数），也可以是某列的 unique 数（数不同值）
+    eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "单数": "count"},
+                      expr="销售额 / 单数", label="单均价")
+    eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "客户数": ("客户号", "unique")},
+                      expr="销售额 / 客户数", label="人均消费")
+    # edv.column 登记过的表达式列，直接传给 value= 也会自动拆成分子/分母
+    eazy_data_viz.column(客单价="销售额/订单数")
+    eazy_data_viz.kpi(df, value="客单价", label="客单价")
+
 1.5 新增（自由排列 / 联动方向 / 汇总表 / 多级桑基 / 同比 / 去重计数）
 --------------------------------------------------------------------------------
     # 自由排列 A：direction="h" 按列数、direction="v" 按行数，layout 是每列/每行的图表数
@@ -526,6 +540,7 @@ KPI 卡片（驾驶舱指标头）
     * delta 传 0.128 显示 ▲12.8%%；inverse=True 表示越小越好（成本/投诉率）
     * target 出现右上角达成率 + 底部进度条；spark + spark_x 出现迷你走势
     * 传 link 后，同组图被点击过滤时 KPI 数字会跟着重算（前端完成）
+    * 比率型指标用 metrics= + expr=（客单价 / 吨均价 / 人均），联动后分子分母各自重算
     * 也可以直接给数：eazy_data_viz.kpi(1630000, label="销售额", delta=0.128)
 
 配色库（7 套，参照 Google / Ant Design / Tableau / IBM Carbon / ECharts / 莫兰迪 / Tailwind）

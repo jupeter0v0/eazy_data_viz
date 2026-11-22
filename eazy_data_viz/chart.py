@@ -17,6 +17,7 @@ import tempfile
 import webbrowser
 
 from . import compare as _compare
+from . import derived as _derived
 from . import frame as _frame
 from . import metric as _metric
 from .metric import Follow
@@ -1443,6 +1444,8 @@ def kpi(
     value: str | None = None,
     *,
     agg: str | None = None,
+    metrics: dict | list | str | None = None,
+    expr: str | None = None,
     label: str | None = None,
     fmt: str = None,
     delta: float | None = None,
@@ -1468,11 +1471,13 @@ def kpi(
 ) -> Chart:
     """KPI 数字卡片（驾驶舱指标头，可跟随联动筛选自动重算）。
 
-    三种用法
+    四种用法
     --------
     >>> eazy_data_viz.kpi(1630000, label="全年销售额", delta=0.128)          # 直接给数值
     >>> eazy_data_viz.kpi(df, value="销售额", label="全年销售额", delta=0.128)  # 从 df 聚合
     >>> eazy_data_viz.kpi(df, value="销售额", spark="销售额", spark_x="月份")   # 带迷你走势
+    >>> eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"},
+    ...                   expr="销售额 / 订单数", label="客单价")               # 派生指标
 
     参数
     ----
@@ -1482,6 +1487,17 @@ def kpi(
         数值列（从 df 聚合时必填）。
     agg : str
         聚合方式，sum / mean / count（计数）/ unique（去重计数）/ max / min / median。
+        用 ``value=`` 时也可以省略：会取 ``edv.column()`` 给这一列登记的聚合方式。
+    metrics : dict | list | str
+        派生指标的「零件」：``{名字: 列名}`` 或 ``{名字: (列名, 聚合)}``，
+        例如 ``metrics={"销售额": "销售额", "订单数": ("订单号", "count")}``；
+        分母是去重数时写 ``("客户号", "unique")``。列名可以和指标名不同。
+        如果 ``value=`` 是 ``edv.column(客单价="销售额/订单数")`` 登记过的公式列，
+        不写 metrics 也会自动按登记公式拆成分子分母。
+    expr : str
+        怎么把 metrics 里的指标算成一个数，例如 ``expr="销售额 / 订单数"``；
+        支持 ``+ - * /`` 与括号。派生指标在前端按「当前联动筛选后的行集」
+        先分别聚合分子分母、再做运算，而不是把预先算好的一列取平均。
     label : str
         指标名（显示在数值上方）。
     fmt : str
@@ -1549,12 +1565,29 @@ def kpi(
         )
     if accent is not None and (not isinstance(accent, int) or isinstance(accent, bool) or accent < 0):
         raise ValueError("accent 需要是 >=0 的整数（配色序号），收到 %r" % (accent,))
+    if value is not None and metrics is not None:
+        raise ValueError(
+            "value 与 metrics 二选一：单一列口径用 value=，由多个指标算出来的用 metrics= + expr=。"
+        )
+    if expr is not None and metrics is None:
+        raise ValueError(
+            'expr 需要配合 metrics 使用：先定义参与计算的指标，'
+            '例如 metrics={"销售额": "销售额", "订单数": "订单数"}, expr="销售额 / 订单数"。'
+        )
+    if metric is not None and (metrics is not None or expr is not None):
+        raise ValueError(
+            "metric=（指标选择器）只能用于单一列口径，不能和 metrics=/expr= 一起用："
+            "派生比率没有可以广播给 follow 图的单列。"
+        )
 
     static_value = None
     records = {"cols": [], "rows": [], "n": 0, "kinds": {}}
     ref = None
     warnings = []
     cmp_cfg = None
+    kpi_def = None
+    mets = None
+    out_roles = {}
 
     if compare is not None and isinstance(data, (int, float)) and not isinstance(data, bool):
         raise ValueError(
@@ -1576,30 +1609,78 @@ def kpi(
                 'kpi 的 metric=%r 需要同时给 value（这个指标对应的数值列），'
                 '例如 kpi(df, value="金额", metric="sale")。' % (metric,)
             )
-        if value is None:
+        if value is None and metrics is None:
             nums = [c for c in df.columns if _frame.column_kind(df[c]) == _frame.KIND_NUM]
             if len(nums) != 1:
-                raise ValueError('kpi 需要指定 value 列，例如 kpi(df, value="销售额")。')
+                raise ValueError(
+                    'kpi 需要指定 value 列，例如 kpi(df, value="销售额")。'
+                    '（只数行数用 agg="count"；派生指标用 metrics= + expr=）'
+                )
             value = nums[0]
-        df, _added = _metric.materialize(df, [value] + ([spark] if spark is not None else []))
-        _frame.require_column(df, value, "value")
-        if agg is None:
-            agg = _metric.agg_for(value)
-        agg = _check_agg(agg or "sum")
+
+        # value 是 edv.column(...) 登记过的公式列（例如 客单价="销售额/订单数"）时，
+        # 自动拆成分子分母：卡片的数 = 销售额合计 ÷ 订单数合计，而不是先算一列再平均。
+        if metrics is None and value is not None:
+            auto = _derived.auto_from_column(df, value)
+            if auto is not None:
+                metrics, expr = auto
+
+        if metrics is not None:
+            mets = _derived.normalize_metrics(df, metrics, default_agg=(agg or "sum"))
+            names = [m["name"] for m in mets]
+            if expr is None:
+                if len(names) == 1:
+                    expr = names[0]
+                elif len(names) == 2:
+                    expr = "%s / %s" % (names[0], names[1])
+                else:
+                    raise ValueError(
+                        "派生指标有 %d 个，需要用 expr= 说明怎么算，例如 "
+                        'expr="销售额 / 订单数"。' % (len(names),)
+                    )
+            rpn = _derived.compile_expr(expr, names)
+            kpi_def = {"metrics": mets, "expr": expr, "rpn": rpn}
+        else:
+            df, _added = _metric.materialize(
+                df, [value] + ([spark] if spark is not None else []))
+            _frame.require_column(df, value, "value")
+            if agg is None:
+                agg = _metric.agg_for(value)
+            agg = _check_agg(agg or "sum")
         if spark is not None:
             _frame.require_column(df, spark, "spark")
             _frame.require_column(df, spark_x, "spark_x")
+        if kpi_def is not None and spark_x is not None:
+            _frame.require_column(df, spark_x, "spark_x")
 
-        cmp_cfg = _compare.parse_compare(df, compare, spark_x=spark_x, value=value, agg=agg)
+        cmp_cfg = _compare.parse_compare(
+            df, compare, spark_x=spark_x,
+            value=None if kpi_def is not None else value,
+            agg=agg or "sum")
 
-        roles = {"value": value}
-        if spark is not None:
-            roles["spark_x"] = spark_x
-            roles["spark_y"] = spark
-        # agg="count" / "unique" 时 value / spark 可以是任意类型（数行数 / 去重计数），
-        # 不再强制转数值。
-        numeric = [] if agg in ("count", "unique") else ([value] + ([spark] if spark is not None else []))
-        dims = [spark_x] if spark is not None else []
+        if kpi_def is not None:
+            roles = {"metrics": [m["col"] for m in mets if m["col"]]}
+            if spark_x is not None:
+                roles["spark_x"] = spark_x
+            if spark is not None:
+                roles["spark_y"] = spark
+            # 参与数值聚合的列强制转数值；unique / count 的列保持原样
+            numeric = [m["col"] for m in mets
+                       if m["col"] and m["agg"] in _derived.NUMERIC_AGGS]
+            if spark is not None:
+                numeric.append(spark)
+            dims = [m["col"] for m in mets if m["col"] and m["agg"] in ("count", "unique")]
+            if spark_x is not None:
+                dims.append(spark_x)
+        else:
+            roles = {"value": value}
+            if spark is not None:
+                roles["spark_x"] = spark_x
+                roles["spark_y"] = spark
+            # agg="count" / "unique" 时 value / spark 可以是任意类型（数行数 / 去重计数），
+            # 不再强制转数值。
+            numeric = [] if agg in ("count", "unique") else ([value] + ([spark] if spark is not None else []))
+            dims = [spark_x] if spark is not None else []
         if cmp_cfg:
             for _cc in (cmp_cfg.get("dim"), cmp_cfg.get("period")):
                 if _cc and _cc not in dims:
@@ -1609,6 +1690,9 @@ def kpi(
         records, ref, info = _frame.prepare(
             df, roles, numeric_roles=numeric, dimension_roles=dims,
         )
+        if kpi_def is not None:
+            agg = _check_agg(agg or "sum")
+        out_roles = roles
         if info.get("truncated"):
             warnings.append(
                 "数据 %d 行，超过 max_rows=%d，已均匀采样 %d 行用于绘图。"
@@ -1625,7 +1709,7 @@ def kpi(
         "height": int(height or 150),
         "absHeight": bool(abs_height),
         "dataRef": ref,
-        "roles": {"value": value} if value is not None else {},
+        "roles": out_roles,
         "agg": agg,
         "fmt": fmt or "thousands",
         "sort": None,
@@ -1647,7 +1731,9 @@ def kpi(
         "inverse": bool(inverse),
         "target": target,
         "targetLabel": target_label,
-        "spark": {"x": spark_x, "y": spark, "agg": agg} if spark is not None else None,
+        "spark": ({"x": spark_x, "y": spark, "agg": agg}
+                  if (spark is not None or kpi_def is not None) and spark_x is not None
+                  else None),
         "hint": hint,
         "unit": unit,
         "prefix": prefix,
@@ -1656,13 +1742,17 @@ def kpi(
         "metric": metric,
         "metricSel": (
             {"name": metric, "column": value, "agg": agg, "label": label or value}
-            if (metric and value is not None)
+            if (metric and value is not None and kpi_def is None)
             else None
         ),
+        "kpi": kpi_def,
         "compute": (
-            {"measure": value, "agg": agg, "compare": cmp_cfg,
-             "metric": metric if metric else None}
-            if value is not None
+            ({"metrics": mets, "expr": expr, "rpn": kpi_def.get("rpn"),
+              "measure": None, "agg": agg, "compare": cmp_cfg, "metric": None}
+             if kpi_def is not None
+             else {"measure": value, "agg": agg, "compare": cmp_cfg,
+                   "metric": metric if metric else None})
+            if (kpi_def is not None or value is not None)
             else None
         ),
         "section": section,

@@ -47,7 +47,7 @@ TEST_JS = r"""
   try {
 
   // ---------------- 纯逻辑 ----------------
-  ok('charts-count', EazyViz.charts.length === 31, EazyViz.charts.length);
+  ok('charts-count', EazyViz.charts.length === 32, EazyViz.charts.length);
   ok('dataStore', Object.keys(EazyViz.dataStore).length >= 1);
   ok('fmt-compact', core0.fmtValue(12345678, 'compact') === '1235万', core0.fmtValue(12345678, 'compact'));
   ok('fmt-percent', core0.fmtValue(12.5, 'percent') === '12.5%', core0.fmtValue(12.5, 'percent'));
@@ -100,7 +100,7 @@ TEST_JS = r"""
     types.push(c.spec.type);
     if (c.spec.type === 'kpi') {
       ok('kpi-html-' + c.index,
-         /总销售额|平均|KPI 进阶|对比 KPI|销售额|数量/.test(c.el.innerHTML),
+         /总销售额|平均|KPI 进阶|对比 KPI|销售额|数量|客单价/.test(c.el.innerHTML),
          c.el.innerHTML.slice(0, 30));
       return;
     }
@@ -181,6 +181,57 @@ TEST_JS = r"""
     ok('kpi-rerender-on-link', now !== kpiText0, now.slice(0, 40));
     clickCat(c1, Object.keys(EazyViz.links).length ? c1.spec._testCat : c1.spec._testCat,
              c1.spec._testVal);
+  });
+
+  // ---------------- 1.7：派生指标（客单价） + 联动重算 ----------------
+  var cd = chart(31);
+  function sumCol(rs, col) {
+    var s = 0;
+    for (var i = 0; i < rs.length; i++) s += Number(rs[i][col]) || 0;
+    return s;
+  }
+  var cdText0 = '';
+  steps.push(function () {
+    ok('kpi-derived-spec',
+       !!(cd.spec.kpi && cd.spec.kpi.rpn && cd.spec.kpi.rpn.length === 3),
+       JSON.stringify(cd.spec.kpi));
+    var rows = core0.rowsOf(cd.data);
+    var want = sumCol(rows, '销售额') / sumCol(rows, '订单数');
+    var got = core0.kpiDerived(cd.spec, rows);
+    ok('kpi-derived-value', Math.abs(got - want) < 1e-6, got + '/' + want);
+    ok('kpi-derived-hint', /= 销售额 \/ 订单数/.test(cd.el.textContent),
+       cd.el.textContent.slice(0, 90));
+    var vEl = cd.el.querySelector('.eazy-kpi-value');
+    ok('kpi-derived-title', !!(vEl && /销售额=/.test(vEl.getAttribute('title') || '')),
+       vEl && vEl.getAttribute('title'));
+    ok('kpi-derived-spark', !!cd.el.querySelector('.eazy-kpi-sparkwrap svg'));
+    ok('kpi-derived-not-source', core0.currentXDim(cd.spec, cd.state) === null,
+       String(core0.currentXDim(cd.spec, cd.state)));
+    cdText0 = cd.el.textContent.replace(/\s+/g, '');
+  });
+  steps.push(function () {
+    var g1 = core0.groupBy(core0.rowsOf(c1.data), [c1.spec.roles.x], c1.spec.roles.y, 'sum');
+    clickCat(c1, g1[0].key, g1[0].value);
+  });
+  steps.push(function () {
+    var all = core0.rowsOf(cd.data);
+    var rows = core0.filteredRows(cd.spec, cd.data, cd.state);
+    ok('kpi-derived-filtered', rows.length > 0 && rows.length < all.length,
+       rows.length + '/' + all.length);
+    var want = sumCol(rows, '销售额') / sumCol(rows, '订单数');
+    var got = core0.kpiDerived(cd.spec, rows);
+    ok('kpi-derived-relinked', Math.abs(got - want) < 1e-6, got + '/' + want);
+    ok('kpi-derived-text-changed', cd.el.textContent.replace(/\s+/g, '') !== cdText0,
+       cd.el.textContent.slice(0, 40));
+    // 派生走势每期各自重算（不是两条曲线相除）
+    var pts = core0.kpiSparkPoints(cd.spec, cd.data, cd.state);
+    ok('kpi-derived-spark-pts', pts.length > 0 && pts[0].v !== null &&
+       Math.abs(pts[0].v - 0) >= 0, JSON.stringify(pts.slice(0, 2)));
+    clickCat(c1, c1.spec._testCat, c1.spec._testVal);
+  });
+  steps.push(function () {
+    ok('kpi-derived-restored', cd.el.textContent.replace(/\s+/g, '') === cdText0,
+       cd.el.textContent.slice(0, 40));
   });
 
   // ---------------- 1.5：多级桑基 / 旭日 / 汇总表 / 同比 / 联动方向 ----------------
@@ -265,6 +316,99 @@ TEST_JS = r"""
   steps.push(function () {
     var vr2 = cu.ec.getModel().getSeriesByIndex(0).getViewRoot();
     ok('sunburst15-zoom-reset', String(vr2 && vr2.name) !== cu.__zoomTop, String(vr2 && vr2.name));
+  });
+
+  // 点最外层叶子：视图根不能落到没有子节点的节点上，否则整张旭日图变成空白
+  steps.push(function () {
+    var so = core0.buildOption(cu.spec, cu.data, { filters: {}, drill: [] });
+    var lv0 = so.series[0].data[0];
+    var lv1 = lv0.children[0];
+    var leaf = lv1.children[0];
+    core0.onChartClick(cu, {
+      componentType: 'series', name: leaf.name,
+      treePathInfo: [{ name: 'root' }, { name: lv0.name }, { name: lv1.name }, { name: leaf.name }],
+      data: { name: leaf.name, nodeDim: '产品', nodeValue: leaf.name, nodeLayer: 2 }
+    });
+    ok('sunburst15-leaf-zoom-parent', cu.zoomPath.length === 2, JSON.stringify(cu.zoomPath));
+  });
+
+  steps.push(function () {
+    var vr3 = cu.ec.getModel().getSeriesByIndex(0).getViewRoot();
+    ok('sunburst15-leaf-not-blank', (vr3.children || []).length > 0,
+       'children=' + ((vr3.children || []).length));
+    EazyViz.core.clearAllLinks();
+  });
+
+  // 放大一层后继续点更深一层：zoomPath 要补成从数据根开始的绝对路径，
+  // 否则重画时按根找不到节点，视图会弹回整棵树。
+  steps.push(function () {
+    EazyViz.core.clearAllLinks();
+    var so = core0.buildOption(cu.spec, cu.data, { filters: {}, drill: [] });
+    var lv0 = so.series[0].data[0];
+    cu.__deepTop = String(lv0.name);
+    core0.onChartClick(cu, {
+      componentType: 'series', name: lv0.name,
+      treePathInfo: [{ name: 'root' }, { name: lv0.name }],
+      data: { name: lv0.name, nodeDim: '大区', nodeValue: lv0.name, nodeLayer: 0 }
+    });
+    ok('sunburst15-deep-top', (cu.zoomPath || [])[0] === cu.__deepTop, JSON.stringify(cu.zoomPath));
+  });
+
+  steps.push(function () {
+    var vr = cu.ec.getModel().getSeriesByIndex(0).getViewRoot();
+    ok('sunburst15-deep-view-top', String(vr && vr.name) === cu.__deepTop, String(vr && vr.name));
+    var so = core0.buildOption(cu.spec, cu.data, { filters: {}, drill: [] });
+    var lv1 = so.series[0].data[0].children[0];
+    cu.__deepSecond = String(lv1.name);
+    core0.onChartClick(cu, {
+      componentType: 'series', name: lv1.name,
+      treePathInfo: [{ name: cu.__deepTop }, { name: lv1.name }],
+      data: { name: lv1.name, nodeDim: '渠道', nodeValue: lv1.name, nodeLayer: 1 }
+    });
+    ok('sunburst15-deep-zoom-path', cu.zoomPath.length === 2 && cu.zoomPath[0] === cu.__deepTop
+       && cu.zoomPath[1] === cu.__deepSecond, JSON.stringify(cu.zoomPath));
+  });
+
+  steps.push(function () {
+    var vr = cu.ec.getModel().getSeriesByIndex(0).getViewRoot();
+    ok('sunburst15-deep-stay', String(vr && vr.name) === cu.__deepSecond, String(vr && vr.name));
+    ok('sunburst15-deep-not-blank', (vr.children || []).length > 0,
+       'children=' + ((vr.children || []).length));
+    EazyViz.core.clearAllLinks();
+  });
+
+  // 放大后点空白/圆心：退回全量视图（ECharts 没自带这个手势，是我们补的）
+  steps.push(function () {
+    EazyViz.core.clearAllLinks();
+    var so = core0.buildOption(cu.spec, cu.data, { filters: {}, drill: [] });
+    var lv0 = so.series[0].data[0];
+    core0.onChartClick(cu, {
+      componentType: 'series', name: lv0.name,
+      treePathInfo: [{ name: 'root' }, { name: lv0.name }],
+      data: { name: lv0.name, nodeDim: '大区', nodeValue: lv0.name, nodeLayer: 0 }
+    });
+    ok('sunburst15-blank-zoomed', (cu.zoomPath || []).length === 1, JSON.stringify(cu.zoomPath));
+  });
+
+  steps.push(function () {
+    var dom = cu.ec.getDom(), rect = dom.getBoundingClientRect();
+    var px = rect.left + rect.width / 2, py = rect.top + 4;
+    var el = rect.width ? (dom.querySelector('canvas') || dom) : dom;
+    ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach(function (t) {
+      var Ctor = t.indexOf('pointer') === 0 ? PointerEvent : MouseEvent;
+      try {
+        el.dispatchEvent(new Ctor(t, { clientX: px, clientY: py, bubbles: true,
+                                       button: 0, pointerType: 'mouse', isPrimary: true }));
+      } catch (e) { /* 旧浏览器没有 PointerEvent */ }
+    });
+    ok('sunburst15-blank-clear', (cu.zoomPath || []).length === 0, JSON.stringify(cu.zoomPath));
+  });
+
+  steps.push(function () {
+    var sm = cu.ec.getModel().getSeriesByIndex(0);
+    ok('sunburst15-blank-root', sm.getViewRoot() === sm.getData().tree.root,
+       String(sm.getViewRoot() && sm.getViewRoot().name));
+    EazyViz.core.clearAllLinks();
   });
 
   steps.push(function () {
@@ -716,6 +860,10 @@ def build_page():
                 "数量": [13.0, 9.0, 9.6],
             }),
             x="月", y=eazy_data_viz.follow(), title="跟随柱"),
+        # 1.7：派生指标卡（客单价 = 销售额 / 订单数），跟随 g1 联动重算
+        eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"},
+                          expr="销售额 / 订单数", label="客单价", fmt="currency",
+                          link="g1", spark_x="月份", title="派生 KPI"),
     ]
     for _c in charts[:3]:
         _c.spec["code"] = ('eazy_data_viz.%s(%s)' % (

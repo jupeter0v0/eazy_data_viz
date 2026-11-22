@@ -1,6 +1,6 @@
 # eazy_data_viz 组件库说明书（给 AI 用）
 
-> 版本 1.6.5 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
+> 版本 1.7.1 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
 
 ## 0. 一句话
 
@@ -13,7 +13,8 @@ pandas → 单文件 HTML 交互图表库（经营驾驶舱场景，Material Des
 | 输入数据 | 第一参数永远是 pandas.DataFrame（除 gauge/ring_progress 这类单值图） |
 | 列参数 | x/y/color/names/values 等参数都传【列名字符串】，不要传 Series 或 JSON |
 | 返回值 | 所有图表函数返回 eazy_data_viz.Chart（.to_html() / .save(path) / .show()） |
-| 聚合 agg | `sum` `mean` `count` `max` `min` `median` |
+| 聚合 agg | `sum` `mean` `count` `unique` `max` `min` `median` |
+| 派生指标 | kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"}, expr="销售额 / 订单数") 由其它指标算出的比率（客单价 / 吨均价 / 人均）；分母可用 count 汇总或某列 unique 数，联动后按筛选结果重算 |
 | 格式 fmt | `compact` `thousands` `raw` `percent` `currency` |
 | 主题 | `light` / `dark`（页面级），配色见 palette |
 | 多图联动 | 多图放同一页面才能联动：eazy_data_viz.dashboard(c1, c2, cols=2)；`link="g1"` 同组联动 |
@@ -64,7 +65,7 @@ eazy_data_viz.set_palette("carbon")                                     # 改全
 
 | 函数 | 签名 | 说明 |
 |---|---|---|
-| `kpi` | `kpi(data: 'pd.DataFrame' = None, value: 'str \| None' = None, *, agg: 'str \| None' = None, label: 'str \| None' = None, fmt: 'str' = None, delta: 'float \| None' = None, delta_label: 'str \| None' = None, inverse: 'bool' = False, target: 'str \| None' = None, target_label: 'str \| None' = None, spark: 'str \| None' = None, spark_x: 'str \| None' = None, compare: 'dict \| None' = None, metric: 'str \| None' = None, hint: 'str \| None' = None, unit: 'str \| None' = None, prefix: 'str \| None' = None, accent: 'int' = 0, height: 'int' = 150, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str \| None' = None, subtitle: 'str \| None' = None, link: 'str \| tuple \| dict \| None' = None, section: 'str \| None' = None) -> 'Chart'` | KPI 数字卡片（驾驶舱指标头，可跟随联动筛选自动重算）。 |
+| `kpi` | `kpi(data: 'pd.DataFrame' = None, value: 'str \| None' = None, *, agg: 'str \| None' = None, metrics: 'dict \| list \| str \| None' = None, expr: 'str \| None' = None, label: 'str \| None' = None, fmt: 'str' = None, delta: 'float \| None' = None, delta_label: 'str \| None' = None, inverse: 'bool' = False, target: 'str \| None' = None, target_label: 'str \| None' = None, spark: 'str \| None' = None, spark_x: 'str \| None' = None, compare: 'dict \| None' = None, metric: 'str \| None' = None, hint: 'str \| None' = None, unit: 'str \| None' = None, prefix: 'str \| None' = None, accent: 'int' = 0, height: 'int' = 150, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str \| None' = None, subtitle: 'str \| None' = None, link: 'str \| tuple \| dict \| None' = None, section: 'str \| None' = None) -> 'Chart'` | KPI 数字卡片（驾驶舱指标头，可跟随联动筛选自动重算）。 |
 | `group_kpi` | `group_kpi(data: 'pd.DataFrame' = None, names: 'str \| None \| Follow' = None, values: 'str \| None \| Follow' = None, *, items: 'list \| None' = None, agg: 'str \| None' = None, sort: 'str \| None' = 'desc', top_n: 'int \| None' = 6, unit: 'str \| None' = None, delta: 'float \| None' = None, fmt: 'str' = 'compact', title: 'str \| None' = None, subtitle: 'str \| None' = None, height: 'int' = 140, abs_height: 'bool' = False, theme: 'str' = 'light') -> 'Chart'` | KPI 卡片组（HTML 渲染）：一排指标卡片。 |
 | `gauge` | `gauge(value: 'str \| None \| Follow', *, label: 'str \| None' = None, min: 'float \| None' = 0, max: 'float \| None' = 100, fmt: 'str' = 'raw', unit: 'str \| None' = None, height: 'int' = 260, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str \| None' = None, subtitle: 'str \| None' = None) -> 'Chart'` | 仪表盘（单个数值）。 |
 | `ring_progress` | `ring_progress(percent: 'float', *, label: 'str \| None' = None, max: 'float \| None' = 100, fmt: 'str' = None, height: 'int' = None, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str \| None' = None) -> 'Chart'` | 环形进度：一个百分比/完成值画成圆环，中心显示数值（不接 DataFrame）。 |
@@ -512,6 +513,7 @@ eazy_data_viz.use_cache()
 | 你想表达 | 用哪个 |
 |---|---|
 | 一个总数 + 同比 | `kpi` |
+| 客单价 / 吨均价 / 人均（由其它指标算） | `kpi` + `metrics=` / `expr=` |
 | 一组总数（4~8 个） | `group_kpi` |
 | 完成率 / 目标达成 | `gauge` / `ring_progress` / `bullet` / `target` / `progress` |
 | 随时间变化 | `line`（可 `area=True` / `step=True`） |
@@ -534,6 +536,9 @@ eazy_data_viz.use_cache()
 eazy_data_viz.kpi(df, value="销售额", label="全年销售额", delta=0.128, delta_label="同比",
          target=2000000, spark="销售额", spark_x="月份", hint="2024 全年 · 含税",
          link="g1").show()
+# 派生指标：由其它指标算出来的比率，联动后按筛选结果重算
+eazy_data_viz.kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"},
+         expr="销售额 / 订单数", label="客单价", fmt="currency", link="g1").show()
 ```
 
 | 参数 | 作用 |
@@ -544,6 +549,8 @@ eazy_data_viz.kpi(df, value="销售额", label="全年销售额", delta=0.128, d
 | `delta` / `delta_label` / `inverse` | 同比环比；`inverse=True` 时下降变绿（成本类指标） |
 | `target` / `target_label` | 目标值 → 右上角徽标 + 达成率进度条 |
 | `spark` / `spark_x` | 迷你走势线（按 spark_x 聚合 spark 列） |
+| `metrics` / `expr` | 派生指标：`metrics` 声明分子分母（列名 / `(列, 聚合)` / `"单量": "count"`），`expr` 用 `+ - * /` 写公式 |
+| `compare` / `metric` | 动态同比/环比；`metric=` 让卡片当选择器驱动 `follow()` 图 |
 | `accent` | 强调色序号（取当前配色的第 N 个颜色） |
 
 ## 7. 交互能力

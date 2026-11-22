@@ -2,19 +2,20 @@
 
 > 适用人群：已经跑通 [02 · 快速上手](02-quickstart.md)，需要给驾驶舱做指标头的分析师 / 工程师。
 > 前置条件：`import eazy_data_viz as edv`，示例数据 `df = edv.sample_df()`（1500 行）。
-> 读完你会：准确使用 16 个 KPI 参数，写出同比、目标达成、反向指标、联动重算等 8 类真实卡片。
+> 读完你会：准确使用 KPI 的全部参数，写出同比、目标达成、反向指标、派生比率（客单价 / 吨均价）、联动重算等 9 类真实卡片。
 
 KPI 卡片是驾驶舱里唯一“不画图”的图表类型：它显示一个聚合数字、一个涨跌标记、
 一条迷你走势和一条目标进度。因为它**参与联动**，所以它和普通图表一样使用 `link`、
 `section`，并由同一套前端运行时重算。
 
-先看它的三种用法，后面所有内容都围绕这张表展开：
+先看它的四种用法，后面所有内容都围绕这张表展开：
 
 | 用法 | 代码 | 数据来源 | 能否联动重算 |
 | --- | --- | --- | --- |
 | 静态值 | `edv.kpi(1630000, label="销售额")` | Python 直接传入数字 | 否（`dataRef=None`，页面里没有明细数据） |
 | 从 DataFrame 聚合 | `edv.kpi(df, value="销售额")` | 前端按 `agg` 现算 | 是 |
 | 带迷你走势 | `edv.kpi(df, value="销售额", spark="销售额", spark_x="月份")` | 前端按 `spark_x` 分组 | 是 |
+| 派生指标 | `edv.kpi(df, metrics={"销售额": "销售额", "客户数": ("客户号", "unique")}, expr="销售额 / 客户数")` | 前端先按 metrics 各自聚合、再按 expr 求值 | 是 |
 
 ```python
 import eazy_data_viz as edv
@@ -23,10 +24,12 @@ df = edv.sample_df()
 df.shape          # (1500, 11)
 df["销售额"].sum()  # 约 1631033.57
 
-# 三种用法各来一张
+# 四种用法各来一张
 edv.kpi(1630000, label="销售额（静态）")
 edv.kpi(df, value="销售额", label="销售额（聚合）")
 edv.kpi(df, value="销售额", label="销售额（带走势）", spark="销售额", spark_x="月份")
+edv.kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"},
+        expr="销售额 / 订单数", label="客单价（派生）", fmt="currency")
 ```
 
 三张卡都能 `.to_html()` / `.save()` / `.show()`；真正做驾驶舱时把它们和别的图一起放进
@@ -37,12 +40,12 @@ edv.kpi(df, value="销售额", label="销售额（带走势）", spark="销售�
 签名（Python 3.8 下和文档一致，全部是关键字参数）：
 
 ```python
-kpi(data=None, value=None, *, agg="sum", label=None, fmt=None,
-    delta=None, delta_label=None, inverse=False,
+kpi(data=None, value=None, *, agg="sum", metrics=None, expr=None,
+    label=None, fmt=None, delta=None, delta_label=None, inverse=False,
     target=None, target_label=None,
-    spark=None, spark_x=None,
-    hint=None, unit=None, prefix=None, accent=0,
-    height=150, theme="light", title=None, subtitle=None,
+    spark=None, spark_x=None, compare=None,
+    metric=None, hint=None, unit=None, prefix=None, accent=0,
+    height=150, abs_height=False, theme="light", title=None, subtitle=None,
     link=None, section=None)
 ```
 
@@ -50,7 +53,12 @@ kpi(data=None, value=None, *, agg="sum", label=None, fmt=None,
 | --- | --- | --- | --- |
 | `data` | `None` | DataFrame，或直接一个数字 | 数字必须 `int`/`float` 且没传 `value` |
 | `value` | `None` | 要聚合的数值列 | DataFrame 里只有 1 个数值列时可省略 |
-| `agg` | `"sum"` | `sum/mean/count/max/min/median` | 传 `avg` 会报 `ValueError` |
+| `agg` | `"sum"` | `sum/mean/count/unique/max/min/median` | 传 `avg` 会报 `ValueError` |
+| `metrics` | `None` | 派生指标的零件：哪个指标用哪一列、怎么聚合 | 与 `value` 二选一 |
+| `expr` | `None` | 把 metrics 算成一个数，支持 `+ - * /` 与括号 | 名字要先在 metrics 里定义 |
+| `compare` | `None` | 动态同比/环比：`{"年": ["2026年", "2025年"]}` | 必须是 DataFrame，静态值不能用 |
+| `metric` | `None` | 指标选择器标识：点卡片让 `edv.follow()` 的图切列 | 派生指标不能用 |
+| `abs_height` | `False` | `height` 就是整个组件外框（含头部） | 想让卡片更矮时用 |
 | `label` | `None` | 数值上方的指标名 | 静态用法下 `title` 会兜底成 `label` |
 | `fmt` | `"compact"` | `compact/thousands/raw/percent/currency` | 只是**显示格式**，不改变数值 |
 | `delta` | `None` | 涨跌幅 | `0.128` 显示 12.8%；`1280` 按原值显示 |
@@ -70,9 +78,9 @@ kpi(data=None, value=None, *, agg="sum", label=None, fmt=None,
 | `link` | `None` | 联动组名 | 同组图表点击后这张卡重算 |
 | `section` | `None` | 看板分区标题 | KPI 卡**自带**该参数，不是所有图都有 |
 
-**结论**：KPI 参数分四组——取数（`data/value/agg`）、显示（`label/fmt/unit/prefix`）、
-状态（`delta*/inverse/target*/spark*`）、布局（`accent/height/theme/link/section`）。
-记住分组，就不会在 16 个参数里迷路。
+**结论**：KPI 参数分五类——取数（`data/value/agg/metrics/expr`）、显示（`label/fmt/unit/prefix`）、
+状态（`delta*/inverse/target*/spark*/compare`）、选择器（`metric`）、布局（`accent/height/abs_height/theme/link/section`）。
+记住分组，就不会在几十个参数里迷路。
 
 ## 2. 数字格式化：`fmt` 到底输出什么
 
@@ -198,7 +206,7 @@ page.save("examples/output/kpi_link.html")
 卡片恢复全年值。
 
 - 联动要求**组名一致**（都在 `"g1"` 组）；
-- KPI 卡必须从 DataFrame 聚合（`value=`）才能重算；静态值不参与；
+- KPI 卡必须从 DataFrame 聚合（`value=`，或派生指标的 `metrics=` + `expr=`）才能重算；静态值不参与；
 - 如果卡片没写 `hint`，带 `link` 时会自动显示“联动组 g1 · 点同组图表筛选”。
 
 ### 场景 7：静态值
@@ -239,6 +247,29 @@ edv.kpi(df, value="销售额", label="12 月销售额",
 | `<= 1` | 百分比，保留 1 位（`0.128` → `12.8%`） | 增长率、环比、占比变化 |
 | `> 1` | 原数值，最多 3 位小数（`-4.1` → `4.1`） | 百分点、分数、人数变化 |
 
+### 场景 9：派生指标（客单价 / 吨均价）
+
+比率型指标要的是「**合计 ÷ 合计**」，不是「先算一列再平均」：
+
+```python
+df["客单价_错误"] = df["销售额"] / df["订单数"]
+df["客单价_错误"].mean()            # 736.94  ← 被小订单拉偏
+df["销售额"].sum() / df["订单数"].sum()   # 635.14  ← 业务口径
+
+card = edv.kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"},
+               expr="销售额 / 订单数", label="客单价", fmt="currency",
+               spark_x="月份", link="g1")
+```
+
+- 分母是「去重数」时换聚合：`metrics={"销售额": "销售额", "客户数": ("客户号", "unique")}`
+  → 人均消费；分母是「行数」时用 `"count"`：`metrics={"销售额": "销售额", "单数": "count"}`；
+- 分母可以是 count 汇总、某列的 unique 数，分子分母各自跟着联动筛选走；
+- 只在 `metrics` 里写 2 个指标、不写 `expr` 时，默认按 `分子 / 分母` 算；
+- 派生卡只给 `spark_x` 就能画走势，每一期各自算一次比率；
+- 分母为 0 或筛选后没数据时显示 `-`；
+- 用 `edv.column(客单价="销售额/订单数")` 登记过的公式列，直接
+  `edv.kpi(df, value="客单价")` 也会自动拆成这个口径。
+
 ## 4. 迷你走势 `spark` / `spark_x`
 
 ```python
@@ -253,6 +284,9 @@ edv.kpi(df, value="销售额", label="销售额",
 3. 按分类/时间的自然顺序排序（`2月` 在 `10月` 前，日期按时间先后）；
 4. 点数 ≥ 2 才画；少于 2 个点静默不显示（不报错）；
 5. 折线 + 13% 透明度面积 + 最后一个点的圆点，颜色取 `accent`。
+
+派生指标（`metrics=` + `expr=`）的走势不一样：每个 `spark_x` 分组里**各自算一次比率**，
+所以看到的是「1 月客单价、2 月客单价……」而不是两条线相除后的假曲线。
 
 ```python
 # 按日：1500 行会聚合成 30 多个点，太密，不建议
@@ -343,8 +377,11 @@ kpis = [
             accent=1, link="g1", section="一、核心指标"),
     edv.kpi(df, value="订单数", label="订单数", fmt="thousands", unit=" 单",
             delta=0.064, accent=2, link="g1", section="一、核心指标"),
+    edv.kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"},
+            expr="销售额 / 订单数", label="客单价", fmt="currency",
+            accent=3, link="g1", section="一、核心指标"),
     edv.kpi(19.87, label="毛利率", fmt="percent", delta=0.012,
-            delta_label="同比", accent=3, hint="静态值，不参与联动",
+            delta_label="同比", accent=4, hint="静态值，不参与联动",
             section="一、核心指标"),
 ]
 
@@ -377,12 +414,16 @@ page = edv.dashboard(
 | `ValueError: 带迷你走势的 KPI 需要 spark_x（横轴列）…` | 只给了 `spark` | 补 `spark_x="月份"` |
 | `ValueError: kpi 需要指定 value 列，例如 kpi(df, value="销售额")。` | 表里有多个数值列却没给 `value` | 显式指定 `value="销售额"` |
 | `ValueError: kpi 需要数据：kpi(df, value="销售额") 或 kpi(1630000, label="销售额")。` | `data=None` | 给 DataFrame 或直接给数字 |
+| `ValueError: value 与 metrics 二选一…` | 同时传了单列口径和派生口径 | 单列用 `value=`，比率用 `metrics=` + `expr=` |
+| `ValueError: kpi 的 expr 里 '客单价' 无法识别（第 6 个字符）…` | 公式里的名字没在 metrics 里定义 | 先在 `metrics` 里定义，或检查错别字 |
+| 比率显示 `-` | 分母为 0，或当前筛选范围没有数据 | 正常保护，不用改 |
+| 派生卡点不了别的图 | 比率没有类目维度，只能当联动接收方 | 用同组的 bar / pie 当联动源 |
 | `ValueError: accent 需要是 >=0 的整数（配色序号），收到 -1` | `accent` 负数/浮点 | 用 0~9 的整数 |
 | `ValueError: height 至少 120（像素），收到 100` | 卡片压得太矮 | `height=120` 起 |
 | 数字显示 `0.2%` 而不是 `20%` | `fmt="percent"` 不乘 100 | 传百分数（19.9）或改用 `delta` |
 | 涨跌幅显示成 `1280%` 而不是 `12.8%` | `delta=12.8` 被当作绝对量 | 传比例 `0.128` |
 | 目标徽标不出现 | `target=None` 或 `target=0` | 给非零数字 |
-| 卡片不随筛选变 | 用了静态值，或 `link` 组名不一致 | 用 `value=` 聚合并统一 `link` |
+| 卡片不随筛选变 | 用了静态值，或 `link` 组名不一致 | 用 `value=` / `metrics=`+`expr=` 聚合并统一 `link` |
 | 迷你走势没画出来 | 分组后点数 < 2 | 换更粗的粒度（月/周） |
 
 最后一条最隐蔽：`spark_x` 如果传了全是唯一值的列（例如每行一个订单号），

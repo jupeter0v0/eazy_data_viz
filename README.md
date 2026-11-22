@@ -32,6 +32,7 @@ edv.bar(df, x="大区", y="销售额", color="产品").show()
 | **自由排列看板** | `layout=` / `direction=` 按列/行分配图表数，或 `grid=(3,3)` + `[[2,2],[1,1]]` 占位；整块网格拼成矩形；`abs_height=True` 让框与框严格等高 |
 | **卡片外框 / 透明底** | `card_style` 三档：`"plain"`（默认，透明无框，页面底色直接透上来）/ `"card"`（实心白卡）/ `"glass"`（半透明 + 背景模糊）；`hints=True` 才显示操作提示小字 |
 | **KPI 对比引擎** | `compare={"年": ["2026年", "2025年"]}`：同比/环比现算，去年为空、0、负数都有规则，联动后自动重算 |
+| **派生指标** | `kpi(metrics={"销售额": …, "订单数": …}, expr="销售额 / 订单数")`：客单价 / 吨均价 / 人均这类比率卡，分子分母可以是 count 汇总或某列 unique 数，联动后按筛选结果重算 |
 | **指标选择器** | `kpi(..., metric="sale")` 让卡片变成按钮，点它所有写 `edv.follow()` 的图换口径；`edv.column(...)` 一次声明每列怎么汇总 |
 | **卡片选择器** | KPI 卡片带 `metric=` 就是一个按钮：`bar(df, x="月", y=edv.follow())` 的图跟着选中的卡换列换聚合（销量/金额/客户数…），纯前端不 rerun；`edv.column(...)` 一次性声明每列怎么汇总 |
 | **同比 / 汇总表** | `bar(yoy=True)` 两系列自动标注同比；`table(groupby={...})` 只在显示层汇总，不影响后台联动 |
@@ -275,6 +276,11 @@ edv.kpi(3.4, label="退货率", fmt="percent", delta=-0.086, inverse=True).show(
 # 4) 参与联动：link="g1" 的 KPI 会随同组图表点击自动重算
 edv.kpi(df, value="销售额", label="销售额（联动）", link="g1",
          spark="销售额", spark_x="月份").show()
+
+# 5) 派生指标：由别的指标算出来的比率（客单价 = 销售额 ÷ 订单数），联动后重算
+edv.kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"},
+         expr="销售额 / 订单数", label="客单价", fmt="currency",
+         link="g1", spark_x="月份").show()
 ```
 
 | 参数 | 说明 |
@@ -285,6 +291,8 @@ edv.kpi(df, value="销售额", label="销售额（联动）", link="g1",
 | `delta` / `delta_label` / `inverse` | 同比环比涨跌；`inverse=True` 反转红绿 |
 | `target` / `target_label` | 目标值 → 徽标「目标 200万」+ 达成率进度条（超额时数字显示真实百分比） |
 | `spark` / `spark_x` | 迷你走势线 |
+| `metrics` / `expr` | 派生指标：`metrics` 声明分子分母（`count` 数行、`unique` 数不同值），`expr` 写 `+ - * /` 公式 |
+| `compare` / `metric` | 动态同比/环比；`metric=` 让卡片当选择器驱动 `follow()` 图 |
 | `accent` | 用当前配色的第 N 个颜色做强调色 |
 | `link` | 联动组名，点同组图表时该 KPI 重算 |
 

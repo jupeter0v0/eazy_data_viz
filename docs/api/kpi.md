@@ -12,6 +12,8 @@ eazy_data_viz.kpi(
     value=None,
     *,
     agg=None,
+    metrics=None,
+    expr=None,
     label=None,
     fmt=None,
     delta=None,
@@ -43,7 +45,9 @@ eazy_data_viz.kpi(
 | --- | --- | --- | --- | --- |
 | `data` | `pandas.DataFrame \| dict \| list \| Series` | `None` | 否 | DataFrame 或直接传数值 |
 | `value` | `str \| float` | `None` | 否 | 要聚合的数值列 |
-| `agg` | `str` | `'sum'` | 否 | 聚合方式，默认 sum |
+| `agg` | `str` | `'sum'` | 否 | 聚合方式，默认 sum（含 count / unique） |
+| `metrics` | `dict \| list \| str` | `None` | 否 | 派生指标的零件：`{"客单价分子": ("销售额", "sum"), "客户数": ("客户号", "unique")}` |
+| `expr` | `str` | `None` | 否 | 怎么把 metrics 算成一个数：`"销售额 / 客户数"`，支持 `+ - * /` 与括号 |
 | `label` | `str` | `None` | 否 | 指标名 |
 | `fmt` | `str` | `None` | 否 | 数字格式，默认 thousands（4,112,275.31） |
 | `delta` | `float \| None` | `None` | 否 | 涨跌幅（比例或绝对值） |
@@ -80,6 +84,7 @@ eazy_data_viz.kpi(
 
 - **作用**：从 DataFrame 取数时，按 agg 聚合该列得到卡片数值。 省略时仅当 DataFrame 恰好只有一个数值列才自动选用，否则报错要求显式传。 列不存在抛 KeyError；`agg="count"` 时文本列合法（数行数），其它聚合会要求数值类型并给出中文提示。
 - **建议**：多指标页面每个 kpi 传不同 value；列名用反引号或原始中文列名。
+- **另一条路**：要算“由其它指标算出来”的比率（客单价 / 吨均价 / 人均），用 `metrics=` + `expr=`，不要先算一列再 `agg="mean"`（见下方 [`metrics`](#metrics--派生指标的零件dict--list--str默认-none) / [`expr`](#expr--把-metrics-算成一个数str默认-none)）。
 - **示例**：`value="销售额"`
 - **报错**：`value=None` 且多数值列 → `ValueError: kpi 需要指定 value 列，例如 kpi(df, value="销售额")。`；列名错 → `KeyError: "value列 'XX' 不存在。当前可用的列有：..."`
 
@@ -89,6 +94,36 @@ eazy_data_viz.kpi(
 - **建议**：金额/数量用 sum；比率/客单价用 mean；记录量用 count；**去重计数用 unique**（例如有多少个不同客户：`kpi(df, value="客户名称", agg="unique", label="客户数")`，文本列同样可以）。
 - **示例**：`agg="mean"`；数客户数：`agg="count"` + `value="客户名称"`（文本列也可以）；去重客户数：`agg="unique"` + `value="客户名称"`
 - **报错**：`agg="avg"` → `ValueError: agg='avg' 不支持，可选：sum, mean, count, unique, max, min, median`
+
+### `metrics` — 派生指标的零件（`dict | list | str`，默认 `None`）
+
+- **作用**：定义参与计算的每个指标「用哪一列、怎么聚合」，跟 `expr` 一起组成派生指标。
+  写法有三类：
+  - `{"名字": "列名"}`：列名同名，聚合取 `agg`（默认 sum），例如 `{"销售额": "销售额", "订单数": "订单数"}`；
+  - `{"名字": ("列名", "聚合")}`：想换列或换聚合，例如 `{"销售额": ("金额", "sum"), "客户数": ("客户号", "unique")}`；
+  - `{"名字": "count"}`：只数行数，不需要列（`col` 为 `None`）。
+  `list` 形式同样支持：`["销售额", "订单数"]`、`[("销售额", "sum"), ("客户号", "unique")]`、
+  `[{"name": "订单数", "agg": "count"}]`。
+  数值聚合（sum/mean/max/min/median）要求列是数值；`count` / `unique` 对文本列同样有效，
+  所以「去重客户数」「去重品类数」都能直接当分母。
+- **建议**：指标名用会显示给人看的短词（`销售额`、`客户数`、`车型数`），因为它是 `expr` 里的变量名，
+  也会出现在数值的 `title` 里（悬停可核对分子分母）。
+- **示例**：`metrics={"销售额": "销售额", "客户数": ("客户号", "unique")}`
+- **报错**：`metrics={"销售额": ("大区", "sum")}`（文本列做数值聚合）→
+  `ValueError: metrics['销售额'] 的列 '大区' 是文本列，不能用 agg='sum'。数不同值请用 agg="unique"，数行数请用 agg="count"。`；
+  指标名重复、缺列、列不存在都会报中文 ValueError / KeyError。
+
+### `expr` — 把 metrics 算成一个数（`str`，默认 `None`）
+
+- **作用**：用四则运算把 `metrics` 里的指标合成卡片上的一个数，支持 `+ - * /` 和括号，
+  也支持小数与一元负号：`"（销售额 - 成本） / 销售额"`、`"(销售额 - 退款) / 销售额"`。
+  公式在 Python 端编译成逆波兰式存进 `spec["kpi"]["rpn"]`，浏览器在**联动筛选后的行集**上
+  先按 `metrics` 各自聚合、再按同一个 RPN 求值——所以分子分母各自跟着筛选走，
+  而不是两个预先算好的数相除。
+- **建议**：分母可能为 0 时不用特殊处理，卡片会显示 `-`；除法结果常配 `fmt="currency"`（客单价、吨均价）。
+- **示例**：`expr="销售额 / 客户数"`；只传 1 个指标时可省略 expr；2 个指标不传 expr 时默认 `"分子 / 分母"`。
+- **报错**：名字写错 → `ValueError: kpi 的 expr 里 '客单价' 无法识别（第 6 个字符）。公式只支持 + - * / 和括号；参与计算的指标要先在 metrics= 里定义，当前已定义：销售额、订单数。`；
+  括号不配对 / 结尾缺操作数 / 只有 expr 没有 metrics 都有对应中文报错。
 
 ### `label` — 指标名（显示在数值上方）（`str`，默认 `None`）
 
@@ -193,7 +228,8 @@ eazy_data_viz.show(
 
 ### `spark` — 迷你走势数值列（`str | None`，默认 `None`）
 
-- **作用**：在卡片右下角画一条无坐标轴的走势线，帮助看指标随时间的形状；必须同时给 `spark_x`。 spark 与 value 可以相同（看该指标自身的走势），也可以不同（例如主指标销售额、走势客单价）。 静态数值模式没有数据行，spark 不会生效。
+- **作用**：在卡片右下角画一条无坐标轴的走势线，帮助看指标随时间的形状；必须同时给 `spark_x`。 spark 与 value 可以相同（看该指标自身的走势），也可以不同（例如主指标销售额、走势客单价）。 静态数值模式没有数据行，spark 不会生效。 派生指标（`metrics` + `expr`）只给 `spark_x` 就行，
+走势会按每个分组**各算一次比率**（不是把分子分母两条线相除）。
 - **建议**：spark_x 用月份/日期等有序列；类别太多时先聚合。
 - **示例**：`spark="销售额"`
 - **报错**：只传 spark 不传 spark_x → `ValueError: 带迷你走势的 KPI 需要 spark_x（横轴列），例如 kpi(df, value="销售额", spark="销售额", spark_x="月份")。`
@@ -299,13 +335,49 @@ print(chart.spec["metricSel"])
 卡片显示 `316` + `▲ +5.3% 同比`（1.6.1 起不再有 2026/2025/环比/指标 chip）。
 点这张卡 = 选中 `sale`，页面上所有 `edv.follow()` 的图换成「金额 / sum」。
 
+### 示例 8：派生指标——客单价（1.7）
+
+```python
+import pandas as pd
+import eazy_data_viz as edv
+
+df = pd.DataFrame({
+    "月份": ["1月", "1月", "2月", "2月"],
+    "大区": ["华东", "华北", "华东", "华北"],
+    "销售额": [1000.0, 500.0, 2000.0, 500.0],
+    "订单数": [10, 5, 20, 5],
+    "客户号": ["A", "B", "A", "C"],
+})
+
+# 客单价 = 销售额合计 ÷ 订单数合计（不是「先算每单客单价再平均」）
+chart = edv.kpi(df, metrics={"销售额": "销售额", "订单数": "订单数"},
+                expr="销售额 / 订单数", label="客单价", fmt="currency",
+                spark_x="月份", link="g1")
+print(chart.spec["kpi"]["rpn"])   # [['v', 0], ['v', 1], ['/']]
+
+# 分母是「某列的去重数」：人均消费 = 销售额 ÷ 去重客户数
+chart2 = edv.kpi(df, metrics={"销售额": "销售额", "客户数": ("客户号", "unique")},
+                 expr="销售额 / 客户数", label="人均消费", fmt="currency")
+
+# 分母是「行数」：单均金额 = 销售额 ÷ 订单行数
+chart3 = edv.kpi(df, metrics={"销售额": "销售额", "单数": "count"},
+                 expr="销售额 / 单数", label="单均金额")
+```
+
+派生卡片会跟着 `link` 联动组重算：点同组柱图筛到「华东」，分子变成华东销售额合计、
+分母变成华东订单数合计，比值不是毛估。数值悬停能看到 `销售额=… · 订单数=…` 的即时分解；
+没写 `hint` 时底部默认显示公式（`= 销售额 / 订单数`）。
+
 ## 返回值
 
 所有图表函数都返回 `eazy_data_viz.Chart` 对象：`chart.spec` 是 JSON 可序列化的完整渲染配置，`chart.data` 是实际参与绘图的数据，`chart.warnings` 记录采样/丢列等降级提示；`save()` / `to_html()` / `palette()` / `show()` 的通用用法见 [交互与联动指南](../guides/06-interaction.md)。
 
 本图的 `spec` 额外包含：
 
-- `roles`：`{"value": value 列}`（静态数值模式为 `{}`）；`xtitle`/`ytitle`/`xlim`/`ylim`/`legend`/`labels`/`zoom` 均固定为 None/False。
+- `roles`：`{"value": value 列}`；派生指标为 `{"metrics": [参与计算的列…]}`（另有 `spark_x`/`spark_y`）；
+  静态数值模式为 `{}`；`xtitle`/`ytitle`/`xlim`/`ylim`/`legend`/`labels`/`zoom` 均固定为 None/False。
+- `spec["kpi"]`：派生指标时为 `{"metrics": [...], "expr": 公式, "rpn": [...]}`，否则为 `None`；
+  `spec["compute"]` 记录前端重算口径（派生时 `measure` 为 `None`，`metrics`/`expr`/`rpn` 齐全）。
 - `spec` 额外包含：`value`（静态值或 None）、`label`、`delta`、`deltaLabel`、`inverse`、`target`、`targetLabel`、`spark`、`hint`、`unit`、`prefix`、`accent`、`section`、`compare`、`metric`（指标名）、`metricSel`（`{name, column, agg, label}`，没传 `metric` 时为 `None`）。
 - kpi 没有 `max_rows` 参数（固定使用公共 MAX_ROWS），也没有 `xlim`/`ylim`/`labels`/`zoom`/`drill`。
 
@@ -423,6 +495,14 @@ chart.save("examples/output/kpi_5.html")
 - **为什么 spark 没画出来？** 常见原因：只传了 spark 没传 spark_x（会直接报错）；或 data 是静态数值，没有数据行；或 spark_x 不是有序列导致走势无意义。 另外 min/max 范围内的数值太少时前端会退化为空白，检查 `chart.data["rows"]`。
 - **delta 会自动计算同比吗？** 不会。delta 是展示参数，需要先用 pandas 算好同比/环比再传入。 传 0.128 显示 12.8%，传 12.8 显示 12.8%（按绝对值处理）。
 - **target 达成率怎么算？** 前端按「当前值 / target」计算并格式化为百分比；target=0 时会异常，请保证目标为正数。 如果 value 是逆向指标，达成率语义要自己确认（目标越低越好时不要用 target 进度条）。
+- **客单价 / 吨均价怎么算？为什么不能先算一列再 mean？** 因为「每单客单价再平均」被小订单拉偏，业务口径是「总金额 ÷ 总单量」。
+  先 `df["客单价"] = 销售额 / 订单数` 再 `agg="mean"` 算的是前者；正确做法是
+  `kpi(df, metrics={...}, expr="销售额 / 订单数")`，分子分母各自聚合后再除，联动后也是这样重算。
+  同理，`edv.column(客单价="销售额/订单数")` 登记过的公式列，直接 `kpi(df, value="客单价")` 会自动拆成分子分母。
+- **为什么卡片显示 `-`？** 分母为 0、或者参与计算的指标在当前筛选范围内没有数据时，比率没有意义，
+  前端统一显示 `-`（和 `fmtValue(null)` 一致），不会显示 `inf`/`NaN`。
+- **派生指标能当联动源吗？** 不能。比率没有单一类目维度，点击派生卡不会给同组图表下筛选条件；
+  它只作为**接收方**跟着其它图重算。
 - **一个页面多个 KPI 如何对齐？** 用 `edv.dashboard(kpi1, kpi2, bar, cols=3)` 组合；每张卡的 height 保持一致，accent 可取不同序号。 所有 KPI 的 fmt/unit 口径要统一，否则数字大小无法横向比较。
 
 ## 相关图表
