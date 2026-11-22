@@ -10,7 +10,8 @@
 eazy_data_viz.kpi(
     data=None,
     value=None,
-    agg="sum",
+    *,
+    agg=None,
     label=None,
     fmt=None,
     delta=None,
@@ -27,6 +28,7 @@ eazy_data_viz.kpi(
     prefix=None,
     accent=0,
     height=150,
+    abs_height=False,
     theme="light",
     title=None,
     subtitle=None,

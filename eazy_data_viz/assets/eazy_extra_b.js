@@ -1191,6 +1191,8 @@
           emphasis: { focus: 'series' }
         };
       }
+      var _sc = U.catColor(spec, name);
+      if (_sc) { sr.itemStyle = sr.itemStyle || {}; sr.itemStyle.color = _sc; }
       series.push(sr);
     }
 

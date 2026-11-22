@@ -14,6 +14,7 @@ eazy_data_viz.ring_progress(
     max=100,
     fmt=None,
     height=None,
+    abs_height=False,
     theme="light",
     title=None,
 ) -> Chart

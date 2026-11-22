@@ -1414,6 +1414,77 @@ def t_audit_162():
     assert b.data["rows"][1][1] == 99.0, b.data["rows"]
 
 
+def t_colors():
+    """1.6.3 colors 参数：只给特定类目/系列指定颜色。"""
+    import json
+
+    RED = "#d93025"
+    chart = eazy_data_viz.bar(DF, "大区", "销售额", colors={"华东": RED})
+    assert chart.spec["colors"] == {"华东": RED}, chart.spec["colors"]
+    json.dumps(chart.spec, allow_nan=False)
+
+    # 有 color 时键同样是系列名，能正常落到 spec
+    chart = eazy_data_viz.bar(DF, "月份", "销售额", color="大区",
+                              colors={"华东": RED})
+    assert chart.spec["colors"] == {"华东": RED}, chart.spec["colors"]
+
+    # 其它支持该参数的图都能带上
+    for fn, args, kwargs in [
+        (eazy_data_viz.line, ("月份", "销售额"), {"color": "大区"}),
+        (eazy_data_viz.pie, ("大区", "销售额"), {}),
+        (eazy_data_viz.funnel, ("渠道", "销售额"), {}),
+        (eazy_data_viz.treemap, (["大区"], "销售额"), {}),
+        (eazy_data_viz.combo, ("月份",), {"bar": "销售额", "line": "利润"}),
+        (eazy_data_viz.rose, ("大区", "销售额"), {}),
+        (eazy_data_viz.waterfall, ("大区", "销售额"), {}),
+        (eazy_data_viz.lollipop, ("大区", "销售额"), {}),
+        (eazy_data_viz.bar_pct, ("月份", "销售额"), {"color": "大区"}),
+        (eazy_data_viz.area_pct, ("月份", "销售额"), {"color": "大区"}),
+    ]:
+        c = fn(DF, *args, colors={"华东": RED}, **kwargs)
+        assert c.spec["colors"] == {"华东": RED}, (fn.__name__, c.spec["colors"])
+
+    # 空字典 / None 都等于没配
+    assert eazy_data_viz.bar(DF, "大区", "销售额", colors={}).spec["colors"] is None
+    assert eazy_data_viz.bar(DF, "大区", "销售额").spec["colors"] is None
+
+    # 数字类目按字符串匹配（前端也是 String(name) 再兜一次）
+    c = eazy_data_viz.line(DF, "月份", "销售额", colors={2026: RED})
+    assert c.spec["colors"] == {"2026": RED}, c.spec["colors"]
+
+    # 匹配不上的类目不报错
+    c = eazy_data_viz.bar(DF, "大区", "销售额", colors={"不存在的区": RED})
+    assert c.spec["colors"] == {"不存在的区": RED}
+
+    # 去掉首尾空白
+    c = eazy_data_viz.bar(DF, "大区", "销售额", colors={"华东": "  #d93025  "})
+    assert c.spec["colors"]["华东"] == RED, c.spec["colors"]
+
+    # 坏值都给出中文提示
+    err = _raised(ValueError, eazy_data_viz.bar, DF, "大区", "销售额", colors="red")
+    assert "colors 需要是" in str(err), str(err)
+    err = _raised(ValueError, eazy_data_viz.bar, DF, "大区", "销售额",
+                  colors={"华东": ""})
+    assert "需要是颜色字符串" in str(err), str(err)
+    err = _raised(ValueError, eazy_data_viz.bar, DF, "大区", "销售额",
+                  colors={"华东": 123})
+    assert "需要是颜色字符串" in str(err), str(err)
+    err = _raised(ValueError, eazy_data_viz.bar, DF, "大区", "销售额",
+                  colors={("a", "b"): RED})
+    assert "键需要是类目名" in str(err), str(err)
+    err = _raised(ValueError, eazy_data_viz.bar, DF, "大区", "销售额",
+                  colors={"华东": eazy_data_viz.follow()})
+    assert "不能是 follow()" in str(err), str(err)
+
+    # 不支持的图不要偷偷接受这个参数（避免「传了没效果」）
+    try:
+        eazy_data_viz.scatter(DF, "销售额", "利润", colors={"华东": RED})
+    except TypeError:
+        pass
+    else:
+        raise AssertionError("scatter 不该接受 colors")
+
+
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):
 
     check(name, fn)

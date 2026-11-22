@@ -7,7 +7,7 @@
 ## 函数签名
 
 ```python
-def slope(
+eazy_data_viz.slope(
     data,
     x,
     y,
@@ -15,7 +15,7 @@ def slope(
     *,
     group=None,
     period=None,
-    agg="sum",
+    agg=None,
     sort=None,
     top_n=None,
     title=None,
@@ -26,15 +26,15 @@ def slope(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=True,
     labels=False,
     zoom=False,
     drill=None,
     link=None,
-    max_rows=200000,
-) -> "Chart":
-    ...
+    max_rows=2000000,
+) -> Chart
 ```
 
 > `data` / `x` / `y` / `color` 是位置参数，其余全部是**关键字限定参数**（`*` 之后必须写成 `参数名=值`）。

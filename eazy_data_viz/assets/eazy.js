@@ -753,6 +753,41 @@
     return null;
   }
 
+  // ---- 指定类目颜色 -----------------------------------------------------
+  // spec.colors = {类目名: 颜色}：命中的类目用指定色，其余走调色板。
+  function catColor(spec, name) {
+    var m = spec && spec.colors;
+    if (!m || name === null || name === undefined) return null;
+    var v = m[name];
+    if (v === undefined) v = m[String(name)];
+    return (typeof v === 'string' && v) ? v : null;
+  }
+
+  // 把颜色刷到「值 / {value,itemStyle}」两种形态的 data item 上
+  function paintItem(item, color) {
+    if (!color) return item;
+    if (item && typeof item === 'object') {
+      item.itemStyle = item.itemStyle || {};
+      item.itemStyle.color = color;
+      return item;
+    }
+    return { value: item, itemStyle: { color: color } };
+  }
+
+  function paintTree(spec, nodes) {
+    if (!nodes) return;
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (!n || typeof n !== 'object') continue;
+      var c = catColor(spec, n.name);
+      if (c) {
+        n.itemStyle = n.itemStyle || {};
+        n.itemStyle.color = c;
+      }
+      if (n.children) paintTree(spec, n.children);
+    }
+  }
+
   function dimItem(v, sel, cat) {
     if (sel === null || sel === undefined) return v;
     if (cat === sel) return v;
@@ -918,6 +953,8 @@
         if (spec.percent && val !== null) val = Math.round(val * 10) / 10;
         if (isBar) {
           var item = dimItem(val === null ? 0 : val, sel, cats[ci]);
+          // 没有 color 时按横轴类目上色；有 color 时系列名才是上色单位
+          if (!cdim) item = paintItem(item, catColor(spec, cats[ci]));
           var g = (yoy && name === yoy.current) ? yoyG[cats[ci]] : null;
           if (g !== null && g !== undefined) item = yoyItem(item, g, spec, theme);
           sdata.push(item);
@@ -933,6 +970,8 @@
           emphasis: { focus: 'series' },
           select: { itemStyle: { opacity: 1 } }
         };
+        var _bc = cdim ? catColor(spec, name) : null;
+        if (_bc) barSeries.color = _bc;
         if (spec.stack) barSeries.stack = 'total';
         if (spec.labels) {
           barSeries.label = {
@@ -952,6 +991,8 @@
           connectNulls: true,
           emphasis: { focus: 'series' }
         };
+        var _lc = catColor(spec, name);
+        if (_lc) lineSeries.color = _lc;
         if (spec.step) lineSeries.step = 'middle';
         if (spec.area) lineSeries.areaStyle = { opacity: spec.stack ? 0.45 : 0.16 };
         if (spec.stack) lineSeries.stack = 'total';
@@ -1097,7 +1138,12 @@
     var sel = sourceSelection(spec, state);
     var dataArr = items.map(function (it) {
       var item = { name: it.name, value: it.value };
-      if (sel !== null && sel !== undefined && it.name !== sel) item.itemStyle = { opacity: 0.3 };
+      var _ic = catColor(spec, it.name);
+      if (_ic) item.itemStyle = { color: _ic };
+      if (sel !== null && sel !== undefined && it.name !== sel) {
+        item.itemStyle = item.itemStyle || {};
+        item.itemStyle.opacity = 0.3;
+      }
       return item;
     });
     // 窄卡片（手机）里外置标签会和环、图例互相压，改成「关标签 + 底部横排图例」
@@ -1435,7 +1481,12 @@
     var sel = sourceSelection(spec, state);
     var dataArr = items.map(function (it) {
       var item = { name: it.name, value: it.value };
-      if (sel !== null && sel !== undefined && it.name !== sel) item.itemStyle = { opacity: 0.3 };
+      var _ic = catColor(spec, it.name);
+      if (_ic) item.itemStyle = { color: _ic };
+      if (sel !== null && sel !== undefined && it.name !== sel) {
+        item.itemStyle = item.itemStyle || {};
+        item.itemStyle.opacity = 0.3;
+      }
       return item;
     });
     var funnelLabel = { show: spec.labels !== false, position: 'inside', color: '#fff', fontSize: 11 };
@@ -1493,6 +1544,7 @@
     var dims = spec.roles.path || [];
     var valCol = spec.roles.value;
     var tree = buildTreemapTree(rows, dims, valCol, spec.agg || 'sum', 0);
+    paintTree(spec, tree);
     return {
       tooltip: (function () {
         var tip = tooltipBox(theme);
@@ -2932,6 +2984,7 @@
       yoyPlan: yoyPlan,
     nameOrder: nameOrder, yoyGrowth: yoyGrowth, yoyItem: yoyItem,
       nodeInfoOf: nodeInfoOf,
+      catColor: catColor, paintItem: paintItem,
       THEME: THEME, FONT: FONT, SEP: SEP,
       PALETTES: PALETTES, themeFor: themeFor, mixColor: mixColor,
       kpiValue: kpiValue, kpiSparkPoints: kpiSparkPoints, kpiSparkSVG: kpiSparkSVG

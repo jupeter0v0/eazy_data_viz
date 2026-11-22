@@ -393,6 +393,15 @@ edv.show(...).save("dashboard.html")
 画廊里 **73 张卡片 / 48 种图表**，每张卡片右上角「代码」按钮会展开生成该图的完整
 Python 代码（由构建脚本自动录制，和实际出图代码完全一致），可一键复制。
 
+改过函数参数后记得同步文档：
+
+```bash
+python tools/sync_doc_signatures.py  # 用 inspect.signature() 回填 docs/api/*.md 的「函数签名」块
+python tools/check_docs.py           # 校验文档四节齐全、每个参数都有详解
+```
+
+两个脚本都能挂 CI：加 `--check` 时只报告差异并以退出码 1 结束。
+
 ---
 
 ## 11. 数据要求

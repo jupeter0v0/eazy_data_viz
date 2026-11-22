@@ -18,8 +18,8 @@ eazy_data_viz.rose(
     values=None,
     *,
     donut=False,
-    agg='sum',
-    sort='desc',
+    agg=None,
+    sort="desc",
     top_n=None,
     title=None,
     subtitle=None,
@@ -27,15 +27,17 @@ eazy_data_viz.rose(
     ytitle=None,
     xlim=None,
     ylim=None,
-    fmt='compact',
+    fmt="compact",
     height=380,
-    theme='light',
+    abs_height=False,
+    colors=None,
+    theme="light",
     legend=True,
     labels=True,
     zoom=False,
     drill=None,
     link=None,
-    max_rows=200000,
+    max_rows=2000000,
 ) -> Chart
 ```
 
@@ -61,6 +63,7 @@ eazy_data_viz.rose(
 | `fmt` | str | 'compact' | 否 | 数值格式（tooltip / 标签） |
 | `height` | int | 380 | 否 | 画布高度（像素） |
 | `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
+| `colors` | `dict \| None` | `None` | 否 | 给特定类目/系列指定颜色 |
 | `theme` | str | 'light' | 否 | 主题（浅色 / 深色） |
 | `legend` | bool 或 None | True | 否 | 是否显示图例 |
 | `labels` | bool | True | 否 | 是否显示数据标签 |
@@ -179,6 +182,12 @@ eazy_data_viz.rose(
 - **作用**：默认 `height` 只算图表正文，标题 / 副标题 / 联动工具条会把卡片额外撑高，同一行里一张带长标题、一张带工具条的卡片底边就对不齐。打开 `abs_height=True` 后 `height` 表示**整个组件外框**（内边距、标题、工具条都算在里面），正文用剩余空间自适应。
 - **建议**：在 `dashboard` / `show` 里要「框和框严格对齐」时打开；单图导出或不在意卡片底边时保持默认。
 - **示例**：`abs_height=True, height=320`（配合 `dashboard(..., cols=2)` 看两张卡的底边）
+
+### `colors` — 给特定类目指定颜色（`dict`，默认 `None`）
+
+- **作用**：`{"类目名": "颜色"}` 的字典，命中的类目用你给的颜色，其余仍走主题调色板。 颜色可以写 `#d93025`、`red`、`rgb(217,48,37)`、`rgba(...)`。键是**扇区名**（`names` 列的取值）。 键匹配不上不会报错（只是那一条不生效），方便同一段代码复用到不同数据集。
+- **建议**：玫瑰图扇区多时，用颜色把头部类目和长尾区分开。 要整体换配色请用 `edv.set_palette()`，不要用它逐个类目硬编码。
+- **示例**：`rose(df, "大区", "销售额", colors={"华东": "#d93025"})`
 
 ### `theme` — 主题（浅色 / 深色）（`str`，默认 `'light'`）
 

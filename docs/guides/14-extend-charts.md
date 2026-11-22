@@ -27,6 +27,7 @@
 | `docs/api/heat_strip.md` | 函数 API 文档（`tools/check_docs.py` 会校验） | 必须 |
 | `examples/charts/heat_strip.py` | 示例脚本 | 建议 |
 | `tools/build_gallery.py` | 在 `main()` 里 `sections.append(_sec(X.heat_strip(...), s))` | 建议 |
+| `tools/sync_doc_signatures.py` | 不用改：跑一遍就会用真实签名回填 `docs/api/heat_strip.md` 的「函数签名」块 | 建议 |
 
 ## 3. Python 侧
 
@@ -282,10 +283,15 @@ assert "eazy-chart" in chart.to_html()
 - `tools/gen_ai_doc.py`：从函数签名自动生成 `docs/eazy_catalog.json` 和 `docs/AI_GUIDE.md` 中的分组条目；新函数要加进 `GROUPS` 列表，然后重跑脚本。
 
 ```bash
-python tools/gen_ai_doc.py     # 刷新 catalog 与 AI 指南
-python tools/check_docs.py     # 检查 API 文档完整性
-python tools/build_gallery.py  # 重新生成 gallery.html
+python tools/sync_doc_signatures.py  # 用真实签名回填各页「函数签名」块（--check 只检查）
+python tools/gen_ai_doc.py           # 刷新 catalog 与 AI 指南
+python tools/check_docs.py           # 检查 API 文档完整性
+python tools/build_gallery.py        # 重新生成 gallery.html
 ```
+
+- `tools/sync_doc_signatures.py`：改过函数参数后先跑它，避免文档里的默认值和实际签名
+  对不上（例如 `max_rows` 已从 20 万改成 200 万）。`--check` 不写文件，只列出不一致的
+  页面并以退出码 1 结束，可以直接挂到 CI。
 
 - `tools/build_gallery.py`：在 `main()` 的对应分区里加一行，`_sec()` 负责分区标题，重跑后根目录 `gallery.html` 与包内 `gallery.html` 都会更新。
 

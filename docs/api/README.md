@@ -18,6 +18,7 @@
 | `save(path, inline=True)` | 写文件并返回绝对路径；目录不存在会自动创建；编码 UTF-8 |
 | `show(open_browser=None)` | 自动判断环境：Streamlit 用 `components.html` 并按图表高度撑开 iframe；Jupyter 用 `IPython.display.HTML`；普通脚本写临时文件并打印路径（`open_browser=True` 时再调浏览器） |
 | `palette(name)` | 单图覆盖配色（google / antd / tableau / carbon / echarts / morandi / tailwind），返回自身可链式调用 |
+| `colors={类目: 颜色}` | 给**特定类目/系列**指定颜色，其余仍走调色板；支持 bar / line / area / pie / funnel / treemap / combo / rose / waterfall / lollipop / area_pct / bar_pct |
 | `.spec` / `.data` / `.data_ref` / `.warnings` | 序列化后的图表配置、嵌入数据、数据指纹、告警（如采样、丢列）。调试与二次开发用 |
 | `.title` | 图表标题（未显式传 `title` 时为自动生成的标题） |
 

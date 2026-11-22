@@ -123,6 +123,47 @@ def _next_id():
     return "c%d" % _SEQ[0]
 
 
+def _parse_colors(colors):
+    """把 colors 归一化成 {类目名: 颜色}；None 或空字典返回 None。
+
+    ``colors`` 用来给**特定类目**指定颜色（其余类目仍走主题配色）::
+
+        bar(df, "大区", "销售额", colors={"华东": "#d93025", "华南": "#2e7d32"})
+
+    - 没有 ``color`` 参数的图（bar / line / area / pie / rose / funnel /
+      treemap / combo），键是**横轴类目名**（饼图是扇区名）。
+    - 有 ``color`` 参数时，键是**系列名**（也就是 color 列的取值）。
+    匹配不上的类目保持原来的调色板颜色。
+    """
+    if colors is None:
+        return None
+    if isinstance(colors, dict):
+        if not colors:
+            return None
+        out = {}
+        for k, v in colors.items():
+            if isinstance(k, bool) or not isinstance(k, (str, int, float)):
+                raise ValueError(
+                    'colors 的键需要是类目名（字符串或数字），收到 %r。' % (k,)
+                )
+            if _metric.is_follow(v):
+                raise ValueError(
+                    "colors 的值需要是颜色字符串，不能是 follow()："
+                    "要按指标换色请给每个指标各配一个颜色字典。"
+                )
+            if not isinstance(v, str) or not v.strip():
+                raise ValueError(
+                    'colors[%r] 需要是颜色字符串（例如 "#d93025" / "red" / '
+                    '"rgb(217,48,37)"），收到 %r。' % (k, v)
+                )
+            out[str(k)] = v.strip()
+        return out
+    raise ValueError(
+        'colors 需要是 {类目: 颜色} 的字典，例如 colors={"华东": "#d93025"}，'
+        "收到 %r。想整体换配色请用 set_palette()。" % (colors,)
+    )
+
+
 def _check_agg(agg):
     if agg not in AGGS:
         raise ValueError("agg=%r 不支持，可选：%s" % (agg, ", ".join(AGGS)))
@@ -405,6 +446,7 @@ def _base_spec(
     fmt,
     height,
     abs_height=False,
+    colors=None,
     theme,
     agg,
     sort,
@@ -598,6 +640,7 @@ def _base_spec(
         "theme": theme,
         "height": int(height if height is not None else _HEIGHT_DEFAULTS.get(kind, 380)),
         "absHeight": bool(abs_height),
+        "colors": _parse_colors(colors),
         "dataRef": ref,
         "roles": dict(roles),
         "follow": ({
@@ -640,6 +683,10 @@ _COMMON_DOC = """
         数值格式：compact(默认, 1.2万) / thousands(12,345) / raw / percent / currency(¥)。
     height : int
         图高（像素），默认 380。
+    abs_height : bool
+        高度口径。False（默认）：height 是图形区的高度，卡片还要加上标题、
+        图例等留白；True：height 就是整张图表卡片（外框）的高度，组图时
+        卡片能严丝合缝地对齐。
     theme : str
         "light"（默认）或 "dark"。
     agg : str
@@ -672,6 +719,12 @@ _COMMON_DOC = """
         方向别名：both/双向、out/单向出/发起、in/单向进/接收。
     max_rows : int
         单图最多嵌入行数，默认 2000000（200 万行；超出自动均匀采样；传 None 表示不采样）。
+    colors : dict
+        给**特定类目**指定颜色，形如 ``{"华东": "#d93025"}``；没匹配上的类目
+        仍走主题配色。没有 color 的图，键是横轴类目名（饼图/玫瑰图是扇区名、
+        漏斗是阶段名）；有 color 的图，键是系列名。想整体换配色用
+        ``set_palette()``。支持本参数的图：bar / line / area / pie / funnel /
+        treemap / combo / rose / waterfall / lollipop / area_pct / bar_pct。
 """
 
 
@@ -698,6 +751,7 @@ def bar(
     fmt: str = "compact",
     height: int = 380,
     abs_height: bool = False,
+    colors: dict | None = None,
     theme: str = "light",
     drill: list[str] | None = None,
     link: str | tuple | dict | None = None,
@@ -705,7 +759,7 @@ def bar(
     labels: bool = False,
     zoom: bool | str = "auto",
     max_rows: int = _frame.MAX_ROWS,
-    percent: float = False,
+    percent: bool = False,
     yoy: bool = False,
     section: str | None = None,
 ) -> Chart:
@@ -772,6 +826,7 @@ def bar(
         fmt=fmt,
         height=height,
         abs_height=abs_height,
+        colors=colors,
         theme=theme,
         agg=("count" if (y is None and agg != "unique") else agg),
         sort=sort,
@@ -814,6 +869,7 @@ def line(
     fmt: str = "compact",
     height: int = 380,
     abs_height: bool = False,
+    colors: dict | None = None,
     theme: str = "light",
     drill: list[str] | None = None,
     link: str | tuple | dict | None = None,
@@ -822,7 +878,7 @@ def line(
     zoom: bool | str = "auto",
     max_rows: int = _frame.MAX_ROWS,
     step: bool | str = False,
-    percent: float = False,
+    percent: bool = False,
     section: str | None = None,
 ) -> Chart:
     """折线图 / 面积图 / 阶梯图。
@@ -844,6 +900,7 @@ def line(
         fmt=fmt,
         height=height,
         abs_height=abs_height,
+        colors=colors,
         theme=theme,
         agg=agg,
         sort=sort,
@@ -890,6 +947,7 @@ def pie(
     fmt: str = "compact",
     height: int = 360,
     abs_height: bool = False,
+    colors: dict | None = None,
     theme: str = "light",
     labels: bool = True,
     link: str | tuple | dict | None = None,
@@ -921,6 +979,7 @@ def pie(
         fmt=fmt,
         height=height,
         abs_height=abs_height,
+        colors=colors,
         theme=theme,
         agg=("count" if (values is None and agg != "unique") else agg),
         sort=sort,
@@ -1176,6 +1235,7 @@ def funnel(
     fmt: str = "compact",
     height: int = 380,
     abs_height: bool = False,
+    colors: dict | None = None,
     theme: str = "light",
     title: str | None = None,
     subtitle: str | None = None,
@@ -1202,6 +1262,7 @@ def funnel(
         fmt=fmt,
         height=height,
         abs_height=abs_height,
+        colors=colors,
         theme=theme,
         agg=("count" if (values is None and agg != "unique") else agg),
         sort="desc",
@@ -1227,6 +1288,7 @@ def treemap(
     fmt: str = "compact",
     height: int = 420,
     abs_height: bool = False,
+    colors: dict | None = None,
     theme: str = "light",
     max_rows: int = _frame.MAX_ROWS,
 ) -> Chart:
@@ -1258,6 +1320,7 @@ def treemap(
         fmt=fmt,
         height=height,
         abs_height=abs_height,
+        colors=colors,
         theme=theme,
         agg=agg,
         sort="desc",
@@ -1580,6 +1643,7 @@ def combo(
     fmt: str = "compact",
     height: int = 400,
     abs_height: bool = False,
+    colors: dict | None = None,
     theme: str = "light",
     zoom: bool | str = "auto",
     link: str | tuple | dict | None = None,
@@ -1620,6 +1684,7 @@ def combo(
         fmt=fmt,
         height=height,
         abs_height=abs_height,
+        colors=colors,
         theme=theme,
         agg=agg,
         sort=None,

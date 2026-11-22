@@ -11,13 +11,15 @@ eazy_data_viz.box(
     data,
     x=None,
     y=None,
+    *,
     title=None,
     subtitle=None,
     ytitle=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
-    max_rows=200000,
+    max_rows=2000000,
 ) -> Chart
 ```
 

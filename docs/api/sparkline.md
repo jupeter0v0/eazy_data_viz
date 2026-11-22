@@ -18,13 +18,14 @@ eazy_data_viz.sparkline(
     y,
     *,
     group,
-    agg='sum',
+    agg=None,
     title=None,
     subtitle=None,
-    fmt='compact',
+    fmt="compact",
     height=260,
-    theme='light',
-    max_rows=200000,
+    abs_height=False,
+    theme="light",
+    max_rows=2000000,
 ) -> Chart
 ```
 

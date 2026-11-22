@@ -13,7 +13,8 @@ eazy_data_viz.scatter(
     y,
     color=None,
     size=None,
-    agg="sum",
+    *,
+    agg=None,
     title=None,
     subtitle=None,
     xtitle=None,
@@ -22,10 +23,11 @@ eazy_data_viz.scatter(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     link=None,
     legend=True,
-    max_rows=200000,
+    max_rows=2000000,
 ) -> Chart
 ```
 

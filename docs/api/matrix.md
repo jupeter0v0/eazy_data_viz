@@ -19,9 +19,10 @@ eazy_data_viz.matrix(
     max_cols=12,
     title=None,
     subtitle=None,
-    fmt='compact',
+    fmt="compact",
     height=460,
-    theme='light',
+    abs_height=False,
+    theme="light",
 ) -> Chart
 ```
 

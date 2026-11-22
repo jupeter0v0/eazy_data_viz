@@ -13,16 +13,17 @@ eazy_data_viz.progress(
     y=None,
     *,
     max=None,
-    agg="sum",
+    agg=None,
     sort="desc",
     top_n=10,
     title=None,
     subtitle=None,
     fmt="compact",
     height=340,
+    abs_height=False,
     theme="light",
     link=None,
-    max_rows=200000,
+    max_rows=2000000,
 ) -> Chart
 ```
 

@@ -8,10 +8,25 @@
 
 ```python
 eazy_data_viz.map_flow(
-    data, source, target, value=None, *,
-    map="china", agg="sum", fmt="compact", name_map=None,
-    zoom=None, palette=None, height=460, theme="light",
-    title=None, subtitle=None, link=None, legend=True, section=None,
+    data,
+    source,
+    target,
+    value=None,
+    *,
+    map="china",
+    agg=None,
+    fmt="compact",
+    name_map=None,
+    zoom=None,
+    palette=None,
+    height=460,
+    abs_height=False,
+    theme="light",
+    title=None,
+    subtitle=None,
+    link=None,
+    legend=True,
+    section=None,
 ) -> Chart
 ```
 

@@ -7,12 +7,12 @@
 ## 函数签名
 
 ```python
-def pareto(
+eazy_data_viz.pareto(
     data,
     x,
     y=None,
     *,
-    agg="sum",
+    agg=None,
     top_n=None,
     cum_fmt="percent",
     sort=None,
@@ -24,15 +24,15 @@ def pareto(
     ylim=None,
     fmt="compact",
     height=400,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=False,
     zoom="auto",
     drill=None,
     link=None,
-    max_rows=200000,
-) -> "Chart":
-    ...
+    max_rows=2000000,
+) -> Chart
 ```
 
 > `data` / `x` / `y` 是位置参数，其余全部是**关键字限定参数**（`*` 之后必须写成 `参数名=值`）。

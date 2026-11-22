@@ -50,7 +50,7 @@
       vals.push(d);
       cum += d;
       cums.push(cum);
-      colors.push(d < 0 ? theme.palette[3] : theme.palette[1]);
+      colors.push(U.catColor(spec, recs[k].name) || (d < 0 ? theme.palette[3] : theme.palette[1]));
     }
     if (spec.total) {
       cats.push('合计');
@@ -221,6 +221,9 @@
       return tipHead(p0.name) + tipRow(label, U.fmtValue(p0.value, spec.fmt));
     };
 
+    var lolliData = [];
+    for (k = 0; k < vals.length; k++) lolliData.push(U.paintItem(vals[k], U.catColor(spec, cats[k])));
+
     return {
       grid: U.makeGrid(theme, { legend: false }),
       toolbox: U.makeToolbox(theme),
@@ -230,12 +233,12 @@
       series: [
         {
           name: spec.roles.y || '值', type: 'bar', barWidth: 2,
-          itemStyle: { color: theme.palette[0], opacity: 0.55 }, data: vals
+          itemStyle: { color: theme.palette[0], opacity: 0.55 }, data: lolliData
         },
         {
           name: spec.roles.y || '值', type: 'scatter', symbolSize: 9, z: 3,
           itemStyle: { color: theme.palette[0], borderColor: theme.bg, borderWidth: 2 },
-          data: vals,
+          data: lolliData,
           label: {
             show: !!spec.labels, position: 'top', color: theme.subtext, fontSize: 11,
             formatter: function (p) { return U.fmtValue(p.value, spec.fmt); }

@@ -10,6 +10,7 @@
 eazy_data_viz.histogram(
     data,
     column=None,
+    *,
     bins=20,
     title=None,
     subtitle=None,
@@ -17,9 +18,10 @@ eazy_data_viz.histogram(
     ytitle="频数",
     fmt="compact",
     height=360,
+    abs_height=False,
     theme="light",
     labels=False,
-    max_rows=200000,
+    max_rows=2000000,
 ) -> Chart
 ```
 

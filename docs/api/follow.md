@@ -3,7 +3,9 @@
 ## 函数签名
 
 ```python
-eazy_data_viz.follow(default=None)
+eazy_data_viz.follow(
+    default=None,
+) -> Chart
 ```
 
 ## 参数总览

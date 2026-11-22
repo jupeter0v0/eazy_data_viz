@@ -14,7 +14,7 @@ eazy_data_viz.radar(
     color=None,
     *,
     max=None,
-    agg="mean",
+    agg=None,
     sort=None,
     top_n=None,
     title=None,
@@ -25,13 +25,14 @@ eazy_data_viz.radar(
     ylim=None,
     fmt="compact",
     height=400,
+    abs_height=False,
     theme="light",
     legend=True,
     labels=False,
     zoom=False,
     drill=None,
     link=None,
-    max_rows=200000,
+    max_rows=2000000,
 ) -> Chart
 ```
 

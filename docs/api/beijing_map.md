@@ -8,7 +8,9 @@
 
 ```python
 eazy_data_viz.beijing_map(
-    data, region="区", value=None, **kwargs
+    data,
+    region="区",
+    value=None,
 ) -> Chart
 ```
 

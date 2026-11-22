@@ -7,13 +7,13 @@
 ## 函数签名
 
 ```python
-def bump(
+eazy_data_viz.bump(
     data,
     x,
     y,
     *,
     group,
-    agg="sum",
+    agg=None,
     sort=None,
     top_n=None,
     title=None,
@@ -24,15 +24,15 @@ def bump(
     ylim=None,
     fmt="compact",
     height=420,
+    abs_height=False,
     theme="light",
     legend=True,
     labels=False,
     zoom="auto",
     drill=None,
     link=None,
-    max_rows=200000,
-) -> "Chart":
-    ...
+    max_rows=2000000,
+) -> Chart
 ```
 
 > `data` / `x` / `y` 是位置参数；`group` 是**必填的关键字参数**（`*` 之后的第一个），其余都是关键字限定参数。

@@ -9,12 +9,14 @@
 ```python
 eazy_data_viz.gauge(
     value,
+    *,
     label=None,
     min=0,
     max=100,
     fmt="raw",
     unit=None,
     height=260,
+    abs_height=False,
     theme="light",
     title=None,
     subtitle=None,

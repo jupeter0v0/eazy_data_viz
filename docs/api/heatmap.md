@@ -12,7 +12,8 @@ eazy_data_viz.heatmap(
     x,
     y,
     value,
-    agg="sum",
+    *,
+    agg=None,
     sort=None,
     title=None,
     subtitle=None,
@@ -20,9 +21,10 @@ eazy_data_viz.heatmap(
     ytitle=None,
     fmt="compact",
     height=400,
+    abs_height=False,
     theme="light",
     labels=False,
-    max_rows=200000,
+    max_rows=2000000,
     link=None,
 ) -> Chart
 ```

@@ -8,12 +8,28 @@
 
 ```python
 eazy_data_viz.geo_map(
-    data, region, value=None, *,
-    map="china", agg="sum", fmt="compact", labels=True,
-    min_value=None, max_value=None, name_map=None,
-    zoom=None, palette=None, height=460, theme="light",
-    title=None, subtitle=None, drill=None, link=None,
-    legend=True, section=None,
+    data,
+    region,
+    value=None,
+    *,
+    map="china",
+    agg=None,
+    fmt="compact",
+    labels=True,
+    min_value=None,
+    max_value=None,
+    name_map=None,
+    zoom=None,
+    palette=None,
+    height=460,
+    abs_height=False,
+    theme="light",
+    title=None,
+    subtitle=None,
+    drill=None,
+    link=None,
+    legend=True,
+    section=None,
 ) -> Chart
 ```
 

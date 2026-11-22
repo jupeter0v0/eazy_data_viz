@@ -7,12 +7,12 @@
 ## 函数签名
 
 ```python
-def waterfall(
+eazy_data_viz.waterfall(
     data,
     x,
     y=None,
     *,
-    agg="sum",
+    agg=None,
     total=None,
     sort=None,
     top_n=None,
@@ -24,15 +24,16 @@ def waterfall(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
+    colors=None,
     theme="light",
     legend=False,
     labels=False,
     zoom="auto",
     drill=None,
     link=None,
-    max_rows=200000,
-) -> "Chart":
-    ...
+    max_rows=2000000,
+) -> Chart
 ```
 
 > `data` / `x` / `y` 是位置参数，其余全部是**关键字限定参数**（`*` 之后必须写成 `参数名=值`）。
@@ -58,6 +59,7 @@ def waterfall(
 | `fmt` | `str` | `'compact'` | 否 | 数值格式：compact / thousands / raw / percent / currency |
 | `height` | `int` | `380` | 否 | 画布高度（像素，≥120） |
 | `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
+| `colors` | `dict \| None` | `None` | 否 | 给特定类目/系列指定颜色 |
 | `theme` | `str` | `'light'` | 否 | light / dark |
 | `legend` | `bool` | `False` | 否 | 是否显示图例（本图固定不显示） |
 | `labels` | `bool` | `False` | 否 | 是否在柱顶标注增量数值 |
@@ -178,6 +180,12 @@ def waterfall(
 - **作用**：默认 `height` 只算图表正文，标题 / 副标题 / 联动工具条会把卡片额外撑高，同一行里一张带长标题、一张带工具条的卡片底边就对不齐。打开 `abs_height=True` 后 `height` 表示**整个组件外框**（内边距、标题、工具条都算在里面），正文用剩余空间自适应。
 - **建议**：在 `dashboard` / `show` 里要「框和框严格对齐」时打开；单图导出或不在意卡片底边时保持默认。
 - **示例**：`abs_height=True, height=320`（配合 `dashboard(..., cols=2)` 看两张卡的底边）
+
+### `colors` — 给特定类目指定颜色（`dict`，默认 `None`）
+
+- **作用**：`{"类目名": "颜色"}` 的字典，命中的类目用你给的颜色，其余仍走主题调色板。 颜色可以写 `#d93025`、`red`、`rgb(217,48,37)`、`rgba(...)`。键是**横轴类目名**。默认按增量正负自动取色（涨绿跌红），配了 `colors` 的类目优先。 键匹配不上不会报错（只是那一条不生效），方便同一段代码复用到不同数据集。
+- **建议**：把某个关键驱动项单独标记；「合计」柱仍用主题第一色。 要整体换配色请用 `edv.set_palette()`，不要用它逐个类目硬编码。
+- **示例**：`waterfall(df, "项目", "变动额", total=True, colors={"退款": "#d93025"})`
 
 ### `theme` — 主题
 

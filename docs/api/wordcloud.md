@@ -17,18 +17,18 @@ eazy_data_viz.wordcloud(
     names=None,
     values=None,
     *,
-    agg='sum',
+    agg=None,
     sort=None,
     top_n=30,
     title=None,
     subtitle=None,
-    fmt='compact',
+    fmt="compact",
     height=360,
     abs_height=False,
-    theme='light',
+    theme="light",
     link=None,
     shape=None,
-    max_rows=200000,
+    max_rows=2000000,
 ) -> Chart
 ```
 

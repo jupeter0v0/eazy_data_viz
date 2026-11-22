@@ -13,7 +13,7 @@ eazy_data_viz.pictorial(
     y=None,
     *,
     symbol="circle",
-    agg="sum",
+    agg=None,
     sort=None,
     top_n=None,
     title=None,
@@ -24,13 +24,14 @@ eazy_data_viz.pictorial(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=True,
     zoom="auto",
     drill=None,
     link=None,
-    max_rows=200000,
+    max_rows=2000000,
 ) -> Chart
 ```
 

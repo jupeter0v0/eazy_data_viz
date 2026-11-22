@@ -12,7 +12,6 @@ eazy_data_viz.area(
     x,
     y,
     color=None,
-    **kwargs,
 ) -> Chart
 ```
 
@@ -78,7 +77,7 @@ eazy_data_viz.area(
 ### `color` — 分组/系列列名（`str`，默认 `None`）
 
 - **作用**：按该列的取值把数据拆成多个系列：柱状图变成分组柱或（配合 `stack=True`）堆叠柱，折线图变成多条线，散点图按类别着色。 同时会参与聚合：每个 (x, color) 组合先按 `agg` 聚合再绘制。 传入的列会变成图例；`legend=False` 可隐藏图例（但系列依然按 color 拆分）。
-- **建议**：分类基数不宜过大：超过 10 个类别时颜色会难以区分，建议先合并低频类别。 `color` 与 `x` 不能是同一列（同一列分组没有意义）。 需要固定配色时用 `chart.palette("tableau")` 或全局 `edv.set_palette(...)`。
+- **建议**：分类基数不宜过大：超过 10 个类别时颜色会难以区分，建议先合并低频类别。 `color` 与 `x` 不能是同一列（同一列分组没有意义）。 需要固定配色时用 `chart.palette("tableau")` 或全局 `edv.set_palette(...)`。 想只给某一条线换色（而不是整体换配色），用 `line` 的同名参数 `colors={"系列名": "#d93025"}`——`area` 是 `line(..., area=True)` 的包装，`line` 的关键字参数都原样透传。
 - **示例**：`color="渠道"`
 - **报错**：列名写错 → `KeyError: "列 'XX' 不存在。当前可用的列有：..."`
 

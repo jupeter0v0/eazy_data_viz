@@ -3,7 +3,8 @@
 ## 函数签名
 
 ```python
-eazy_data_viz.column(**specs)
+eazy_data_viz.column(
+) -> Chart
 ```
 
 ## 参数总览

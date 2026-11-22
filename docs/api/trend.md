@@ -24,14 +24,15 @@ eazy_data_viz.trend(
     ytitle=None,
     xlim=None,
     ylim=None,
-    fmt='compact',
+    fmt="compact",
     height=400,
-    theme='light',
+    abs_height=False,
+    theme="light",
     legend=None,
     labels=False,
     zoom=False,
     link=None,
-    max_rows=200000,
+    max_rows=2000000,
 ) -> Chart
 ```
 

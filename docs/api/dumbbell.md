@@ -7,7 +7,7 @@
 ## 函数签名
 
 ```python
-def dumbbell(
+eazy_data_viz.dumbbell(
     data,
     x,
     y1,
@@ -15,7 +15,7 @@ def dumbbell(
     *,
     labels=None,
     series_names=None,
-    agg="sum",
+    agg=None,
     sort=None,
     top_n=None,
     title=None,
@@ -26,14 +26,14 @@ def dumbbell(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=True,
     zoom="auto",
     drill=None,
     link=None,
-    max_rows=200000,
-) -> "Chart":
-    ...
+    max_rows=2000000,
+) -> Chart
 ```
 
 > `data` / `x` / `y1` / `y2` 是位置参数，其余全部是**关键字限定参数**（`*` 之后必须写成 `参数名=值`）。

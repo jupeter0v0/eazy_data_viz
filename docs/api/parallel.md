@@ -20,12 +20,13 @@ eazy_data_viz.parallel(
     ylim=None,
     fmt="compact",
     height=440,
+    abs_height=False,
     theme="light",
     legend=False,
     labels=False,
     zoom=False,
     link=None,
-    max_rows=200000,
+    max_rows=2000000,
 ) -> Chart
 ```
 

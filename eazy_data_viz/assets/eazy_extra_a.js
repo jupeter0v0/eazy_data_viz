@@ -622,6 +622,8 @@
     for (i = 0; i < items.length; i++) {
       var it = { name: items[i].name, value: items[i].value };
       if (sel !== null && sel !== undefined && items[i].name !== sel) it.itemStyle = { opacity: 0.3 };
+      var _rc = U.catColor(spec, items[i].name);
+      if (_rc) { it.itemStyle = it.itemStyle || {}; it.itemStyle.color = _rc; }
       dataArr.push(it);
     }
 

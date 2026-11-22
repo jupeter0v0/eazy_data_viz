@@ -7,14 +7,14 @@
 ## 函数签名
 
 ```python
-def target(
+eazy_data_viz.target(
     data,
     x,
     actual,
     target=None,
     *,
     target_value=None,
-    agg="sum",
+    agg=None,
     sort=None,
     top_n=None,
     title=None,
@@ -25,15 +25,15 @@ def target(
     ylim=None,
     fmt="compact",
     height=380,
+    abs_height=False,
     theme="light",
     legend=True,
     labels=False,
     zoom="auto",
     drill=None,
     link=None,
-    max_rows=200000,
-) -> "Chart":
-    ...
+    max_rows=2000000,
+) -> Chart
 ```
 
 > `data` / `x` / `actual` / `target` 是位置参数，其余全部是**关键字限定参数**（`*` 之后必须写成 `参数名=值`）。

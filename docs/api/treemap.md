@@ -11,13 +11,16 @@ eazy_data_viz.treemap(
     data,
     path,
     value,
-    agg="sum",
+    *,
+    agg=None,
     title=None,
     subtitle=None,
     fmt="compact",
     height=420,
+    abs_height=False,
+    colors=None,
     theme="light",
-    max_rows=200000,
+    max_rows=2000000,
 ) -> Chart
 ```
 
@@ -34,6 +37,7 @@ eazy_data_viz.treemap(
 | `fmt` | `str` | `'compact'` | 否 | 数值格式 |
 | `height` | `int` | `420` | 否 | 画布高度（默认 420） |
 | `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
+| `colors` | `dict \| None` | `None` | 否 | 给特定类目/系列指定颜色 |
 | `theme` | `str` | `'light'` | 否 | light / dark |
 | `max_rows` | `int` | `2000000` | 否 | 最大绘制行数 |
 
@@ -98,6 +102,12 @@ eazy_data_viz.treemap(
 - **作用**：默认 `height` 只算图表正文，标题 / 副标题 / 联动工具条会把卡片额外撑高，同一行里一张带长标题、一张带工具条的卡片底边就对不齐。打开 `abs_height=True` 后 `height` 表示**整个组件外框**（内边距、标题、工具条都算在里面），正文用剩余空间自适应。
 - **建议**：在 `dashboard` / `show` 里要「框和框严格对齐」时打开；单图导出或不在意卡片底边时保持默认。
 - **示例**：`abs_height=True, height=320`（配合 `dashboard(..., cols=2)` 看两张卡的底边）
+
+### `colors` — 给特定类目指定颜色（`dict`，默认 `None`）
+
+- **作用**：`{"类目名": "颜色"}` 的字典，命中的类目用你给的颜色，其余仍走主题调色板。 颜色可以写 `#d93025`、`red`、`rgb(217,48,37)`、`rgba(...)`。键是**节点名**：每一层都可以配，同名节点一起生效（层级路径不同也各自生效）。 键匹配不上不会报错（只是那一条不生效），方便同一段代码复用到不同数据集。
+- **建议**：适合把「异常类目」在整个结构里点出来，其余保持主题色。 要整体换配色请用 `edv.set_palette()`，不要用它逐个类目硬编码。
+- **示例**：`treemap(df, ["大区", "产品"], "销售额", colors={"华东": "#d93025"})`
 
 ### `theme` — 主题（light / dark）（`str`，默认 `'light'`）
 

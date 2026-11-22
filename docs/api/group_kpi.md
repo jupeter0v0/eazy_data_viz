@@ -13,7 +13,7 @@ eazy_data_viz.group_kpi(
     values=None,
     *,
     items=None,
-    agg="sum",
+    agg=None,
     sort="desc",
     top_n=6,
     unit=None,
@@ -22,6 +22,7 @@ eazy_data_viz.group_kpi(
     title=None,
     subtitle=None,
     height=140,
+    abs_height=False,
     theme="light",
 ) -> Chart
 ```
