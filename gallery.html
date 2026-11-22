@@ -2464,7 +2464,8 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
 
   function applyMetric(spec) {
     if (!spec || !spec.switch) return spec;
-    var cur = EazyViz.metric;
+    // 每张卡片有自己的默认指标（spec.metric）；用户点了指标 chip 才用全局 EazyViz.metric 覆盖
+    var cur = EazyViz.metric || spec.metric || null;
     for (var role in spec.switch) {
       if (!Object.prototype.hasOwnProperty.call(spec.switch, role)) continue;
       var map = spec.switch[role] || {};
@@ -2656,8 +2657,20 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     }
     if (metricList.length > 1) {
       html += '<div class="eazy-kpi-metrics">';
+      var metricCols = {};
+      if (spec.switch) {
+        for (var sr in spec.switch) {
+          if (!Object.prototype.hasOwnProperty.call(spec.switch, sr)) continue;
+          var smap = spec.switch[sr] || {};
+          for (var sk in smap) {
+            if (Object.prototype.hasOwnProperty.call(smap, sk) && metricCols[sk] === undefined) {
+              metricCols[sk] = smap[sk];
+            }
+          }
+        }
+      }
       for (var mi = 0; mi < metricList.length; mi++) {
-        html += kpiChip('metric:' + metricList[mi], metricList[mi], '',
+        html += kpiChip('metric:' + metricList[mi], metricCols[metricList[mi]] || metricList[mi], '',
           metricOn === metricList[mi], 'eazy-kpi-metric');
       }
       html += '</div>';
