@@ -64,6 +64,20 @@ eazy_data_viz.bar(df, x="月", y=eazy_data_viz.follow("金额"))    # 没选卡�
 4. 用户点某张卡片 → 只更新 `EazyViz.selection` 并重画相关图表（含卡片高亮），Python 完全不参与；
 5. 再点同一张卡片 → 取消选中，图回到 `follow(default)` 的列。
 
+## 类目顺序会变吗（1.6.4）
+
+不会。`y=follow()` 的图默认把**类目顺序钉住**：页面第一次渲染时按当时选中指标
+（没选中则按 `follow(default)`）的合计降序排一次，之后切卡片只换数值、不重排左右
+位置，柱子的位置在切换过程中保持稳定，方便对比同一批类目的不同指标。
+
+```python
+edv.bar(df, "大区", edv.follow("销售额"))              # 顺序固定（按销售额排一次）
+edv.bar(df, "大区", edv.follow("销售额"), sort="desc")  # 每次都按当前指标重排
+edv.bar(df, "大区", edv.follow("销售额"), sort="none")  # 完全按 df 里的出现顺序
+```
+
+分组柱（带 `color`）的**图例顺序**也一起钉住；显式写 `sort=` 时以你为准。
+
 ## 完整示例
 
 ### 示例 1：一张 KPI 卡当「按钮」，两个图跟着换口径

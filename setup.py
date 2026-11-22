@@ -14,7 +14,7 @@ def read(*parts):
 
 setup(
     name="eazy_data_viz",
-    version="1.6.3",
+    version="1.6.4",
     description="给 pandas 用的经营驾驶舱图表库（HTML / Streamlit）：48 种图表、Material Design 3、客户端下钻/联动",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",

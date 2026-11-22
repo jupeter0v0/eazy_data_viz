@@ -1485,6 +1485,41 @@ def t_colors():
         raise AssertionError("scatter 不该接受 colors")
 
 
+def t_follow_order():
+    """1.6.4：follow() 的图默认钉住类目顺序，显式 sort 才跟着指标重排。"""
+    import json
+
+    y = eazy_data_viz.follow("销售额")
+
+    # 自动 → sortUser=False（前端按打开页面时的指标把顺序钉住）
+    c = eazy_data_viz.bar(DF, "大区", y)
+    assert c.spec["follow"] and "y" in c.spec["follow"], c.spec["follow"]
+    assert c.spec["sortUser"] is False, c.spec["sortUser"]
+    assert c.spec["sort"] == "desc", c.spec["sort"]      # bar 的默认排序不变
+
+    # 显式 sort（任何形式）→ sortUser=True，交给用户
+    for kw in ({"sort": "desc"}, {"sort": "none"}, {"sort": "x"},
+               {"sort": "月份"}):
+        c2 = eazy_data_viz.bar(DF, "大区", y, **kw)
+        assert c2.spec["sortUser"] is True, (kw, c2.spec["sortUser"])
+
+    # 没有 follow 的图不受影响，行为与以前完全一致
+    c3 = eazy_data_viz.bar(DF, "大区", "销售额")
+    assert c3.spec["follow"] is None and c3.spec["sortUser"] is False
+    assert c3.spec["sort"] == "desc"
+
+    # 折线默认保持数据顺序，钉不钉都一样
+    c4 = eazy_data_viz.line(DF, "月份", y)
+    assert c4.spec["sort"] == "x" and c4.spec["sortUser"] is False
+
+    # 分组柱：系列顺序也由前端钉住，spec 里同样只标记 sortUser
+    c5 = eazy_data_viz.bar(DF, "月份", y, color="大区")
+    assert c5.spec["sortUser"] is False and c5.spec["follow"]
+
+    # spec 依旧可 JSON 序列化（不能把 Follow 写进去）
+    json.dumps(c.spec, allow_nan=False)
+
+
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):
 
     check(name, fn)

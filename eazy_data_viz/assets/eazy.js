@@ -883,6 +883,19 @@
       cats.sort(listRanker(spec.sortRank) || compareCatX);
     }
 
+    // 1.6.4：用 follow() 的图（KPI 卡片切指标）在这里把类目顺序钉住。
+    // 第一次渲染按「当前指标」的合计降序排一次并记住，之后切卡片只改值、不再重排，
+    // 柱子的左右位置保持稳定。显式传了 sort= 时以用户为准（sortUser）。
+    var pinOrder = !!spec.follow && !spec.sortUser;
+    if (pinOrder) {
+      if (!spec.pinCats) {
+        cats.sort(function (a, b) { return (totals[b] || 0) - (totals[a] || 0); });
+        spec.pinCats = cats.slice();
+      } else {
+        cats.sort(listRanker(spec.pinCats) || compareCatX);
+      }
+    }
+
     var otherCats = [];
     if (spec.topN && cats.length > spec.topN) {
       otherCats = cats.slice(spec.topN);
@@ -906,6 +919,10 @@
       seriesNames = seriesOrder.slice();
       if (spec.sort !== 'none') {
         seriesNames.sort(function (a, b) { return (seriesTotals[b] || 0) - (seriesTotals[a] || 0); });
+      }
+      if (pinOrder) {
+        if (!spec.pinSeries) spec.pinSeries = seriesNames.slice();
+        else seriesNames.sort(listRanker(spec.pinSeries) || compareCatX);
       }
     } else {
       seriesNames = [ydim || '记录数'];

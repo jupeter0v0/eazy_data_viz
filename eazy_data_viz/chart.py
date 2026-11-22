@@ -573,6 +573,9 @@ def _base_spec(
             "缺少 x：请用 x=\"列名\" 指定横轴（分类/时间）列。"
         )
 
+    # 用户是否显式传了 sort：下面 follow() 的「固定顺序」要靠它区分。
+    _user_sort = sort
+
     # 排序默认值（按语义自动选择，用户不用关心）：
     #   - x 是时间/数值列 → 按 x 升序（时间线天然顺序）
     #   - 柱状图 → 按数值降序（排行榜更直观）
@@ -650,6 +653,8 @@ def _base_spec(
         "agg": agg,
         "fmt": fmt or "compact",
         "sort": sort,
+        # 用户显式给了 sort 就用用户的；否则 follow() 的图由前端把顺序钉住（1.6.4）
+        "sortUser": _user_sort is not None,
         "sortRank": sort_rank,
         "topN": top_n,
         "xtitle": xtitle,
@@ -694,6 +699,9 @@ _COMMON_DOC = """
     sort : str
         类目排序：
             * "desc"(默认) / "asc" / "none"(保持数据顺序) / "x"(横轴列顺序)
+            * 用 ``y=follow()`` 的图（KPI 卡片切指标）：不传 sort 时，顺序是按
+              **页面打开时的那个指标**排一次就固定住，之后切卡片只改柱高、
+              不再重排左右位置；想让它每次跟着当前指标重排，显式写 sort="desc"。
             * **一列列名**：按这一列在每个类目下的最小值排序。最适合
               横轴是"1月…12月"这类文本、想按时间先后排的场景：
               ``bar(df, x="月", y="金额", sort="年-月")``。
