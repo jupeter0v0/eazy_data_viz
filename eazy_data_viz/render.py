@@ -195,6 +195,22 @@ def _prepare_layout(specs, layout=None, direction=None, grid=None):
     return plan
 
 
+def _initial_selection(specs):
+    """页面初始选中的指标（第一张带 metricSel 的 KPI 卡片）。"""
+    for spec in specs or []:
+        ms = spec.get("metricSel") if isinstance(spec, dict) else None
+        if not ms:
+            continue
+        return {
+            "id": spec.get("id"),
+            "name": ms.get("name"),
+            "column": ms.get("column"),
+            "agg": ms.get("agg"),
+            "label": ms.get("label"),
+        }
+    return None
+
+
 def _grid_markup(specs, layout, cols):
     """按布局计划生成卡片容器 + 卡片。layout=None 时是原来的等宽网格。"""
     if layout is None:
@@ -538,6 +554,9 @@ html[data-theme=dark] .eazy-kpi-delta.eazy-down{background:rgba(242,139,130,.14)
 .eazy-root.is-plain .eazy-card:hover{border-color:transparent;box-shadow:none}
 
 /* KPI 卡片里的小切换（1.6）：本期/基期、同比/环比、指标 */
+.eazy-kpi-selectable{cursor:pointer;border-radius:12px;transition:box-shadow .18s ease}
+.eazy-kpi-selectable:hover{box-shadow:0 0 0 1px var(--pv-outline-var) inset}
+.eazy-kpi.is-selected{outline:2px solid var(--eazy-accent,#1a73e8);outline-offset:3px}
 .eazy-kpi-cmp,.eazy-kpi-metrics{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .eazy-kpi-chip{
   font:inherit;font-size:10.5px;line-height:1;padding:3px 6px;border-radius:999px;
@@ -953,7 +972,8 @@ def build_page(charts: list, inline: bool = True, title: str | None = None,
 
     style = normalize_card_style(card_style)
     page = {"theme": theme, "palette": palette, "charts": specs, "links": [],
-            "layout": plan, "hints": bool(hints), "cardStyle": style}
+            "layout": plan, "hints": bool(hints), "cardStyle": style,
+            "selection": _initial_selection(specs)}
     maps = _map_payload(specs)
     cities = _cities_payload() if "china" in maps else {}
     payload = {"maps": _frame.to_json(maps) if maps else "{}",
@@ -1097,7 +1117,8 @@ def build_fragment(charts: list, title: str | None = None, desc: str | None = No
                  header + filters, cards + footer))
 
     page = {"theme": theme, "palette": palette, "charts": specs, "links": [],
-            "layout": plan, "hints": bool(hints), "cardStyle": style}
+            "layout": plan, "hints": bool(hints), "cardStyle": style,
+            "selection": _initial_selection(specs)}
     maps = _map_payload(specs)
     cities = _cities_payload() if "china" in maps else {}
     return {

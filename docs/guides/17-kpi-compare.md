@@ -1,140 +1,195 @@
-# 17 · KPI 对比与指标切换
+# 17 · KPI 对比、卡片选择器与指标跟随
 
-> 适用版本：1.6.0+　｜　相关：`kpi`、`switch`、`bar` 的 `yoy`、[06 多图联动](06-interaction.md)
+> 适用版本：1.6.1+　｜　相关：`kpi` 的 `compare=` / `metric=`、`follow()`、`column()`、
+>`bar` 的 `yoy`、[06 多图联动](06-interaction.md)
 
-一张经营看板通常要回答三个问题：**现在多少**、**比去年好还是差**、**换个口径（销售额/销量/应收）怎么样**。
-1.6 之前这三件事分别要靠：先筛数据再画 KPI、手填 `delta=`、给每种口径单独做一页。1.6 把三件事都做成参数。
+做经营看板时常见的三个诉求：
+
+1. **同比 / 环比要现算**，而且要跟着联动一起变——不能每次先在 pandas 里筛好再传进来；
+2. **一张 KPI 卡片就是一个按钮**：点「销售额」全看板看金额，点「客户数」全看板看去重客户数；
+3. **每列怎么汇总，最好只声明一次**，不要每张图都写 `agg=`。
+
+这三件事分别由 `compare=`、`metric=` + `edv.follow()`、`edv.column(...)` 负责。
 
 ---
 
 ## 1. 动态同比：`compare=`
 
-### 1.1 最小可用
+### 1.1 最小写法
 
 ```python
-import pandas as pd
-import eazy_data_viz as edv
-
-df = pd.DataFrame({
-    "年": ["2026年", "2026年", "2026年", "2025年", "2025年", "2025年"],
-    "月": ["1月", "2月", "3月", "1月", "2月", "3月"],
-    "金额": [130, 90, 96, 100, 120, 80],
-})
-
-chart = edv.kpi(df, value="金额", label="销售额", spark="金额", spark_x="月",
-                compare={"年": ["2026年", "2025年"]})
-print(chart.spec["compare"]["static"])
-# {'cur': 316.0, 'base': 300.0, 'rate': 0.0533…, 'mom': {'cur': 96.0, 'base': 90.0, 'rate': 0.0666…}}
+edv.kpi(
+    df, value="金额", label="销售额",
+    spark="金额", spark_x="月",
+    compare={"年": ["2026年", "2025年"]},
+)
 ```
 
-卡片上会出现：
+含义：在 `年` 这一列里，`2026年` 是本期、`2025年` **是上期**；卡片主数字显示本期合计，
+旁边标注同比增速。上下期是**同期对齐**的：本期只有 1–8 月，上期也只取 1–8 月，
+不会拿「8 个月的 2026」去比「12 个月的 2025」。
 
-```
-销售额
-316        ▲ +5.3% 同比
-[2026年 316] [2025年 300] [环比]
-▁▂▃▅▆▇   ← 迷你走势
-```
-
-* 点 `2025年` → 主数字换成基期（300），chips 里高亮跟着换；
-* 点 `环比` → 增长率换成「最后一期 vs 上一期」（96 vs 90）；
-* 再点一次回到默认。
-
-### 1.2 字典里的四个键
+### 1.2 完整参数
 
 | 键 | 取值 | 默认 | 说明 |
 |---|---|---|---|
-| 列名 | `["本期取值", "基期取值"]` | 必填 | 例如 `"年": ["2026年", "2025年"]` |
-| `show` | `"value"` / `"rate"` / `"both"` | `"both"` | 主数字显示数值还是增长率 |
-| `mode` | `"yoy"` / `"mom"` | `"yoy"` | 同比（两组取值）/ 环比（最后两期） |
-| `period` | 列名 | 取 `spark_x` | 同期对齐与环比分期都用它 |
-| `base_label` | 字符串 | 基期取值本身 | 基期 chip 上显示的名字 |
-
-### 1.3 「同期对齐」为什么重要
-
-2026 年只有 1–8 月的数据，2025 年有整年。直接比总量，2026 永远输。`compare` 只比**本期已有的期**：
+| `列名` | `[本期值, 上期值]` | — | 必填；只能用**一个**数据列做对比 |
+| `show` | `"value"` / `"rate"` / `"both"` | `"both"` | 显示本期值、增速，还是两个都显示 |
+| `mode` | `"yoy"` / `"mom"` | `"yoy"` | 同比（本期 vs 上期）或环比（最后一期 vs 上一期） |
+| `period` | 列名 | 有 `spark_x` 就用 `spark_x` | 判断「期」的列，决定同期对齐与环比 |
+| `base_label` | 字符串 | 上期取值本身 | 上期的显示名，例如 `"去年同期"` |
+| `label` | 字符串 | `"同比"` / `"环比"` | 增速标签 |
 
 ```python
-df["月"] = pd.Categorical(df["月"], ["1月", "2月", "3月"])
-chart = edv.kpi(df, value="金额", spark_x="月", compare={"年": ["2026年", "2025年"]})
-print(chart.spec["compare"]["static"]["base"])   # 只累计 1–3 月 → 300，而不是整年
+edv.kpi(df, value="金额", compare={"年": ["2026年", "2025年"], "show": "rate", "mode": "yoy"})
+edv.kpi(df, value="金额", compare={"年": ["2026年", "2025年"], "mode": "mom", "period": "月"})
 ```
 
-### 1.4 去年为空 / 为 0 / 为负
+### 1.3 上期为空 / 为 0 / 为负数的规则
 
-| 情况 | 显示 | 为什么 |
+| 情况 | 显示 | 说明 |
 |---|---|---|
-| 基期没有数据 | 「新增」 | 从 0 到有，增长率没有意义 |
-| 基期 = 0，本期 > 0 | 「新增」 | 同上（除零） |
-| 基期 = 0，本期 = 0 | `—` | 没有信息 |
-| 基期 < 0（例如利润 -100 → -50） | `+50%` | 分母取绝对值，方向不会反 |
+| 上期没有数据 | `新增`（本期 > 0）或 `—` | 不显示无穷大，也不显示 100% |
+| 上期为 0 | `—`，本期 > 0 时显示 `新增` | 0 做分母没有意义，直接不给数字 |
+| 上期为负 | 照常算，分母取绝对值 | 例如上期 -100 → 本期 -50，显示 `+50.0%`（减亏一半） |
+| 本期为空 | `—` | 没有本期就没有增速 |
+| 不足两期（环比） | 不显示环比 | 数据只有一期时无法环比 |
 
-### 1.5 联动之后会重算
+### 1.4 联动之后会重算吗
 
-这是把数字交给前端算的核心好处：点别的图筛选「渠道 = 直销」，KPI 会拿**过滤后的行**重算本期、基期、同比、环比四个数。
-以前「先 `df[df["年"]=="2026年"]` 再画 KPI」的做法，联动一变，卡片还停在没筛过的静态值上。
+会。`compare` 的数值是在**浏览器里**用当前筛选结果现算的：点了别的图的某个类目，
+KPI 卡片上的本期值、上期值、增速会一起重算，不需要 Python 重跑。
 
-### 1.6 和 `delta=` 的关系
+### 1.5 不要提前筛数据
 
-`compare` 与 `delta` 同时传时**以 compare 为准**，并在 `chart.warnings["warnings"]` 里提示一句。
-静态数字（`kpi(42)`）不能配 compare，会直接报错。
+```python
+# ✗ 错：基期被你筛掉了，compare 永远算不出同比
+edv.kpi(df[df["年"] == "2026年"], value="金额", compare={"年": ["2026年", "2025年"]})
+
+# ✓ 对：传完整数据，compare 自己切本期 / 上期
+edv.kpi(df, value="金额", compare={"年": ["2026年", "2025年"]})
+```
+
+报错里也会提示这句：「如果你已经把数据筛到本期，请改传未筛选的完整数据——compare 会自己切本期/基期。」
 
 ---
 
-## 2. 指标切换：`edv.switch(...)`
+## 2. 卡片 = 选择器：`metric=` + `edv.follow()`
 
-### 2.1 一个 switch，全看板跟着切
+### 2.1 思路
+
+KPI 卡片本身就是个按钮。给它一个标识 `metric="sale"`，点它就等于「选中销售额这个口径」；
+其它图表在度量位置写 `edv.follow()`，表示「我的这根柱子跟着选中的卡走」。
 
 ```python
-amount = edv.switch(sale="金额", qty="数量", balance="余额")
+edv.column(金额="sum", 客户名称="unique")   # 可选：声明每列怎么汇总
 
 edv.show(
-    edv.kpi(df, value=amount, label="销售额", metric="sale", spark="金额", spark_x="月"),
-    edv.bar(df, x="月", y=amount),
-    edv.pie(df, names="大区", values=amount),
-    cols=3, title="经营看板", card_style="glass")
+    edv.kpi(df, value="金额", metric="sale", label="销售额", spark="金额", spark_x="月"),
+    edv.kpi(df, value="客户名称", metric="cust", label="客户数"),
+    edv.kpi(df, value="余额", metric="bal", label="应收余额"),
+    edv.bar(df, x="月", y=edv.follow()),
+    edv.pie(df, names="大区", values=edv.follow()),
+    edv.table(df, groupby={"columns": ["大区"], "value": edv.follow()}),
+    cols=2,
+)
 ```
 
-点第一张卡片上的「数量」chip：三张图一起换成数量口径。**纯前端**，不触发 Python 重跑。
+- 页面初始选中第一张带 `metric=` 的卡片（这里就是「销售额」）；
+- 点「客户数」→ 柱状图换成按客户名称去重计数、饼图同理、汇总表也换成去重数；
+- 再点一次同一张 → 取消选中，图回到 `follow(default)` 的列；
+- 选中的卡片会有高亮描边，方便知道现在看的是哪个口径。
 
-### 2.2 哪些参数能接
-
-任何列名角色：`x` / `y` / `y2` / `color` / `size` / `names` / `values` / `value` / `path`（单个）/ `source` / `target` / `spark` …
+### 2.2 `follow()` 的默认列
 
 ```python
-edv.bar(df, x="月", y=edv.switch(sale="金额", qty="数量"))
-edv.pie(df, names="大区", values=edv.switch(sale="金额", qty="数量"))
-edv.kpi(df, value=edv.switch(cust="客户名称", order="订单号"), agg="unique", spark_x="月")
+edv.bar(df, x="月", y=edv.follow("金额"))   # 没选中时先看金额
+edv.bar(df, x="月", y=edv.follow())         # 不写就等用户点卡片
 ```
 
-### 2.3 想固定某张图
+### 2.3 哪些角色能接
 
-那张图别传 switch，传具体列名即可 —— 它就不会跟着切。
+度量角色都可以：`y`、`y2`、`value`、`values`、`size`、`names`、`spark`。
+维度角色（`x`、`color`、`path`）不能接，会直接报错——那会把整张图的结构换掉。
 
-### 2.4 类型要一致
+```python
+edv.combo(df, x="月", bar=edv.follow(), line="数量")
+edv.scatter(df, x="订单数", y=edv.follow(), size=edv.follow())
+```
 
-同组 switch 的列要同类（都数值或都文本）。数值图切到文本列会画不出来；文本类指标配 `agg="count"` / `"unique"`。
+### 2.4 不写 `follow()` 的图
+
+完全不动。所以一个看板里可以混着「固定看金额」的图和「跟着切」的图。
+
+### 2.5 为什么不用 rerun
+
+选中状态只存在前端 `EazyViz.selection` 里，切换时只重画相关的图；不重新读数据、
+不重新序列化 payload，所以是毫秒级。Streamlit 里也不会 `st.rerun()`。
 
 ---
 
-## 3. 卡片外框：`card_style`
+## 3. 每列怎么汇总：`edv.column(...)`
 
-1.6 起默认 `"plain"`（透明、无边框），把页面底色让出来。
+### 3.1 一次声明，整页生效
 
 ```python
-edv.show(a, b, c, card_style="card")    # 旧样式：实心白卡
-edv.show(a, b, c, card_style="glass")   # 液态玻璃：半透明 + 背景模糊
+edv.column(
+    金额="sum",
+    客户名称="unique",        # 去重计数
+    订单数="count",           # 行数
+    订单均价="金额/订单数",    # 表达式列，默认按 mean
+)
 ```
 
-| 取值 | 别名 | 效果 |
+之后：
+
+```python
+edv.bar(df, x="月", y="客户名称")   # 自动 unique
+edv.bar(df, x="月", y="订单均价")   # 自动 mean
+edv.table(df, groupby={"columns": ["大区"], "value": "客户名称"})   # 汇总表也去重计数
+```
+
+### 3.2 表达式列
+
+支持 `+ - * /`，可以嵌套引用别的登记项：
+
+```python
+edv.column(毛利额="金额-成本", 毛利率=("毛利额/金额", "mean"))
+```
+
+表达式列**只在被引用时才计算**，不会凭空增加页面体积；分母为 0 或空值的那一行记为缺失。
+
+### 3.3 优先级
+
+显式传的 `agg=` > `edv.column(...)` 登记值 > 默认 `sum`。
+
+```python
+edv.column(金额="sum")
+edv.bar(df, x="月", y="金额")             # sum（登记值）
+edv.bar(df, x="月", y="金额", agg="mean") # mean（显式覆盖）
+```
+
+---
+
+## 4. 卡片外框：`card_style`
+
+`show()` / `dashboard()` 的 `card_style` 三档（1.6 起默认透明）：
+
+| 取值 | 效果 | 适合 |
 |---|---|---|
-| `"plain"`（默认） | `transparent` / `透明` / `无框` | 透明，页面底色直接透上来 |
-| `"card"` | `default` / `solid` / `实心` | 实心白卡 |
-| `"glass"` | `liquid` / `液态玻璃` / `玻璃` | 半透明渐变 + 毛玻璃 + 高光边 |
+| `"plain"`（默认） | 无边框、无底色、无阴影 | 白底/浅色页面上让图表「浮」着，最省视觉噪音 |
+| `"card"` | 实心卡片（旧样式：白底 + 边框 + 阴影） | 需要明确分区、深色背景 |
+| `"glass"` | 液态玻璃：半透明 + 磨砂 + 高光边 | 有渐变/图片背景，想让底色透上来 |
+
+```python
+edv.show(*charts, card_style="glass", cols=3)
+```
+
+别名：`transparent`/`透明`/`无框` → plain；`default`/`solid`/`实心` → card；`liquid`/`液态玻璃` → glass。
 
 ---
 
-## 4. 完整例子（Streamlit）
+## 5. 完整例子（Streamlit）
 
 ```python
 import streamlit as st
@@ -142,48 +197,61 @@ import eazy_data_viz as edv
 
 @edv.cached
 def read_data():
-    ...  # 返回 年/月/组织名称/渠道/物料名称/金额/数量/余额 的明细
+    ...  # 返回已 groupby 汇总过的多维数据
 
 df = read_data()
-amount = edv.switch(sale="金额", qty="数量", balance="余额")
 
-st.plotly = None  # 占位，忽略
+edv.column(金额="sum", 数量="sum", 客户名称="unique", 余额="sum", 订单数="count")
+
 edv.streamlit_dashboard(
-    edv.kpi(df, value=amount, label="销售额", metric="sale", spark="金额", spark_x="月",
-            compare={"年": ["2026年", "2025年"]}, abs_height=110, link="q1"),
-    edv.kpi(df, value=amount, label="应收余额", metric="balance", link="q1"),
-    edv.bar(df, x="月", y=amount, color="年", link="q1", sort="年-月"),
-    edv.sunburst(df, path=["渠道", "年"], value=amount, link="q1"),
-    cols=2, card_style="glass", palette="tableau")
+    edv.kpi(df, value="金额", metric="sale", label="销售额", spark="金额", spark_x="月",
+            compare={"年": ["2026年", "2025年"]}, abs_height=100, fmt="compact"),
+    edv.kpi(df, value="数量", metric="qty", label="销售量", abs_height=100),
+    edv.kpi(df, value="余额", metric="bal", label="应收余额", abs_height=100),
+    edv.kpi(df, value="客户名称", metric="cust", label="客户数", agg="unique", abs_height=100),
+    edv.bar(df, x="月", y=edv.follow(), drill=["渠道", "品牌系列"],
+            color="年", link="q1", sort="年-月", yoy=True),
+    edv.sunburst(df, path=["渠道", "年"], value=edv.follow(), link="q1"),
+    edv.sankey(df, path=["组织名称", "渠道"], value=edv.follow(), link="q1"),
+    edv.table(df, groupby={"columns": ["年", "月", "组织名称"], "value": "数量"}, link="q1"),
+    palette="tableau", card_style="glass",
+    grid=(4, 4), layout=[[1, 1], [1, 1], [1, 1], [1, 1], [1, 3], [1, 1], [2, 3], [2, 1]],
+)
 ```
 
-点柱状图的「1月」→ 两张 KPI 的同比、环比、基期全部按 1 月重算。
+点任意一张 KPI 卡片，柱状图 / 旭日 / 桑基 / 汇总表一起换口径；点图里的类目，四张卡片一起重算同比。
 
 ---
 
-## 5. 常见问题
+## 6. 常见问题
 
-**Q1. 为什么同比方向反了？**
+**Q1. `compare` 和 `bar(yoy=True)` 有什么区别？**
 
-老版本 `yoy=True` 靠「系列合计大者为本期」判断，年份不完整时会反。1.6 的 `compare` 直接指定本期/基期，没有这个问题；
-`bar(yoy=True)` 也已按「名字里的数字」判断（2026 > 2025）。
+`bar(yoy=True)` 只是给柱状图在**两个 color 系列**之间标增长率；`compare=` 是 KPI 卡片的
+动态对比引擎，支持同期对齐、环比、上期为空/为 0/为负的规则，而且跟着联动重算。
 
-**Q2. `compare` 和「先筛数据」冲突吗？**
+**Q2. 卡片上的两排 chip 去哪了？**
 
-冲突。传 compare 时**不要**把数据筛到本期，否则基期是空的。把完整数据交给它。
+1.6.1 起去掉了。卡片只显示「本期数值 + 同比/环比」，切换用「点卡片选指标」的方式，
+界面更安静，也不会挤占卡片高度。
 
-**Q3. 环比只有一个期怎么办？**
+**Q3. 切换指标会不会影响联动条件？**
 
-不足两期时不出「环比」chip，主数字仍是本期值。
+不会。联动条件（`link`）与指标选择是两件事：先按联动筛行，再按当前指标算值。
 
-**Q4. 指标切换后联动还在吗？**
+**Q4. 只有一张卡片也能当选择器吗？**
 
-在。切换只换「用哪一列」，联动过滤、下钻路径、compare 全都不受影响。
+能。点它是选中，再点是取消；取消后图回到 `follow(default)`。
 
-**Q5. 能不能只让一张 KPI 跟着切换？**
+**Q5. `follow()` 能用于 `table` 的 `groupby.value` 吗？**
 
-可以，只在那张卡上写 `metric=`；其它图不传 switch 就不会动。
+能。`table(df, groupby={"columns": ["大区"], "value": edv.follow()})` 会跟着选中卡片换汇总列。
+
+**Q6. 为什么 `agg` 的默认值变成 `None` 了？**
+
+为了区分「用户没传」和「用户显式传了 sum」。没传时才会去查 `edv.column(...)` 的登记值；
+显式传了就以你写的为准。
 
 ---
 
-下一篇：[12 图表选型速查](10-chart-selection.md)　｜　上一篇：[16 自由排列](16-layout.md)
+下一篇：[16 自由排列](16-layout.md)　｜　上一篇：[15 中文与本地化约定](15-chinese-format.md)　｜　回到 [教程索引](README.md)

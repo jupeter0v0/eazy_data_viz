@@ -52,9 +52,18 @@ def ensure_frame(data):
     )
 
 
+def _is_follow(value):
+    """是不是 ``edv.follow()`` 的占位符（延迟导入，避免循环依赖）。"""
+    from . import metric as _metric
+    return _metric.is_follow(value)
+
+
 def require_column(df, name, role, hint=""):
-    """校验列存在，不存在时给出中文可读错误。"""
-    if name is None:
+    """校验列存在，不存在时给出中文可读错误。
+
+    ``follow()`` 占位符交给 ``_base_spec`` 解析，这里直接放行。
+    """
+    if name is None or _is_follow(name):
         return None
     if name not in df.columns:
         cols = ", ".join(str(c) for c in list(df.columns)[:20])

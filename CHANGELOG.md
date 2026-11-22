@@ -1,3 +1,29 @@
+## 1.6.1 — 2026-11-22
+
+### KPI 卡片改成「指标选择器」+ `edv.follow()`
+- `kpi(..., metric="sale")` 给卡片一个标识，**点卡片 = 选中这个口径**（再点取消，选中卡片有高亮描边）。
+- 图表的度量角色可以写 `edv.follow()`（`y` / `y2` / `value` / `values` / `size` / `names` / `spark`）：
+  选中哪张卡片，所有 `follow` 的图就换成那张卡的列 + 聚合，**纯前端、不 rerun Python**。
+- `follow(default="金额")` 指定还没选中时先用的列；页面初始选中 = 第一张带 `metric=` 的卡片。
+- 所有图表都能接：bar/line/area/pie/rose/scatter/heatmap/box/funnel/treemap/sunburst/sankey/tree/graph/
+  wordcloud/table(`groupby.value`)/combo/waterfall/pareto/lollipop/dumbbell/slope/pyramid/trend/theme_river/
+  group_kpi/target/pictorial/progress/tile/sparkline…
+- 去掉上一版卡片上的两排 chip（2026/2025、环比、指标名）：卡片只显示「本期数值 + 同比/环比」，
+  界面更安静，也不挤占卡片高度。
+
+### `edv.column(...)`：一次声明每列怎么汇总
+- `edv.column(金额="sum", 客户名称="unique", 订单数="count", 订单均价="金额/订单数")`，
+  之后建图不用逐张写 `agg=`；没登记的列仍按 `sum`。
+- 支持表达式列（`+ - * /`，可嵌套引用别的登记项），只在被引用时才计算；分母为 0 / 空值记为缺失。
+- `agg` 的默认值从 `"sum"` 改为 `None`，用来区分「没传」（查登记表）与「显式传了 sum」。
+- `table(groupby=...)` 的 `agg` 同样走登记表；`groupby.value` 也能接 `follow()`。
+
+### 其它
+- `edv.switch()` / `Switch` 从公开 API 移除（文件保留，文档移到 `docs/_deprecated/switch.md`）；
+  旧用法请改成「`kpi(metric=...)` + `follow()`」。
+- 新增文档：[`docs/api/follow.md`](docs/api/follow.md)、[`docs/api/column.md`](docs/api/column.md)，
+  重写 `docs/api/kpi.md` 的 `metric` 小节与 [17 · KPI 对比、卡片选择器与跟随](docs/guides/17-kpi-compare.md)。
+
 ## 1.6.0 — 2026-11-22
 
 ### KPI 动态对比引擎：同比 / 环比现算

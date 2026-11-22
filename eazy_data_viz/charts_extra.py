@@ -32,7 +32,8 @@ import numpy as np
 import pandas as pd
 
 from . import frame as _frame
-from .metric import Switch
+from . import metric as _metric
+from .metric import Follow
 from .chart import (
     AGGS,
     Chart,
@@ -163,7 +164,7 @@ def _manual_spec(
     **extra
 ):
     """手工构造 spec（不接 DataFrame 的图：matrix / ring_progress / group_kpi）。"""
-    _check_agg(agg)
+    agg = _check_agg(agg or "sum")
     _check_fmt(fmt)
     if theme not in ("light", "dark"):
         raise ValueError('theme 只支持 "light" / "dark"，收到 %r' % (theme,))
@@ -229,14 +230,16 @@ def _require_cols(df, pairs):
 
 def _coerce_numeric(data, pairs, agg=None):
     """校验数值列；object 里近似全数字的列自动转成数值（返回可能复制过的 df）。"""
-    # agg="count" 统计的是行数、agg="unique" 统计不重复值的个数，
-    # 两种情况下列是文本也合法，不需要（也不能）转成数值。
-    if agg in ("count", "unique"):
-        return data
     df = _frame.ensure_frame(data)
     copy = None
     for role, col in pairs:
         if col is None:
+            continue
+        if _metric.is_follow(col):
+            continue
+        # agg="count"/"unique"（或 edv.column 登记成这两者）时，文本列也合法。
+        if (agg if agg is not None else _metric.agg_for(col)) in ("count", "unique"):
+            _frame.require_column(df, col, role)
             continue
         _frame.require_column(df, col, role)
         kind = _frame.column_kind(df[col])
@@ -265,7 +268,7 @@ def _coerce_time(data, pairs):
     df = _frame.ensure_frame(data)
     copy = None
     for role, col in pairs:
-        if col is None:
+        if col is None or _metric.is_follow(col):
             continue
         _frame.require_column(df, col, role)
         kind = _frame.column_kind(df[col])
@@ -380,9 +383,9 @@ def _num_or_none(value):
 def waterfall(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch = None,
+    y: str | None | Follow = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     total: bool = None,
     sort: str | None = None,
     top_n: int | None = None,
@@ -453,7 +456,7 @@ def bullet(
     target: str | None = None,
     *,
     target_value: str | None = None,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -529,9 +532,9 @@ def bullet(
 def lollipop(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch = None,
+    y: str | None | Follow = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -597,11 +600,11 @@ def dumbbell(
     data: pd.DataFrame,
     x: str | None,
     y1: str | None,
-    y2: str | None | Switch,
+    y2: str | None | Follow,
     *,
     labels: bool = None,
     series_names: list[str] | None = None,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -672,9 +675,9 @@ def dumbbell(
 def pareto(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch = None,
+    y: str | None | Follow = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     top_n: int | None = None,
     cum_fmt: str = "percent",
     sort: str | None = None,
@@ -745,12 +748,12 @@ def pareto(
 def slope(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch,
+    y: str | None | Follow,
     color: str | None = None,
     *,
     group: str | None = None,
     period: str | None = None,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -844,10 +847,10 @@ def slope(
 def bump(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch,
+    y: str | None | Follow,
     *,
     group: str | None,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -911,11 +914,11 @@ def bump(
 def radar(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch = None,
+    y: str | None | Follow = None,
     color: str | None = None,
     *,
     max: float | None = None,
-    agg: str = "mean",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -982,11 +985,11 @@ def radar(
 # ==========================================================================
 def rose(
     data: pd.DataFrame,
-    names: str | None | Switch,
-    values: str | None | Switch = None,
+    names: str | None | Follow,
+    values: str | None | Follow = None,
     *,
     donut: bool = False,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = "desc",
     top_n: int | None = None,
     title: str | None = None,
@@ -1122,10 +1125,10 @@ def parallel(
 def pictorial(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch = None,
+    y: str | None | Follow = None,
     *,
     symbol: str | None = "circle",
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -1200,7 +1203,7 @@ def target(
     target: str | None = None,
     *,
     target_value: str | None = None,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -1275,7 +1278,7 @@ def target(
 def trend(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch,
+    y: str | None | Follow,
     color: str | None = None,
     *,
     title: str | None = None,
@@ -1366,8 +1369,8 @@ def trend(
 def quadrant(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch,
-    size: str | None | Switch = None,
+    y: str | None | Follow,
+    size: str | None | Follow = None,
     color: str | None = None,
     *,
     quad_labels: list[str] | None = None,
@@ -1531,10 +1534,10 @@ def matrix(
 def sparkline(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch,
+    y: str | None | Follow,
     *,
     group: str | None,
-    agg: str = "sum",
+    agg: str | None = None,
     title: str | None = None,
     subtitle: str | None = None,
     fmt: str = "compact",
@@ -1640,9 +1643,9 @@ def ring_progress(
 def sunburst(
     data: pd.DataFrame,
     path: str | list[str] | None,
-    value: str | None | Switch = None,
+    value: str | None | Follow = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = "desc",
     top_n: int | None = None,
     title: str | None = None,
@@ -1707,9 +1710,9 @@ def sunburst(
 def tree(
     data: pd.DataFrame,
     path: str | list[str] | None,
-    value: str | None | Switch = None,
+    value: str | None | Follow = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = "desc",
     top_n: int | None = None,
     title: str | None = None,
@@ -1773,10 +1776,10 @@ def sankey(
     data: pd.DataFrame,
     source: str | None = None,
     target: str | None = None,
-    value: str | None | Switch = None,
+    value: str | None | Follow = None,
     *,
     path: str | list[str] | None = None,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -1869,9 +1872,9 @@ def graph(
     data: pd.DataFrame,
     source: str | None,
     target: str | None,
-    value: str | None | Switch = None,
+    value: str | None | Follow = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -1934,9 +1937,9 @@ def theme_river(
     data: pd.DataFrame,
     x: str | None,
     color: str | None,
-    value: str | None | Switch = None,
+    value: str | None | Follow = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -1999,9 +2002,9 @@ def theme_river(
 def calendar(
     data: pd.DataFrame,
     date: str | None,
-    value: str | None | Switch = None,
+    value: str | None | Follow = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = "x",
     top_n: int | None = None,
     title: str | None = None,
@@ -2065,7 +2068,7 @@ def gantt(
     end: str | None,
     *,
     color: str | None = None,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -2218,10 +2221,10 @@ def candlestick(
 # ==========================================================================
 def pyramid(
     data: pd.DataFrame,
-    names: str | None | Switch,
-    values: str | None | Switch = None,
+    names: str | None | Follow,
+    values: str | None | Follow = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = "asc",
     top_n: int | None = None,
     title: str | None = None,
@@ -2281,10 +2284,10 @@ def pyramid(
 def area_pct(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch,
+    y: str | None | Follow,
     color: str | None = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -2350,10 +2353,10 @@ def area_pct(
 def bar_pct(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch,
+    y: str | None | Follow,
     color: str | None = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -2422,10 +2425,10 @@ def bar_pct(
 def progress(
     data: pd.DataFrame,
     x: str | None = None,
-    y: str | None | Switch = None,
+    y: str | None | Follow = None,
     *,
     max: float | None = None,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = "desc",
     top_n: int | None = 10,
     title: str | None = None,
@@ -2486,10 +2489,10 @@ def progress(
 
 def tile(
     data: pd.DataFrame,
-    names: str | None | Switch = None,
-    values: str | None | Switch = None,
+    names: str | None | Follow = None,
+    values: str | None | Follow = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = None,
     title: str | None = None,
@@ -2577,7 +2580,7 @@ def _parse_table_groupby(df, groupby):
                 "groupby 的 value 只能是一列（汇总 / 去重计数的列），收到 %d 列。" % len(value)
             )
         value = value[0]
-    if value is not None:
+    if value is not None and not _metric.is_follow(value):
         _require_cols(df, [("groupby.value", value)])
         if value in dims:
             raise ValueError(
@@ -2587,7 +2590,11 @@ def _parse_table_groupby(df, groupby):
 
     agg = groupby.get("agg")
     if agg is None:
-        agg = "count" if value is None else "sum"
+        agg = _metric.agg_for(value if isinstance(value, str) else None)
+        if agg is None and _metric.is_follow(value):
+            agg = _metric.agg_for(value.default)
+        if agg is None:
+            agg = "sum" if value is not None else "count"
     if not isinstance(agg, str):
         raise ValueError("groupby 的 agg 需要是字符串，可选：%s。" % "、".join(AGGS))
     agg = agg.lower()
@@ -2602,9 +2609,21 @@ def _parse_table_groupby(df, groupby):
         )
     return {
         "columns": [str(c) for c in dims],
-        "value": str(value) if value is not None else None,
+        # follow() 要原样往上传，交给 _base_spec 解析成 spec["follow"]
+        "value": value if _metric.is_follow(value) else (str(value) if value is not None else None),
         "agg": agg,
     }
+
+
+def _json_groupby(group):
+    """groupby 的 spec 版本：follow() 换成 None（浏览器端随选中指标填回）。"""
+    if not group:
+        return group
+    out = dict(group)
+    if _metric.is_follow(out.get("value")):
+        out["value"] = None
+        out["follow"] = True
+    return out
 
 
 def table(
@@ -2691,7 +2710,7 @@ def table(
             if group["agg"] not in ("count", "unique"):
                 df = _coerce_numeric(df, [("groupby.value（汇总数值）", group["value"])])
         columns = list(group["columns"])
-        if group["value"] is not None:
+        if group["value"] is not None and not _metric.is_follow(group["value"]):
             columns.append(group["value"])
     elif columns is None:
         columns = [c for c in df.columns][:12]
@@ -2724,7 +2743,10 @@ def table(
     spec, records, ref, info = _ext(
         "table",
         df,
-        {"columns": list(columns), "value": group["value"] if group else None},
+        {
+            "columns": [c for c in columns if not _metric.is_follow(c)],
+            "value": group["value"] if group else None,
+        },
         title=title
         if title is not None
         else ("汇总数据" if group else "明细数据"),
@@ -2748,7 +2770,7 @@ def table(
         max_rows=embed_rows,
         columns=[str(c) for c in columns],
         limit=show_limit,
-        groupby=group,
+        groupby=_json_groupby(group),
         total=total,
         index=index,
         bar=(list(bar_cols) if bar_cols else None),
@@ -2824,10 +2846,10 @@ def _parse_cloud_shape(shape):
 
 def wordcloud(
     data: pd.DataFrame,
-    names: str | None | Switch = None,
-    values: str | None | Switch = None,
+    names: str | None | Follow = None,
+    values: str | None | Follow = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     top_n: int | None = 30,
     title: str | None = None,
@@ -2895,11 +2917,11 @@ def wordcloud(
 
 def group_kpi(
     data: pd.DataFrame = None,
-    names: str | None | Switch = None,
-    values: str | None | Switch = None,
+    names: str | None | Follow = None,
+    values: str | None | Follow = None,
     *,
     items: list | None = None,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = "desc",
     top_n: int | None = 6,
     unit: str | None = None,
@@ -2924,7 +2946,12 @@ def group_kpi(
     ----
     >>> eazy_data_viz.charts_extra.group_kpi(df, names="大区", values="销售额", unit="万元")
     """
-    _check_agg(agg)
+    if _metric.is_follow(values):
+        values = values.default
+    if agg is None:
+        agg = _metric.agg_for(values or names)
+    _check_agg(agg or "sum")
+    agg = agg or "sum"
     _check_fmt(fmt)
     if not isinstance(top_n, int) or isinstance(top_n, bool) or top_n < 1:
         raise ValueError("top_n 需要是 >=1 的整数，收到 %r" % (top_n,))

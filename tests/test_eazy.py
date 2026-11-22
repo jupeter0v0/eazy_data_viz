@@ -1238,49 +1238,90 @@ def t_kpi_compare():
             raise AssertionError("compare=%s 没有报错" % word)
 
 
-def t_metric_switch():
-    """1.6：edv.switch 指标切换 + kpi(metric=) + 图表角色接受 switch。"""
+def t_follow_column():
+    """1.6.1：edv.column 列聚合登记 + edv.follow 指标跟随 + kpi(metric=) 选择器。"""
     import pandas as pd
 
     df = pd.DataFrame({
         "月": ["1月", "2月", "3月"],
+        "大区": ["华东", "华北", "华东"],
         "金额": [100.0, 200.0, 300.0],
         "数量": [10.0, 20.0, 30.0],
-        "余额": [1000.0, 2000.0, 3000.0],
+        "客户名称": ["C1", "C2", "C1"],
+        "订单数": [1.0, 2.0, 3.0],
     })
-    sw = eazy_data_viz.switch(sale="金额", qty="数量")
-    assert isinstance(sw, eazy_data_viz.Switch)
-    assert sw.default_name == "sale" and sw.default_column == "金额"
-    assert sw.columns == ["金额", "数量"] and sw.names == ["sale", "qty"]
 
-    k = eazy_data_viz.kpi(df, value=sw, label="指标", metric="qty", spark="金额", spark_x="月")
-    assert k.spec["switch"] == {"value": {"sale": "金额", "qty": "数量"}}
-    assert k.spec["metric"] == "qty"
-    assert k.spec["roles"]["value"] == "金额", "Python 侧应该先用默认指标出图"
-    assert k.data["kinds"]["数量"] == "num", "switch 的其它列也要一起转数值"
+    eazy_data_viz.reset_columns()
+    table = eazy_data_viz.column(
+        金额="sum", 数量="sum", 客户名称="unique", 订单数="count",
+        订单均价="金额/订单数",
+    )
+    assert table["金额"]["agg"] == "sum"
+    assert table["客户名称"]["agg"] == "unique"
+    assert table["订单均价"]["expr"] == "金额/订单数", table["订单均价"]
+    assert eazy_data_viz.column_table()["订单数"]["agg"] == "count"
 
-    b = eazy_data_viz.bar(df, x="月", y=sw)
-    assert b.spec["switch"] == {"y": {"sale": "金额", "qty": "数量"}}
-    assert b.spec["roles"]["y"] == "金额"
+    # 1) follow()：度量角色交出占位符，spec 里写 follow 映射
+    f = eazy_data_viz.follow()
+    assert isinstance(f, eazy_data_viz.Follow)
+    b = eazy_data_viz.bar(df, x="大区", y=f)
+    assert b.spec["roles"]["y"] is None, b.spec["roles"]
+    assert b.spec["follow"] == {"y": {"default": None, "agg": "sum"}}, b.spec["follow"]
 
-    # 默认指标（不传 metric）取第一个
-    k2 = eazy_data_viz.kpi(df, value=sw, spark="金额", spark_x="月")
-    assert k2.spec["metric"] == "sale"
+    b2 = eazy_data_viz.bar(df, x="大区", y=eazy_data_viz.follow("客户名称"))
+    assert b2.spec["follow"] == {"y": {"default": "客户名称", "agg": "unique"}}, b2.spec["follow"]
+
+    # 2) 没传 agg 时按 edv.column 的登记值
+    b3 = eazy_data_viz.bar(df, x="大区", y="客户名称")
+    assert b3.spec["agg"] == "unique", b3.spec["agg"]
+    b4 = eazy_data_viz.bar(df, x="大区", y="金额")
+    assert b4.spec["agg"] == "sum", b4.spec["agg"]
+
+    # 3) 表达式列：用到才计算
+    b5 = eazy_data_viz.bar(df, x="大区", y="订单均价")
+    assert "订单均价" in b5.data["cols"], b5.data["cols"]
+    assert b5.spec["agg"] == "mean", b5.spec["agg"]
+
+    # 4) 全图表都能接 follow()
+    others = [
+        eazy_data_viz.line(df, x="月", y=eazy_data_viz.follow()),
+        eazy_data_viz.pie(df, names="大区", values=eazy_data_viz.follow()),
+        eazy_data_viz.sunburst(df, path=["大区"], value=eazy_data_viz.follow()),
+        eazy_data_viz.sankey(df, path=["大区", "月"], value=eazy_data_viz.follow()),
+        eazy_data_viz.wordcloud(df, names="客户名称", values=eazy_data_viz.follow()),
+        eazy_data_viz.table(df, groupby={"columns": ["大区"], "value": eazy_data_viz.follow()}),
+        eazy_data_viz.treemap(df, path=["大区"], value=eazy_data_viz.follow()),
+        eazy_data_viz.heatmap(df, x="月", y="大区", value=eazy_data_viz.follow()),
+        eazy_data_viz.combo(df, x="月", bar=eazy_data_viz.follow(), line="数量"),
+    ]
+    for c in others:
+        assert c.spec.get("follow"), (c.spec["type"], c.spec.get("follow"))
+
+    # 5) kpi 卡片 = 选择器
+    k = eazy_data_viz.kpi(df, value="金额", metric="sale", label="销售额")
+    assert k.spec["metricSel"] == {
+        "name": "sale", "column": "金额", "agg": "sum", "label": "销售额",
+    }, k.spec["metricSel"]
+    assert k.spec["metric"] == "sale"
+
+    k2 = eazy_data_viz.kpi(df, value="客户名称", metric="cust", label="客户数")
+    assert k2.spec["metricSel"]["agg"] == "unique", k2.spec["metricSel"]
 
     bad = [
-        (lambda: eazy_data_viz.switch(), "至少需要一个指标"),
-        (lambda: eazy_data_viz.switch(sale=""), "列名字符串"),
-        (lambda: eazy_data_viz.kpi(df, value=sw, metric="nope"), "不在 value 的 switch 里"),
-        (lambda: eazy_data_viz.kpi(df, value="金额", metric="sale"), "需要 value 是 edv.switch"),
-        (lambda: eazy_data_viz.bar(df, x="月", y=["a", sw]), "switch"),
+        (lambda: eazy_data_viz.column(), "至少需要一列"),
+        (lambda: eazy_data_viz.column(金额="avg"), "不支持"),
+        (lambda: eazy_data_viz.column(金额=123), "需要是字符串"),
+        (lambda: eazy_data_viz.bar(df, x=eazy_data_viz.follow(), y="金额"), "度量角色"),
     ]
     for fn, word in bad:
         try:
             fn()
-        except ValueError as e:
+        except (ValueError, TypeError) as e:
             assert word in str(e), (word, str(e))
         else:
-            raise AssertionError("switch=%s 没有报错" % word)
+            raise AssertionError("1.6.1 校验缺失：%s" % word)
+
+    eazy_data_viz.reset_columns()
 
 
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):

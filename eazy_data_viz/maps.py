@@ -252,7 +252,9 @@ def _require_columns(df, pairs):
 
 
 def _check_agg_arg(agg):
-    """校验 agg（value 为空时前端会按 count 处理，这里仍先校验用户输入）。"""
+    """校验 agg（None 表示走 edv.column 的登记值，没登记就按 sum）。"""
+    if agg is None:
+        return None
     _check_agg(agg)
     return agg
 
@@ -612,7 +614,7 @@ def geo_map(
     value: str | None = None,
     *,
     map: str | None = "china",
-    agg: str = "sum",
+    agg: str | None = None,
     fmt: str = "compact",
     labels: bool = True,
     min_value: float | None = None,
@@ -732,7 +734,7 @@ def map_bubble(
     value: str | None = None,
     *,
     map: str | None = "china",
-    agg: str = "sum",
+    agg: str | None = None,
     size: str | None = None,
     color: str | None = None,
     fmt: str = "compact",
@@ -836,7 +838,7 @@ def map_flow(
     value: str | None = None,
     *,
     map: str | None = "china",
-    agg: str = "sum",
+    agg: str | None = None,
     fmt: str = "compact",
     name_map: dict | None = None,
     zoom: bool | str = None,

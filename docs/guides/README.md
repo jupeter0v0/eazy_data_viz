@@ -18,7 +18,7 @@
 | 12 | [常见问题与错误对照](12-troubleshooting.md) | 按「现象 → 原因 → 解决」定位乱码、空白图、类型报错、Streamlit 裁剪、地图不匹配、体积过大等问题 |
 | 13 | [性能与体积](13-performance.md) | 用实测数据估算 HTML 体积与首屏耗时，会采样、预聚合、数据去重和 iframe 数量控制 |
 | 16 | [自由排列](16-layout.md) | 用 `layout=` / `direction=` / `grid=` 排出「左一大、右竖排三小」「通栏趋势 + 2×2 明细」这类非等宽看板 |
-| 17 | [KPI 对比与指标切换](17-kpi-compare.md) | `compare=` 动态同比/环比（去年同期对齐、去年为空或负数）、`edv.switch(...)` 一键切换销售额/销量/应收余额、`card_style` 透明/实心/玻璃三档 |
+| 17 | [KPI 对比、卡片选择器与指标跟随](17-kpi-compare.md) | `compare=` 动态同比/环比（去年同期对齐、去年为空或负数）、KPI 卡片当按钮 + `edv.follow()` 全看板换口径、`edv.column(...)` 声明列汇总、`card_style` 透明/实心/玻璃三档 |
 | 14 | [扩展图表](14-extend-charts.md) | 从 Python 函数到 JS builder 新增一种图表，并补齐测试、API 文档、示例与 gallery 卡片 |
 | 15 | [中文本地化约定](15-cn-conventions.md) | 让图表按中文习惯读数与显示：万/亿/百万单位、`3月1日` 日期轴、带序号/合计/数据条的明细表 |
 | 地图 | [地图图表完全指南](map.md) | 三张地图（`geo_map` / `map_bubble` / `map_flow`）的选型、区域名匹配、下钻联动与体积控制 |

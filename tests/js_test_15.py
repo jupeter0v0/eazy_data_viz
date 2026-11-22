@@ -47,7 +47,7 @@ TEST_JS = r"""
   try {
 
   // ---------------- 纯逻辑 ----------------
-  ok('charts-count', EazyViz.charts.length === 29, EazyViz.charts.length);
+  ok('charts-count', EazyViz.charts.length === 31, EazyViz.charts.length);
   ok('dataStore', Object.keys(EazyViz.dataStore).length >= 1);
   ok('fmt-compact', core0.fmtValue(12345678, 'compact') === '1235万', core0.fmtValue(12345678, 'compact'));
   ok('fmt-percent', core0.fmtValue(12.5, 'percent') === '12.5%', core0.fmtValue(12.5, 'percent'));
@@ -99,7 +99,9 @@ TEST_JS = r"""
   EazyViz.charts.forEach(function (c) {
     types.push(c.spec.type);
     if (c.spec.type === 'kpi') {
-      ok('kpi-html-' + c.index, /总销售额|平均|KPI 进阶|对比 KPI/.test(c.el.innerHTML), c.el.innerHTML.slice(0, 30));
+      ok('kpi-html-' + c.index,
+         /总销售额|平均|KPI 进阶|对比 KPI|销售额|数量/.test(c.el.innerHTML),
+         c.el.innerHTML.slice(0, 30));
       return;
     }
     if (EazyViz.core.htmlBuilders[c.spec.type]) {
@@ -565,32 +567,41 @@ TEST_JS = r"""
   // 1.6：compare（动态同比 / 环比 / 双值切换）与指标切换
   steps.push(function () {
     var kc = chartByTitle('对比 KPI');
-    var bc = chartByTitle('指标切换');
-    ok('cmp16-charts', !!kc && !!bc, !!kc + '/' + !!bc);
+    ok('cmp16-charts', !!kc, !!kc);
     if (!kc) return;
     var res = core0.computeKpi(kc.spec, kc.data, kc.state);
     ok('cmp16-cur', Math.abs(res.cur - 316) < 1e-6, res.cur);
     ok('cmp16-base', Math.abs(res.base - 300) < 1e-6, res.base);
     ok('cmp16-rate', Math.abs(res.rate - (16 / 300)) < 1e-6, res.rate);
     ok('cmp16-mom', res.mom && Math.abs(res.mom.rate - ((96 - 90) / 90)) < 1e-6, res.mom);
-    var acts = [];
-    var chips = kc.el.querySelectorAll('[data-eazy-kpi-act]');
-    for (var ci = 0; ci < chips.length; ci++) acts.push(chips[ci].getAttribute('data-eazy-kpi-act'));
-    ok('cmp16-chips', acts.indexOf('year:cur') >= 0 && acts.indexOf('year:base') >= 0, acts.join(','));
-    var vCur = kc.el.querySelector('.eazy-kpi-value').textContent;
-    core0.handleKpiAct(kc.el.querySelector('[data-eazy-kpi-act="year:base"]'), 'year:base');
-    var vBase = kc.el.querySelector('.eazy-kpi-value').textContent;
-    ok('cmp16-switch-year', vCur !== vBase, vCur + '->' + vBase);
-    core0.handleKpiAct(kc.el.querySelector('[data-eazy-kpi-act="year:cur"]'), 'year:cur');
-    core0.handleKpiAct(kc.el.querySelector('[data-eazy-kpi-act="rate:mom"]'), 'rate:mom');
-    ok('cmp16-switch-rate', /环比/.test(kc.el.textContent), kc.el.textContent.slice(0, 40));
 
-    if (bc) {
-      ok('metric16-spec', !!(bc.spec.switch && bc.spec.switch.y), JSON.stringify(bc.spec.switch));
-      core0.setMetric('qty');
-      ok('metric16-applied', bc.spec.roles.y === '数量', bc.spec.roles.y);
-      core0.setMetric(null);
-      ok('metric16-reset', bc.spec.roles.y === '销售额', bc.spec.roles.y);
+    ok('cmp16-no-chips', kc.el.querySelectorAll('.eazy-kpi-chip').length === 0,
+       kc.el.querySelectorAll('.eazy-kpi-chip').length);
+    ok('cmp16-rate-text', /同比|环比/.test(kc.el.textContent), kc.el.textContent.slice(0, 40));
+
+    var fc = chartByTitle('跟随柱');
+    ok('follow17-spec', !!(fc && fc.spec.follow && fc.spec.follow.y), fc && JSON.stringify(fc.spec.follow));
+    if (fc) {
+      ok('follow17-initial', fc.spec.roles.y === '销售额', fc.spec.roles.y);
+      var btns17 = document.querySelectorAll('[data-eazy-metric]');
+      ok('follow17-selectable', btns17.length >= 2, btns17.length);
+      ok('follow17-selected', document.querySelectorAll('.eazy-kpi.is-selected').length === 1,
+         document.querySelectorAll('.eazy-kpi.is-selected').length);
+      var qtyBtn = null;
+      for (var b17 = 0; b17 < btns17.length; b17++) {
+        var id17 = btns17[b17].getAttribute('data-eazy-metric');
+        for (var c17 = 0; c17 < EazyViz.charts.length; c17++) {
+          var sp17 = EazyViz.charts[c17].spec;
+          if (sp17.id === id17 && sp17.metricSel && sp17.metricSel.name === 'qty') qtyBtn = btns17[b17];
+        }
+      }
+      ok('follow17-btn', !!qtyBtn, !!qtyBtn);
+      if (qtyBtn) qtyBtn.click();
+      ok('follow17-select', EazyViz.selection && EazyViz.selection.name === 'qty',
+         EazyViz.selection && EazyViz.selection.name);
+      ok('follow17-switch', fc.spec.roles.y === '数量', fc.spec.roles.y);
+      ok('follow17-highlight', document.querySelectorAll('.eazy-kpi.is-selected').length === 1,
+         document.querySelectorAll('.eazy-kpi.is-selected').length);
     }
   });
 
@@ -683,14 +694,28 @@ def build_page():
             }),
             value="销售额", label="对比 KPI", spark="销售额", spark_x="月",
             compare={"年": ["2026年", "2025年"]}, title="对比 KPI"),
+        eazy_data_viz.kpi(
+            __import__("pandas").DataFrame({
+                "月": ["1月", "2月", "3月"],
+                "销售额": [130.0, 90.0, 96.0],
+                "数量": [13.0, 9.0, 9.6],
+            }),
+            value="销售额", metric="sale", label="销售额", spark="销售额", spark_x="月",
+            title="指标卡片A"),
+        eazy_data_viz.kpi(
+            __import__("pandas").DataFrame({
+                "月": ["1月", "2月", "3月"],
+                "销售额": [130.0, 90.0, 96.0],
+                "数量": [13.0, 9.0, 9.6],
+            }),
+            value="数量", metric="qty", label="数量", title="指标卡片B"),
         eazy_data_viz.bar(
             __import__("pandas").DataFrame({
                 "月": ["1月", "2月", "3月"],
                 "销售额": [130.0, 90.0, 96.0],
                 "数量": [13.0, 9.0, 9.6],
             }),
-            x="月", y=eazy_data_viz.switch(sale="销售额", qty="数量"),
-            title="指标切换"),
+            x="月", y=eazy_data_viz.follow(), title="跟随柱"),
     ]
     for _c in charts[:3]:
         _c.spec["code"] = ('eazy_data_viz.%s(%s)' % (

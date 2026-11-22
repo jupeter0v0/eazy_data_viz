@@ -37,7 +37,7 @@ chart.palette("tableau").save("examples/output/api-chart.html")
 | 参数 | 含义 | 默认值 |
 | --- | --- | --- |
 | `data` | 第一个位置参数，`pandas.DataFrame`（也接受 Series / dict / list）；`gauge` / `ring_progress` 这类单值图不需要 | 必填（单值图除外） |
-| `x` / `y` | 列名字符串：`x` 是维度（分类或时间），`y` 是度量；`y=None` 时按 `count` 统计行数。**单个列名的角色都能接 `edv.switch(...)`** 做指标切换（`y` / `value` / `values` / `names` / `size` / `spark`） | `bar`/`line` 的 `x` 必填；`y` 可省略 |
+| `x` / `y` | 列名字符串：`x` 是维度（分类或时间），`y` 是度量；`y=None` 时按 `count` 统计行数。**度量角色的列名可以换成 `edv.follow()`**，跟着选中的 KPI 卡片走（`y` / `value` / `values` / `names` / `size` / `spark`） | `bar`/`line` 的 `x` 必填；`y` 可省略 |
 | `color` | 分组列名，多个系列/多条线/堆叠色 | `None` |
 | `size` | 气泡/散点大小列名（`scatter`、`map_bubble`） | `None` |
 | `title` / `subtitle` | 标题 / 副标题；不传时按图表类型自动生成，如「销售额 按 大区」「销售额 趋势」 | `None`（自动） |
@@ -49,7 +49,8 @@ chart.palette("tableau").save("examples/output/api-chart.html")
 | `top_n` | 只保留前 N 项，其余合并为「其他」（「其他」不可点击下钻） | `None` |
 | `height` | 图表高度（像素），最小 120 | `380`（各图不同：KPI 150、gauge 260、calendar 300、pie/histogram 360、heatmap/combo/table 400、treemap 420、gantt/candlestick 420、sunburst/tree 460、地图 460） |
 | `abs_height` | `True` 时 `height` 变成**整个组件外框**的高度（含标题、副标题、联动工具条），正文自适应剩余空间——同一行里标题长短不一时框底能对齐 | `False`（`height` 只算正文） |
-| `switch` | 指标切换映射：`edv.switch(sale="金额", qty="数量")`，任何列名参数（`y` / `value` / `values` / `size` / `names` / `spark` …）都能接；点 KPI 卡片上的指标 chip 一键换列，纯前端 | 见 [switch](switch.md) |
+| `follow` | 度量跟随：`y=edv.follow()`，点带 `metric=` 的 KPI 卡片（卡片本身就是按钮），所有 `follow` 的图换成那张卡的列 + 聚合，纯前端 | 见 [follow](follow.md) |
+| `column` | 列汇总登记：`edv.column(金额="sum", 客户名称="unique", 订单均价="金额/订单数")`，之后建图不用逐张写 `agg=` | 见 [column](column.md) |
 | `compare` | 仅 `kpi`：动态对比 `{"年": ["2026年", "2025年"], "show": "rate"}`，本期/基期/同比/环比现算，联动后自动重算 | `None` |
 | `theme` | `light` / `dark`。看板内以第一张图的主题为准，页面右上角可运行时切换 | `"light"` |
 | `legend` | 是否显示图例；图例可点选过滤系列 | `True`（部分图为 `False`，如 `waterfall`、`bullet`） |

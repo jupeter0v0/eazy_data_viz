@@ -29,8 +29,10 @@ NON_CHART = {
     "streamlit_dashboard", "streamlit_available",
     # 缓存与性能辅助，文档在 docs/api/README.md「缓存与性能辅助」与 guides/07、13
     "cached", "clear_cache", "cache_info", "use_cache",
-    # 指标切换类型，文档在 docs/api/switch.md 与 guides/17
-    "switch", "Switch",
+    # 指标跟随的占位类型（follow() 的返回值），文档在 docs/api/follow.md
+    "Follow",
+    # column() 的辅助函数，文档在 docs/api/column.md 的「返回值」小节
+    "column_table", "reset_columns", "column_spec",
 }
 
 

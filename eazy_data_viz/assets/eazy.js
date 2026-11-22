@@ -1653,61 +1653,68 @@
     return out;
   }
 
-  // 指标切换：spec.switch = {角色: {指标名: 列名}}；全局指针在 EazyViz.metric。
-  function metricNames(spec) {
-    var names = [], seen = {}, role, n;
-    var sw = spec && spec.switch;
-    if (!sw) return names;
-    for (role in sw) {
-      if (!Object.prototype.hasOwnProperty.call(sw, role)) continue;
-      var map = sw[role] || {};
-      for (n in map) {
-        if (!Object.prototype.hasOwnProperty.call(map, n)) continue;
-        if (!Object.prototype.hasOwnProperty.call(seen, n)) { seen[n] = 1; names.push(n); }
-      }
-    }
-    return names;
+  // 指标选择器（1.6.1）
+  //
+  // 带 metricSel 的 KPI 卡片本身就是一个按钮：点它把这张卡的 {column, agg}
+  // 广播给所有 follow 图（spec.follow = {角色: {default, agg}}），不触发 Python 重算。
+  function metricSelOf(spec) {
+    return (spec && spec.metricSel) ? spec.metricSel : null;
   }
 
-  function applyMetric(spec) {
-    if (!spec || !spec.switch) return spec;
-    // 每张卡片有自己的默认指标（spec.metric）；用户点了指标 chip 才用全局 EazyViz.metric 覆盖
-    var cur = EazyViz.metric || spec.metric || null;
-    for (var role in spec.switch) {
-      if (!Object.prototype.hasOwnProperty.call(spec.switch, role)) continue;
-      var map = spec.switch[role] || {};
-      if (cur && Object.prototype.hasOwnProperty.call(map, cur)) {
-        spec.roles[role] = map[cur];
-      } else if (!cur) {
-        // 清空指标（重置）时回到 switch 的第一个指标，和 Python 侧默认值一致
-        var names = Object.keys(map);
-        if (names.length) spec.roles[role] = map[names[0]];
+  function currentSelection() {
+    return EazyViz.selection || null;
+  }
+
+  function applyFollow(spec) {
+    if (!spec || !spec.follow) return spec;
+    var sel = currentSelection();
+    var col = (sel && sel.column) ? sel.column : null;
+    if (!spec.__followBase) spec.__followBase = {};
+    for (var role in spec.follow) {
+      if (!Object.prototype.hasOwnProperty.call(spec.follow, role)) continue;
+      if (!Object.prototype.hasOwnProperty.call(spec.__followBase, role)) {
+        spec.__followBase[role] = spec.roles ? spec.roles[role] : null;
+      }
+      var def = spec.follow[role] || {};
+      var use = col || def.default || spec.__followBase[role] || null;
+      if (!spec.roles) spec.roles = {};
+      spec.roles[role] = use;
+      // 汇总表按 spec.groupby.value 取度量列，这里一起换
+      if (role === 'value' && spec.groupby) spec.groupby.value = use;
+      if (col) {
+        if (sel && sel.agg) spec.agg = sel.agg;
+      } else if (def.agg) {
+        spec.agg = def.agg;
       }
     }
     return spec;
   }
 
-  function setMetric(name) {
-    EazyViz.metric = name || null;
+  function selectMetric(id) {
+    var target = null, i;
+    for (i = 0; i < EazyViz.charts.length; i++) {
+      var c0 = EazyViz.charts[i];
+      if (c0 && c0.spec && c0.spec.id === id) { target = c0; break; }
+    }
+    var ms = target ? metricSelOf(target.spec) : null;
+    if (!ms) return;
+    var cur = currentSelection();
+    if (cur && cur.id === id) {
+      EazyViz.selection = null;   // 再点一次取消，回到各自的默认列
+    } else {
+      EazyViz.selection = {
+        id: id, name: ms.name, column: ms.column, agg: ms.agg, label: ms.label
+      };
+    }
+    applySelection();
+  }
+
+  function applySelection() {
     for (var i = 0; i < EazyViz.charts.length; i++) {
       var c = EazyViz.charts[i];
-      if (c && c.spec && (c.spec.switch || c.spec.metric)) renderChart(c);
+      if (!c || !c.spec) continue;
+      if (c.spec.follow || c.spec.metricSel) renderChart(c);
     }
-  }
-
-  function kpiSelection(spec) {
-    if (!EazyViz.kpiSel) EazyViz.kpiSel = {};
-    var sel = EazyViz.kpiSel[spec.id];
-    if (!sel) sel = { year: 'cur', rate: 'yoy' };
-    if (sel.year !== 'base') sel.year = 'cur';
-    if (sel.rate !== 'mom') sel.rate = 'yoy';
-    return sel;
-  }
-
-  function kpiChip(act, label, value, on, extraCls) {
-    return '<button type="button" class="eazy-kpi-chip' + (on ? ' is-on' : '') +
-      (extraCls ? ' ' + extraCls : '') + '" data-eazy-kpi-act="' + esc(act) + '">' +
-      esc(label) + (value ? '<b>' + esc(value) + '</b>' : '') + '</button>';
   }
 
   function pctText(v) {
@@ -1803,16 +1810,18 @@
     var pal = theme.palette || PALETTES.google.colors;
     var accent = pal[Math.abs(Number(spec.accent) || 0) % pal.length];
     var kres = computeKpi(spec, data, state);
-    var sel = kpiSelection(spec);
     var cmpOn = !!spec.compare;
-    var val = (cmpOn && sel.year === 'base') ? kres.base : kres.cur;
+    var ms = metricSelOf(spec);
+    var nowSel = currentSelection();
+    var selected = !!(ms && nowSel && nowSel.id === spec.id);
+    var val = kres.cur;
     // 换算单位（万 / 亿 / 百万）和文字后缀（ 单 / ℃ / %）都由 fmtValue 拼好
     var txt = fmtValue(val, spec.fmt, spec);
     if (spec.prefix) txt = spec.prefix + txt;
-    var metricList = metricNames(spec);
-    var metricOn = EazyViz.metric || spec.metric || (metricList.length ? metricList[0] : null);
 
-    var html = '<div class="eazy-kpi" style="--eazy-accent:' + accent + '">';
+    var html = '<div class="eazy-kpi' + (ms ? ' eazy-kpi-selectable' : '') +
+      (selected ? ' is-selected' : '') + '" style="--eazy-accent:' + accent + '"' +
+      (ms ? ' data-eazy-metric="' + esc(spec.id) + '"' : '') + '>';
     html += '<div class="eazy-kpi-head"><span class="eazy-kpi-label">' +
       esc(spec.label || '') + '</span>';
     var achieved = null, targetV = num(spec.target);
@@ -1826,8 +1835,9 @@
 
     html += '<div class="eazy-kpi-main"><span class="eazy-kpi-value">' + esc(txt) + '</span>';
     if (cmpOn) {
-      var rateUse = (sel.rate === 'mom' && kres.hasMom) ? (kres.mom ? kres.mom.rate : null) : kres.rate;
-      var rateName = (sel.rate === 'mom') ? '环比' : '同比';
+      var momMode = spec.compare.mode === 'mom';
+      var rateUse = momMode ? (kres.mom ? kres.mom.rate : null) : kres.rate;
+      var rateName = momMode ? '环比' : '同比';
       if (rateUse !== null && rateUse !== undefined && isFinite(rateUse)) {
         var rGood = (rateUse >= 0) !== !!spec.inverse;
         html += '<span class="eazy-kpi-delta ' + (rGood ? 'eazy-up' : 'eazy-down') + '">' +
@@ -1849,39 +1859,6 @@
       }
     }
     html += '</div>';
-
-    if (cmpOn) {
-      html += '<div class="eazy-kpi-cmp">';
-      html += kpiChip('year:cur', kres.curLabel || '本期',
-        kres.cur === null ? '—' : fmtValue(kres.cur, spec.fmt, spec), sel.year === 'cur');
-      html += kpiChip('year:base', kres.baseLabel || '上期',
-        kres.hasBase ? fmtValue(kres.base, spec.fmt, spec) : '—', sel.year === 'base');
-      if (kres.hasMom) {
-        var momOn = sel.rate === 'mom';
-        html += kpiChip('rate:' + (momOn ? 'yoy' : 'mom'), momOn ? '同比' : '环比', '', false, 'eazy-kpi-toggle');
-      }
-      html += '</div>';
-    }
-    if (metricList.length > 1) {
-      html += '<div class="eazy-kpi-metrics">';
-      var metricCols = {};
-      if (spec.switch) {
-        for (var sr in spec.switch) {
-          if (!Object.prototype.hasOwnProperty.call(spec.switch, sr)) continue;
-          var smap = spec.switch[sr] || {};
-          for (var sk in smap) {
-            if (Object.prototype.hasOwnProperty.call(smap, sk) && metricCols[sk] === undefined) {
-              metricCols[sk] = smap[sk];
-            }
-          }
-        }
-      }
-      for (var mi = 0; mi < metricList.length; mi++) {
-        html += kpiChip('metric:' + metricList[mi], metricCols[metricList[mi]] || metricList[mi], '',
-          metricOn === metricList[mi], 'eazy-kpi-metric');
-      }
-      html += '</div>';
-    }
 
     var hint = spec.hint;
     if (!hint && spec.link && EazyViz.hints) hint = '联动组 ' + spec.link + ' · 点同组图表筛选';
@@ -2052,6 +2029,7 @@
   EazyViz.page = {};
   EazyViz.dataStore = {};
   EazyViz.hints = false;
+  EazyViz.selection = null;
   EazyViz.cardStyle = 'default';
   // components.v2 里页面挂在 Shadow DOM 中：scope 指向 ShadowRoot，host 指向宿主元素。
   // 静态 HTML 导出时两者为 null，所有查询自动退化为 document。
@@ -2119,21 +2097,6 @@
       if (inScope(c.el)) return c;
     }
     return fallback;
-  }
-
-  // 按元素归属反查图表：明细表的单元格点击没有 chart index，只能靠 DOM 包含关系定位。
-  function handleKpiAct(el, act) {
-    var parts = String(act).split(':');
-    var kind = parts[0], value = parts[1];
-    if (kind === 'metric') { setMetric(value); return; }
-    var chart = chartOfEl(el);
-    if (!chart || !chart.spec) return;
-    var sel = kpiSelection(chart.spec);
-    if (kind === 'year') sel.year = (value === 'base') ? 'base' : 'cur';
-    else if (kind === 'rate') sel.rate = (value === 'mom') ? 'mom' : 'yoy';
-    else return;
-    EazyViz.kpiSel[chart.spec.id] = sel;
-    renderChart(chart);
   }
 
   function chartOfEl(el) {
@@ -2301,7 +2264,7 @@
   }
 
   function renderChart(c) {
-    var spec = applyMetric(c.spec);
+    var spec = applyFollow(c.spec);
     var htmlBuilder = HTML_BUILDERS[spec.type];
     // 先记下容器宽度，图例排版 / 字号收敛 / KPI 缩放都依赖它
     activeWidth = c.el.clientWidth || 0;
@@ -2747,8 +2710,8 @@
               Number(el.getAttribute('data-crumb')));
             return;
           }
-          var kpiAct = el.getAttribute('data-eazy-kpi-act');
-          if (kpiAct) { handleKpiAct(el, kpiAct); return; }
+          var metricId = el.getAttribute('data-eazy-metric');
+          if (metricId) { selectMetric(metricId); return; }
           var codeIdx = el.getAttribute('data-eazy-code');
           if (codeIdx !== null && codeIdx !== undefined) { toggleCode(Number(codeIdx)); return; }
           var copyIdx = el.getAttribute('data-eazy-copy');
@@ -2896,6 +2859,7 @@
     EazyViz.charts = alive;
     if (!alive.length) EazyViz.links = {};
     EazyViz.hints = !!EazyViz.page.hints;
+    EazyViz.selection = EazyViz.page.selection || null;
     EazyViz.cardStyle = EazyViz.page.cardStyle || 'default';
     EazyViz.dataStore = global.EAZY_DATA || {};
     EazyViz.scope = rootEl || null;
@@ -2977,11 +2941,10 @@
     rateOf: rateOf,
     computeKpi: computeKpi,
     compareRows: compareRows,
-    applyMetric: applyMetric,
-    setMetric: setMetric,
-    metricNames: metricNames,
-    kpiSelection: kpiSelection,
-    handleKpiAct: handleKpiAct,
+    applyFollow: applyFollow,
+    selectMetric: selectMetric,
+    applySelection: applySelection,
+    metricSelOf: metricSelOf,
     kpiHTML: kpiHTML,
     buildTreemapTree: buildTreemapTree,
     onChartClick: onChartClick,

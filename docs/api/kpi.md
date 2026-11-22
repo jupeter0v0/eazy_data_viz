@@ -52,7 +52,7 @@ eazy_data_viz.kpi(
 | `spark` | `str \| None` | `None` | 否 | 迷你走势数值列 |
 | `spark_x` | `str \| None` | `None` | 否 | 迷你走势横轴列 |
 | `compare` | `dict \| None` | `None` | 否 | 动态对比：`{"年": ["2026年", "2025年"], "show": "rate"}` |
-| `metric` | `str \| None` | `None` | 否 | 默认指标名（配合 `value=edv.switch(...)`） |
+| `metric` | `str \| None` | `None` | 否 | 给这张卡片一个指标标识，使它变成**选择器**：点它，所有 `edv.follow()` 的图换成这里的列 |
 | `hint` | `str \| None` | `None` | 否 | 底部说明小字 |
 | `unit` | `str` | `None` | 否 | 数值后缀 |
 | `prefix` | `str \| None` | `None` | 否 | 数值前缀 |
@@ -166,17 +166,28 @@ eazy_data_viz.kpi(df, value="金额", spark="金额", spark_x="月",
 
 > 注意：**不要**再把数据筛到本期（`df[df["年"] == "2026年"]`）再传 compare —— 那样基期没有数据了。
 
-### `metric` — 默认指标名（`str | None`，默认 `None`）
+### `metric` — 指标标识（`str | None`，默认 `None`）
 
-**作用**：配合 `value=edv.switch(...)` 指定这张卡片默认看哪个指标；点击卡片上的指标 chip 会把看板里**所有**用到同一个 switch 的图表切到对应列，不触发 Python 重算。
+**作用**：给这张卡片一个标识，让它变成**选择器（按钮）**。页面上带 `metric=` 的 KPI 卡片可以点选：选中哪张，所有写 `edv.follow()` 的图就换成那张卡的列与聚合；再点一次取消，回到 `follow(default)`。选中状态存在前端，不触发 Python 重算。
 
 ```python
-amount = eazy_data_viz.switch(sale="金额", qty="数量", balance="余额")
-eazy_data_viz.kpi(df, value=amount, label="销售额", metric="sale", spark_x="月")
-eazy_data_viz.bar(df, x="月", y=amount)          # 会跟着切
+eazy_data_viz.show(
+    eazy_data_viz.kpi(df, value="金额", metric="sale", label="销售额", spark="金额", spark_x="月"),
+    eazy_data_viz.kpi(df, value="客户名称", metric="cust", label="客户数", agg="unique"),
+    eazy_data_viz.bar(df, x="月", y=eazy_data_viz.follow()),   # 跟着选中的卡走
+    cols=2,
+)
 ```
 
-**报错**：`kpi 的 metric='nope' 不在 value 的 switch 里（可选：sale、qty）。`、`kpi 的 metric='sale' 需要 value 是 edv.switch(...)…`。
+- 点「销售额」：柱子的 `y` = `金额`、按 `sum`；点「客户数」：同一根柱子变成按客户去重计数。
+- 页面初始选中 = 第一张带 `metric=` 的卡片。
+- `metric` 只是标识，不要求唯一，但建议唯一（联动组里更好认）。
+
+**建议**：卡片本身仍显示它自己的数值（`value` + `compare` 的同比），点选只改变别的图，不改这张卡显示的数字。
+
+**示例**：`metric="sale"`
+
+**报错**：`ValueError: kpi 的 metric='sale' 需要同时给 value（这个指标对应的数值列），例如 kpi(df, value="金额", metric="sale")。`（`value=None` 时给不出选择器）
 
 ### `spark` — 迷你走势数值列（`str | None`，默认 `None`）
 
@@ -261,7 +272,7 @@ eazy_data_viz.bar(df, x="月", y=amount)          # 会跟着切
 - **建议**：与同页图表使用一致的分区名。
 - **示例**：`section="总览"`
 
-### 示例 7：动态同比 + 指标切换（1.6）
+### 示例 7：动态同比 + 卡片选择器（1.6）
 
 ```python
 import pandas as pd
@@ -273,16 +284,18 @@ df = pd.DataFrame({
     "金额": [130, 90, 96, 100, 120, 80],
     "数量": [13, 9, 9.6, 10, 12, 8],
 })
-amount = eazy_data_viz.switch(sale="金额", qty="数量")
 
 chart = eazy_data_viz.kpi(
-    df, value=amount, label="销售额", metric="sale",
+    df, value="金额", label="销售额", metric="sale",
     spark="金额", spark_x="月", compare={"年": ["2026年", "2025年"], "show": "rate"})
 print(chart.spec["compare"]["static"])
 # {'cur': 316.0, 'base': 300.0, 'rate': 0.0533…, 'mom': {'cur': 96.0, 'base': 90.0, …}}
+print(chart.spec["metricSel"])
+# {'name': 'sale', 'column': '金额', 'agg': 'sum', 'label': '销售额'}
 ```
 
-卡片显示 `316` + `▲ +5.3% 同比`，下面一排 chip：`2026年 316` / `2025年 300` / `环比` / `销售额` / `数量`。
+卡片显示 `316` + `▲ +5.3% 同比`（1.6.1 起不再有 2026/2025/环比/指标 chip）。
+点这张卡 = 选中 `sale`，页面上所有 `edv.follow()` 的图换成「金额 / sum」。
 
 ## 返回值
 
@@ -291,7 +304,7 @@ print(chart.spec["compare"]["static"])
 本图的 `spec` 额外包含：
 
 - `roles`：`{"value": value 列}`（静态数值模式为 `{}`）；`xtitle`/`ytitle`/`xlim`/`ylim`/`legend`/`labels`/`zoom` 均固定为 None/False。
-- `spec` 额外包含：`value`（静态值或 None）、`label`、`delta`、`deltaLabel`、`inverse`、`target`、`targetLabel`、`spark`、`hint`、`unit`、`prefix`、`accent`、`section`。
+- `spec` 额外包含：`value`（静态值或 None）、`label`、`delta`、`deltaLabel`、`inverse`、`target`、`targetLabel`、`spark`、`hint`、`unit`、`prefix`、`accent`、`section`、`compare`、`metric`（指标名）、`metricSel`（`{name, column, agg, label}`，没传 `metric` 时为 `None`）。
 - kpi 没有 `max_rows` 参数（固定使用公共 MAX_ROWS），也没有 `xlim`/`ylim`/`labels`/`zoom`/`drill`。
 
 ## 完整示例

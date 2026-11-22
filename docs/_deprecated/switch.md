@@ -1,3 +1,8 @@
+> **已废弃（1.6.1）**：`edv.switch()` 与 `Switch` 已从公开 API 移除，改由
+> [`edv.follow()`](../api/follow.md)（度量跟随选中的 KPI 卡片）与
+> [`edv.column()`](../api/column.md)（每列汇总登记）承担。
+> 这份文档仅作历史参考保留。
+
 # `switch` — 指标切换映射（1.6）
 
 ## 函数签名

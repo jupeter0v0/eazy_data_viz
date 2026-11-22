@@ -18,7 +18,7 @@ import webbrowser
 from . import compare as _compare
 from . import frame as _frame
 from . import metric as _metric
-from .metric import Switch
+from .metric import Follow
 
 __all__ = [
     "Chart",
@@ -415,7 +415,16 @@ def _base_spec(
     max_rows,
     **extra
 ):
-    _check_agg(agg)
+    roles, follow_map = _metric.resolve_roles(roles)
+    if agg is None:
+        agg = _metric.agg_for(_metric.measure_of(roles))
+    if agg is None and follow_map:
+        # follow() 没给默认列时，用它的 default 去查登记表；再不行按 sum
+        for _rk, _def in follow_map.items():
+            agg = _metric.agg_for(_def.get("default"))
+            if agg:
+                break
+    agg = _check_agg(agg or "sum")
     _check_fmt(fmt)
     if theme not in ("light", "dark"):
         raise ValueError('theme 只支持 "light" / "dark"，收到 %r' % (theme,))
@@ -427,10 +436,14 @@ def _base_spec(
 
     link_group, link_mode = _parse_link(link)
 
-    # 1.6：角色参数可以是 edv.switch(...)，解析出默认列，其余列写进 spec["switch"]。
-    roles, switch_map = _metric.resolve_roles(roles)
-
     df = _frame.ensure_frame(data)
+
+    # 1.6.1：edv.column() 登记的表达式列在这里算出来（只算被用到的那些）。
+    df, _added = _metric.materialize(
+        df,
+        [rv for rv in roles.values() if isinstance(rv, str)]
+        + [d.get("default") for d in follow_map.values() if d.get("default")],
+    )
 
     # 下钻维度：drill 的第一层就是 x；也可以只传 drill 让 x 自动取 drill[0]。
     if drill is not None:
@@ -455,10 +468,16 @@ def _base_spec(
     # 所以这时不能把 measure 列强制转成数值。
     if agg == "unique":
         _ucol = None
+        _ufollow = None
         for _rk in ("y", "value", "y2", "spark", "size"):
             if roles.get(_rk) is not None:
                 _ucol = roles.get(_rk)
                 break
+            if _rk in follow_map:
+                _ufollow = _rk
+        if _ucol is None and _ufollow is not None:
+            # follow() 的列在浏览器里随选中指标变化，这里只放行、不校验
+            _ucol = (follow_map.get(_ufollow) or {}).get("default") or "(follow)"
         if _ucol is None:
             raise ValueError(
                 'agg="unique"（去重计数）需要指定要计数的列，例如 '
@@ -474,13 +493,12 @@ def _base_spec(
             numeric_cols.append(rv)
         else:
             dim_cols.append(rv)
-    # switch 里其它指标列也要一起转成数值、一起嵌进 dataStore，切换时才能直接用。
-    if switch_map and not count_mode:
-        for _rk, _mapping in switch_map.items():
-            if _rk in _NUMERIC_ROLE_KEYS.get(kind, ()):
-                for _col in _mapping.values():
-                    if _col not in numeric_cols:
-                        numeric_cols.append(_col)
+    # 1.6.1：follow 角色的默认列也要转成数值、一起嵌进 dataStore（点卡片切换时直接用）。
+    if follow_map and not count_mode:
+        for _rk, _def in follow_map.items():
+            if _rk in _NUMERIC_ROLE_KEYS.get(kind, ()) and _def.get("default"):
+                if _def["default"] not in numeric_cols:
+                    numeric_cols.append(_def["default"])
     records, ref, info = _frame.prepare(
         df, roles, max_rows=max_rows,
         numeric_roles=numeric_cols, dimension_roles=dim_cols,
@@ -557,7 +575,10 @@ def _base_spec(
         "absHeight": bool(abs_height),
         "dataRef": ref,
         "roles": dict(roles),
-        "switch": switch_map or None,
+        "follow": ({
+            rk: {"default": d.get("default"), "agg": agg}
+            for rk, d in follow_map.items()
+        } or None),
         "agg": agg,
         "fmt": fmt or "compact",
         "sort": sort,
@@ -635,10 +656,10 @@ _COMMON_DOC = """
 def bar(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch = None,
+    y: str | None | Follow = None,
     color: str | None = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     stack: bool = False,
     horizontal: bool = False,
     sort: str | None = None,
@@ -750,10 +771,10 @@ def bar(
 def line(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch,
+    y: str | None | Follow,
     color: str | None = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     smooth: bool = True,
     area: bool = False,
     markers: bool = None,
@@ -821,7 +842,7 @@ def line(
 def area(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch,
+    y: str | None | Follow,
     color: str | None = None,
     **kwargs,
 ) -> Chart:
@@ -832,11 +853,11 @@ def area(
 
 def pie(
     data: pd.DataFrame,
-    names: str | None | Switch,
-    values: str | None | Switch = None,
+    names: str | None | Follow,
+    values: str | None | Follow = None,
     *,
     donut: bool = False,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = "desc",
     top_n: int | None = None,
     title: str | None = None,
@@ -893,11 +914,11 @@ def pie(
 def scatter(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch,
+    y: str | None | Follow,
     color: str | None = None,
-    size: str | None | Switch = None,
+    size: str | None | Follow = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     title: str | None = None,
     subtitle: str | None = None,
     xtitle: str | None = None,
@@ -1010,10 +1031,10 @@ def histogram(
 def heatmap(
     data: pd.DataFrame,
     x: str | None,
-    y: str | None | Switch,
-    value: str | None | Switch,
+    y: str | None | Follow,
+    value: str | None | Follow,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     sort: str | None = None,
     title: str | None = None,
     subtitle: str | None = None,
@@ -1065,7 +1086,7 @@ def heatmap(
 def box(
     data: pd.DataFrame,
     x: str | None = None,
-    y: str | None | Switch = None,
+    y: str | None | Follow = None,
     *,
     title: str | None = None,
     subtitle: str | None = None,
@@ -1123,10 +1144,10 @@ def box(
 
 def funnel(
     data: pd.DataFrame,
-    names: str | None | Switch,
-    values: str | None | Switch = None,
+    names: str | None | Follow,
+    values: str | None | Follow = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     fmt: str = "compact",
     height: int = 380,
     abs_height: bool = False,
@@ -1173,9 +1194,9 @@ def funnel(
 def treemap(
     data: pd.DataFrame,
     path: str | list[str] | None,
-    value: str | None | Switch,
+    value: str | None | Follow,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     title: str | None = None,
     subtitle: str | None = None,
     fmt: str = "compact",
@@ -1228,7 +1249,7 @@ def treemap(
 
 
 def gauge(
-    value: str | None | Switch,
+    value: str | None | Follow,
     *,
     label: str | None = None,
     min: float | None = 0,
@@ -1290,9 +1311,9 @@ def gauge(
 
 def kpi(
     data: pd.DataFrame = None,
-    value: str | None | Switch = None,
+    value: str | None = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     label: str | None = None,
     fmt: str = None,
     delta: float | None = None,
@@ -1405,7 +1426,6 @@ def kpi(
     ref = None
     warnings = []
     cmp_cfg = None
-    switch_map = {}
 
     if compare is not None and isinstance(data, (int, float)) and not isinstance(data, bool):
         raise ValueError(
@@ -1421,29 +1441,22 @@ def kpi(
             raise ValueError(
                 'kpi 需要数据：kpi(df, value="销售额") 或 kpi(1630000, label="销售额")。'
             )
-        _check_agg(agg)
         df = _frame.ensure_frame(data)
-        if _metric.is_switch(value):
-            switch_map = {"value": dict(value)}
-            if metric is None:
-                metric = value.default_name
-            elif metric not in value:
-                raise ValueError(
-                    "kpi 的 metric=%r 不在 value 的 switch 里（可选：%s）。"
-                    % (metric, "、".join(value.names))
-                )
-            value = value.default_column
-        elif metric is not None:
+        if metric is not None and value is None:
             raise ValueError(
-                'kpi 的 metric=%r 需要 value 是 edv.switch(...)，例如 '
-                'kpi(df, value=edv.switch(sale="金额", qty="数量"), metric="sale")。' % (metric,)
+                'kpi 的 metric=%r 需要同时给 value（这个指标对应的数值列），'
+                '例如 kpi(df, value="金额", metric="sale")。' % (metric,)
             )
         if value is None:
             nums = [c for c in df.columns if _frame.column_kind(df[c]) == _frame.KIND_NUM]
             if len(nums) != 1:
                 raise ValueError('kpi 需要指定 value 列，例如 kpi(df, value="销售额")。')
             value = nums[0]
+        df, _added = _metric.materialize(df, [value] + ([spark] if spark is not None else []))
         _frame.require_column(df, value, "value")
+        if agg is None:
+            agg = _metric.agg_for(value)
+        agg = _check_agg(agg or "sum")
         if spark is not None:
             _frame.require_column(df, spark, "spark")
             _frame.require_column(df, spark_x, "spark_x")
@@ -1457,10 +1470,6 @@ def kpi(
         # agg="count" / "unique" 时 value / spark 可以是任意类型（数行数 / 去重计数），
         # 不再强制转数值。
         numeric = [] if agg in ("count", "unique") else ([value] + ([spark] if spark is not None else []))
-        if switch_map and agg not in ("count", "unique"):
-            for _col in switch_map["value"].values():
-                if _col not in numeric:
-                    numeric.append(_col)
         dims = [spark_x] if spark is not None else []
         if cmp_cfg:
             for _cc in (cmp_cfg.get("dim"), cmp_cfg.get("period")):
@@ -1516,9 +1525,14 @@ def kpi(
         "accent": int(accent or 0),
         "compare": cmp_cfg,
         "metric": metric,
-        "switch": switch_map or None,
+        "metricSel": (
+            {"name": metric, "column": value, "agg": agg, "label": label or value}
+            if (metric and value is not None)
+            else None
+        ),
         "compute": (
-            {"measure": value, "agg": agg, "compare": cmp_cfg, "metric": metric}
+            {"measure": value, "agg": agg, "compare": cmp_cfg,
+             "metric": metric if metric else None}
             if value is not None
             else None
         ),
@@ -1533,7 +1547,7 @@ def combo(
     bar: str | list[str] | None = None,
     line: str | list[str] | None = None,
     *,
-    agg: str = "sum",
+    agg: str | None = None,
     title: str | None = None,
     subtitle: str | None = None,
     xtitle: str | None = None,
@@ -1592,7 +1606,10 @@ def _ensure_numeric(records, col, role, agg=None):
     agg="count" 统计的是行数、agg="unique" 统计不重复值的个数，
     两种情况下列是文本也合法，这时直接跳过检查。
     """
-    if agg in ("count", "unique"):
+    if col is None or _metric.is_follow(col):
+        return
+    how = agg if agg is not None else _metric.agg_for(col)
+    if how in ("count", "unique"):
         return
     kind = (records.get("kinds") or {}).get(str(col))
     if kind not in (None, _frame.KIND_NUM):
