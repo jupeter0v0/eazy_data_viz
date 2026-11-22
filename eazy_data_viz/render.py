@@ -526,7 +526,35 @@ html[data-theme=dark] .eazy-kpi-delta.eazy-down{background:rgba(242,139,130,.14)
 .eazy-wc-canvas{display:block;width:100%;height:100%}
 
 
-/* ---------- 卡片外框：实心 / 液态玻璃（card_style="glass"） ---------- */
+/* ---------- 卡片外框：透明（默认）/ 实心 / 液态玻璃 ---------- */
+.eazy-root.is-plain .eazy-card{
+  background:transparent;
+  border-color:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+  padding-left:2px;
+  padding-right:2px;
+}
+.eazy-root.is-plain .eazy-card:hover{border-color:transparent;box-shadow:none}
+
+/* KPI 卡片里的小切换（1.6）：本期/基期、同比/环比、指标 */
+.eazy-kpi-cmp,.eazy-kpi-metrics{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.eazy-kpi-chip{
+  font:inherit;font-size:10.5px;line-height:1;padding:3px 6px;border-radius:999px;
+  border:1px solid var(--pv-outline-var);background:var(--pv-surface-1);color:var(--pv-text);
+  cursor:pointer;transition:color .15s,border-color .15s,background .15s;
+}
+.eazy-root.is-glass .eazy-kpi-chip,.eazy-root.is-plain .eazy-kpi-chip{background:rgba(127,127,127,.10)}
+.eazy-kpi-chip b{margin-left:3px;font-weight:600}
+.eazy-kpi-chip:hover{color:var(--pv-text)}
+.eazy-kpi-chip.is-on{border-color:var(--eazy-accent,#1a73e8);color:var(--eazy-accent,#1a73e8)}
+.eazy-kpi-chip.eazy-kpi-toggle{border-style:dashed}
+.eazy-kpi-chip.eazy-kpi-metric{opacity:.72}
+.eazy-kpi-chip.eazy-kpi-metric.is-on{opacity:1}
+/* 有对比小切换时把迷你走势压矮一点，卡片高度不变 */
+.eazy-kpi:has(.eazy-kpi-cmp) .eazy-kpi-sparkwrap{height:26px}
+
+/* ---------- 卡片外框：液态玻璃（card_style="glass"） ---------- */
 /* 液态玻璃靠半透明渐变 + 背景模糊，换页面底色时卡片不会像白框一样压住背景。 */
 .eazy-root.is-glass .eazy-card{
   background:linear-gradient(155deg,rgba(255,255,255,.58) 0%,rgba(240,246,255,.3) 45%,
@@ -635,24 +663,35 @@ window.addEventListener('error', function (e) {
 """
 
 
-_CARD_STYLES = ("default", "glass")
+_CARD_STYLES = ("plain", "card", "glass")
+_CARD_PLAIN = ("", "plain", "none", "transparent", "borderless", "透明", "无框", "无边框")
+_CARD_SOLID = ("default", "solid", "card", "box", "实心", "卡片")
 _CARD_GLASS = ("glass", "liquid", "液态玻璃", "玻璃", "liquid-glass")
+
+_ERR_CARD_STYLE = (
+    'card_style 只支持 "plain"（透明无框，默认）/ "card"（实心卡片）/ '
+    '"glass"（液态玻璃），收到 %r。'
+)
 
 
 def normalize_card_style(card_style):
-    """把 ``card_style`` 归一化成 ``"default"`` / ``"glass"``。"""
+    """把 ``card_style`` 归一化成 ``"plain"`` / ``"card"`` / ``"glass"``。
+
+    1.6 起默认 ``"plain"``：卡片没有底色、边框和阴影，图表直接落在页面背景上，
+    换底色时不会出现白框；``"card"`` 是 1.5 及以前的实心卡片，``"glass"`` 是液态玻璃。
+    """
     if card_style is None:
-        return "default"
+        return "plain"
     if not isinstance(card_style, str):
-        raise ValueError('card_style 只支持 "default"（实心卡片）或 "glass"（液态玻璃），收到 %r。'
-                         % (card_style,))
+        raise ValueError(_ERR_CARD_STYLE % (card_style,))
     key = card_style.strip().lower()
-    if key in ("", "default", "solid", "plain", "实心"):
-        return "default"
+    if key in _CARD_PLAIN:
+        return "plain"
+    if key in _CARD_SOLID:
+        return "card"
     if key in _CARD_GLASS:
         return "glass"
-    raise ValueError('card_style 只支持 "default"（实心卡片）或 "glass"（液态玻璃），收到 %r。'
-                     % (card_style,))
+    raise ValueError(_ERR_CARD_STYLE % (card_style,))
 
 
 def _esc(text):
@@ -774,7 +813,7 @@ def streamlit_show(charts: list, cols: int = 2, title: str | None = None,
                    on_select: object = None, layout: list | None = None,
                    direction: str | None = None,
                    grid: tuple | int | str | None = None,
-                   hints: bool = None, card_style: str = "default") -> str:
+                   hints: bool = None, card_style: str = "plain") -> str:
     """在 Streamlit 页面里渲染一张或多张图，返回实际使用的模式（``"v2"`` / ``"v1"``）。
 
     优先使用 ``st.components.v2``（无 iframe、高度按内容自适应、图表点击可回传
@@ -871,7 +910,7 @@ def build_page(charts: list, inline: bool = True, title: str | None = None,
                layout: list | None = None, direction: str | None = None,
                grid: tuple | int | str | None = None,
                hints: bool = None,
-               card_style: str = "default") -> str:
+               card_style: str = "plain") -> str:
     """把一组 Chart 组装成一个完整 HTML 文档字符串。
 
     ``palette`` 指定页面默认配色（google / antd / tableau / carbon / echarts /
@@ -967,7 +1006,7 @@ try {{
         cols=cols,
         cards=cards,
         footer=footer,
-        root_cls=" is-glass" if style == "glass" else "",
+        root_cls=(" is-glass" if style == "glass" else (" is-plain" if style == "plain" else "")),
         maps=payload["maps"],
         cities=payload["cities"],
         data=payload["data"],
@@ -1001,7 +1040,7 @@ def build_fragment(charts: list, title: str | None = None, desc: str | None = No
                    palette: str | None = None, layout: list | None = None,
                    direction: str | None = None,
                    grid: tuple | int | str | None = None,
-                   hints: bool = None, card_style: str = "default") -> dict:
+                   hints: bool = None, card_style: str = "plain") -> dict:
     """组装 components.v2 组件所需的三部分：HTML 片段、CSS、data。
 
     返回值是 dict：
@@ -1053,7 +1092,8 @@ def build_fragment(charts: list, title: str | None = None, desc: str | None = No
 
     style = normalize_card_style(card_style)
     markup = ('<div class="eazy-root%s" data-theme="%s" data-palette="%s">%s%s</div>'
-              % (" is-glass" if style == "glass" else "", theme, palette,
+              % (" is-glass" if style == "glass" else (" is-plain" if style == "plain" else ""),
+                 theme, palette,
                  header + filters, cards + footer))
 
     page = {"theme": theme, "palette": palette, "charts": specs, "links": [],
@@ -1081,7 +1121,7 @@ class Dashboard:
                  layout: list | None = None, direction: str | None = None,
                  grid: tuple | int | str | None = None,
                  hints: bool = None,
-                 card_style: str = "default") -> None:
+                 card_style: str = "plain") -> None:
         charts = list(charts)
         if not charts:
             raise ValueError("dashboard 至少需要一张图。")

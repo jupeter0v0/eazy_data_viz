@@ -110,7 +110,7 @@ python -c "import eazy_data_viz as e; e.help()"
 ```
 eazy_data_viz/          Python 包（chart.py / charts_extra.py / maps.py / frame.py / render.py + assets/）
 docs/                   本文档
-  guides/               17 篇教程
+  guides/               18 篇教程
   api/                  49 个函数参考 + 公共参数
   eazy_catalog.json     机器可读目录
 examples/               charts/ 单图示例、cockpit/ 看板、output/ 运行产物（gitignored）

@@ -15,7 +15,9 @@ import sys
 import tempfile
 import webbrowser
 
+from . import compare as _compare
 from . import frame as _frame
+from . import metric as _metric
 
 __all__ = [
     "Chart",
@@ -424,6 +426,9 @@ def _base_spec(
 
     link_group, link_mode = _parse_link(link)
 
+    # 1.6：角色参数可以是 edv.switch(...)，解析出默认列，其余列写进 spec["switch"]。
+    roles, switch_map = _metric.resolve_roles(roles)
+
     df = _frame.ensure_frame(data)
 
     # 下钻维度：drill 的第一层就是 x；也可以只传 drill 让 x 自动取 drill[0]。
@@ -468,6 +473,13 @@ def _base_spec(
             numeric_cols.append(rv)
         else:
             dim_cols.append(rv)
+    # switch 里其它指标列也要一起转成数值、一起嵌进 dataStore，切换时才能直接用。
+    if switch_map and not count_mode:
+        for _rk, _mapping in switch_map.items():
+            if _rk in _NUMERIC_ROLE_KEYS.get(kind, ()):
+                for _col in _mapping.values():
+                    if _col not in numeric_cols:
+                        numeric_cols.append(_col)
     records, ref, info = _frame.prepare(
         df, roles, max_rows=max_rows,
         numeric_roles=numeric_cols, dimension_roles=dim_cols,
@@ -544,6 +556,7 @@ def _base_spec(
         "absHeight": bool(abs_height),
         "dataRef": ref,
         "roles": dict(roles),
+        "switch": switch_map or None,
         "agg": agg,
         "fmt": fmt or "compact",
         "sort": sort,
@@ -1288,6 +1301,8 @@ def kpi(
     target_label: str | None = None,
     spark: bool = None,
     spark_x: str | None = None,
+    compare: dict | None = None,
+    metric: str | None = None,
     hint: str | None = None,
     unit: str | None = None,
     prefix: str | None = None,
@@ -1335,6 +1350,17 @@ def kpi(
         迷你走势的数值列；配合 spark_x 使用。
     spark_x : str
         迷你走势的横轴（时间/有序分类列，如 "月份"、"日期"）。
+    compare : dict
+        动态对比（1.6）：``{"年": ["2026年", "2025年"], "show": "rate"}``
+        第一个取值是本期、第二个是基期，卡片会自己从数据里算本期值 / 上期值 /
+        同比率，并且在联动过滤之后重新计算。``show`` 可选 ``"value"``（双数值）/
+        ``"rate"``（同比率）/ ``"both"``（默认，两者）；``mode="mom"`` 改成环比
+        （最后一期 vs 上一期，需要 ``period`` 或 ``spark_x``）；有 period 列时
+        基期只取本期已有的那些期，做同期对齐。
+    metric : str
+        指标名（1.6）：``value=edv.switch(sale="金额", qty="数量")`` 时用
+        ``metric="sale"`` 指定默认指标；点击这张卡片会把看板里所有用到同一个
+        switch 的图表切到对应列，不触发 Python 重算。
     hint : str
         底部小字说明，例如 "2024 全年 · 含税"。
     unit : str
@@ -1377,6 +1403,13 @@ def kpi(
     records = {"cols": [], "rows": [], "n": 0, "kinds": {}}
     ref = None
     warnings = []
+    cmp_cfg = None
+    switch_map = {}
+
+    if compare is not None and isinstance(data, (int, float)) and not isinstance(data, bool):
+        raise ValueError(
+            "compare 需要 DataFrame（按列取值动态对比）；静态数值请直接用 delta= 指定增长率。"
+        )
 
     if isinstance(data, (int, float)) and not isinstance(data, bool) and value is None:
         static_value = float(data)
@@ -1389,6 +1422,21 @@ def kpi(
             )
         _check_agg(agg)
         df = _frame.ensure_frame(data)
+        if _metric.is_switch(value):
+            switch_map = {"value": dict(value)}
+            if metric is None:
+                metric = value.default_name
+            elif metric not in value:
+                raise ValueError(
+                    "kpi 的 metric=%r 不在 value 的 switch 里（可选：%s）。"
+                    % (metric, "、".join(value.names))
+                )
+            value = value.default_column
+        elif metric is not None:
+            raise ValueError(
+                'kpi 的 metric=%r 需要 value 是 edv.switch(...)，例如 '
+                'kpi(df, value=edv.switch(sale="金额", qty="数量"), metric="sale")。' % (metric,)
+            )
         if value is None:
             nums = [c for c in df.columns if _frame.column_kind(df[c]) == _frame.KIND_NUM]
             if len(nums) != 1:
@@ -1399,6 +1447,8 @@ def kpi(
             _frame.require_column(df, spark, "spark")
             _frame.require_column(df, spark_x, "spark_x")
 
+        cmp_cfg = _compare.parse_compare(df, compare, spark_x=spark_x, value=value, agg=agg)
+
         roles = {"value": value}
         if spark is not None:
             roles["spark_x"] = spark_x
@@ -1406,7 +1456,17 @@ def kpi(
         # agg="count" / "unique" 时 value / spark 可以是任意类型（数行数 / 去重计数），
         # 不再强制转数值。
         numeric = [] if agg in ("count", "unique") else ([value] + ([spark] if spark is not None else []))
+        if switch_map and agg not in ("count", "unique"):
+            for _col in switch_map["value"].values():
+                if _col not in numeric:
+                    numeric.append(_col)
         dims = [spark_x] if spark is not None else []
+        if cmp_cfg:
+            for _cc in (cmp_cfg.get("dim"), cmp_cfg.get("period")):
+                if _cc and _cc not in dims:
+                    dims.append(_cc)
+        if cmp_cfg and delta is not None:
+            warnings.append("compare 已开启动态对比，delta 参数被忽略（同比 / 环比由 compare 现算）。")
         records, ref, info = _frame.prepare(
             df, roles, numeric_roles=numeric, dimension_roles=dims,
         )
@@ -1443,7 +1503,7 @@ def kpi(
         "linkMode": _link_mode,
         "value": static_value,
         "label": label,
-        "delta": delta,
+        "delta": None if cmp_cfg else delta,
         "deltaLabel": delta_label,
         "inverse": bool(inverse),
         "target": target,
@@ -1453,6 +1513,14 @@ def kpi(
         "unit": unit,
         "prefix": prefix,
         "accent": int(accent or 0),
+        "compare": cmp_cfg,
+        "metric": metric,
+        "switch": switch_map or None,
+        "compute": (
+            {"measure": value, "agg": agg, "compare": cmp_cfg, "metric": metric}
+            if value is not None
+            else None
+        ),
         "section": section,
     }
     return Chart(spec, records, ref, {"warnings": warnings})

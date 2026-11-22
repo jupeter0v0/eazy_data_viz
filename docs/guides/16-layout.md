@@ -318,9 +318,10 @@ edv.dashboard(*cards, direction="h", layout=[1, 2])
 > `abs_height` 也适用于普通 `cols` 等宽看板：`edv.dashboard(a, b, c, cols=3)` 里给三张图都设
 > `height=320, abs_height=True`，同样能消掉标题/工具条带来的高度差。
 
-## 7. 卡片外框：`card_style="glass"`（1.5.6）
+## 7. 卡片外框：`card_style`（1.5.6 新增，1.6 默认改为透明）
 
-默认是实心白卡（`card_style="default"`）。把页面放进自己的底色里（Streamlit 主题、深色底、彩色背景）时，
+**1.6 起默认是透明无框（`card_style="plain"`）**：卡片只剩内容，页面底色直接透上来。
+把页面放进自己的底色里（Streamlit 主题、深色底、彩色背景）时，
 白卡会像一块块白框压住背景，这时换成**液态玻璃**：
 
 ```python
@@ -332,7 +333,15 @@ edv.show(a, b, c, d, grid=(2, 2), layout=[[1, 1], [1, 1]], card_style="glass")
 页面底色会**透**上来，不再被白框挡住；深色主题自己有一套更暗的玻璃层。
 
 * 取值：`"default"`（默认，实心） / `"glass"`（液态玻璃，别名 `liquid`、`液态玻璃`、`玻璃`）；
-* 传别的值直接报错：`ValueError: card_style 只支持 "default"（实心卡片）或 "glass"（液态玻璃），收到 'x'。`；
+* 三档取值：
+
+| 取值 | 效果 |
+|---|---|
+| `"plain"`（默认，1.6 起） | 透明、无边框、无阴影，卡片内容直接浮在页面底色上 |
+| `"card"` | 实心白卡（1.5.6 及以前的默认样式，仍可用 `"default"` / `"solid"` / `"实心"` 别名） |
+| `"glass"` | 液态玻璃：半透明渐变 + 背景模糊 + 高光边 |
+
+* 传别的值直接报错：`ValueError: card_style 只支持 "plain"（透明无框，默认）/ "card"（实心卡片）/ "glass"（液态玻璃），收到 'x'。`；
 * 同样支持 `dashboard(...)` / `show(...)` / `streamlit_dashboard(...)`。
 
 ### 顺带：工具栏搬到页脚（1.5.6）

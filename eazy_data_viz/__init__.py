@@ -63,12 +63,13 @@ from .charts_extra import (
     wordcloud,
 )
 from .maps import geo_map, beijing_map, map_bubble, map_flow
+from .metric import Switch, switch
 from . import palette
 from .render import Dashboard, dashboard
 from .render import streamlit_show as _streamlit_show
 from .streamlit_v2 import is_available as streamlit_available
 
-__version__ = "1.5.7"
+__version__ = "1.6.0"
 
 __all__ = [
     "Chart",
@@ -150,6 +151,8 @@ __all__ = [
     "cache_info",
     "use_cache",
     "cached",
+    "switch",
+    "Switch",
 ]
 
 
@@ -480,6 +483,18 @@ eazy_data_viz · pandas 交互式图表库（经营驾驶舱版）  v%s
     eazy_data_viz.gantt    (df, task="任务", start="开始", end="结束", color="负责人")
     eazy_data_viz.ring_progress(72.5, label="完成率")
     eazy_data_viz.group_kpi(df, items=[{"label": "总销售额", "value": 1630000, "fmt": "compact"}])
+
+1.6 新增（KPI 动态对比 / 指标切换 / 透明卡片）
+
+    # 动态同比：卡片自己算本期/基期/同比/环比，联动后自动重算
+    eazy_data_viz.kpi(df, value="金额", spark="金额", spark_x="月",
+                      compare={"年": ["2026年", "2025年"], "show": "rate"})
+    # 指标切换：一个看板切换 销售额 / 销量 / 应收余额
+    amount = eazy_data_viz.switch(sale="金额", qty="数量", balance="余额")
+    eazy_data_viz.show(eazy_data_viz.kpi(df, value=amount, metric="sale", spark_x="月"),
+                       eazy_data_viz.bar(df, x="月", y=amount))
+    # 卡片外框：默认 plain（透明无框）；还有 card（实心）/ glass（液态玻璃）
+    eazy_data_viz.show(..., card_style="glass")
 
 1.5 新增（自由排列 / 联动方向 / 汇总表 / 多级桑基 / 同比 / 去重计数）
 --------------------------------------------------------------------------------

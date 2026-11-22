@@ -47,7 +47,7 @@ TEST_JS = r"""
   try {
 
   // ---------------- 纯逻辑 ----------------
-  ok('charts-count', EazyViz.charts.length === 27, EazyViz.charts.length);
+  ok('charts-count', EazyViz.charts.length === 29, EazyViz.charts.length);
   ok('dataStore', Object.keys(EazyViz.dataStore).length >= 1);
   ok('fmt-compact', core0.fmtValue(12345678, 'compact') === '1235万', core0.fmtValue(12345678, 'compact'));
   ok('fmt-percent', core0.fmtValue(12.5, 'percent') === '12.5%', core0.fmtValue(12.5, 'percent'));
@@ -99,7 +99,7 @@ TEST_JS = r"""
   EazyViz.charts.forEach(function (c) {
     types.push(c.spec.type);
     if (c.spec.type === 'kpi') {
-      ok('kpi-html-' + c.index, /总销售额|平均|KPI 进阶/.test(c.el.innerHTML), c.el.innerHTML.slice(0, 30));
+      ok('kpi-html-' + c.index, /总销售额|平均|KPI 进阶|对比 KPI/.test(c.el.innerHTML), c.el.innerHTML.slice(0, 30));
       return;
     }
     if (EazyViz.core.htmlBuilders[c.spec.type]) {
@@ -562,6 +562,38 @@ TEST_JS = r"""
     }
   });
 
+  // 1.6：compare（动态同比 / 环比 / 双值切换）与指标切换
+  steps.push(function () {
+    var kc = chartByTitle('对比 KPI');
+    var bc = chartByTitle('指标切换');
+    ok('cmp16-charts', !!kc && !!bc, !!kc + '/' + !!bc);
+    if (!kc) return;
+    var res = core0.computeKpi(kc.spec, kc.data, kc.state);
+    ok('cmp16-cur', Math.abs(res.cur - 316) < 1e-6, res.cur);
+    ok('cmp16-base', Math.abs(res.base - 300) < 1e-6, res.base);
+    ok('cmp16-rate', Math.abs(res.rate - (16 / 300)) < 1e-6, res.rate);
+    ok('cmp16-mom', res.mom && Math.abs(res.mom.rate - ((96 - 90) / 90)) < 1e-6, res.mom);
+    var acts = [];
+    var chips = kc.el.querySelectorAll('[data-eazy-kpi-act]');
+    for (var ci = 0; ci < chips.length; ci++) acts.push(chips[ci].getAttribute('data-eazy-kpi-act'));
+    ok('cmp16-chips', acts.indexOf('year:cur') >= 0 && acts.indexOf('year:base') >= 0, acts.join(','));
+    var vCur = kc.el.querySelector('.eazy-kpi-value').textContent;
+    core0.handleKpiAct(kc.el.querySelector('[data-eazy-kpi-act="year:base"]'), 'year:base');
+    var vBase = kc.el.querySelector('.eazy-kpi-value').textContent;
+    ok('cmp16-switch-year', vCur !== vBase, vCur + '->' + vBase);
+    core0.handleKpiAct(kc.el.querySelector('[data-eazy-kpi-act="year:cur"]'), 'year:cur');
+    core0.handleKpiAct(kc.el.querySelector('[data-eazy-kpi-act="rate:mom"]'), 'rate:mom');
+    ok('cmp16-switch-rate', /环比/.test(kc.el.textContent), kc.el.textContent.slice(0, 40));
+
+    if (bc) {
+      ok('metric16-spec', !!(bc.spec.switch && bc.spec.switch.y), JSON.stringify(bc.spec.switch));
+      core0.setMetric('qty');
+      ok('metric16-applied', bc.spec.roles.y === '数量', bc.spec.roles.y);
+      core0.setMetric(null);
+      ok('metric16-reset', bc.spec.roles.y === '销售额', bc.spec.roles.y);
+    }
+  });
+
   var i = 0;
   function next() {
     if (i < steps.length) {
@@ -641,6 +673,24 @@ def build_page():
                 "大区": ["华东", "华东", "华东", "华北", "华北", "华南"],
                 "客户名称": ["A", "A", "B", "A", "C", "D"]}),
             x="大区", y="客户名称", agg="unique", title="去重计数"),
+        # 1.6：compare 动态同比 + switch 指标切换
+        eazy_data_viz.kpi(
+            __import__("pandas").DataFrame({
+                "年": ["2026年", "2026年", "2026年", "2025年", "2025年", "2025年"],
+                "月": ["1月", "2月", "3月", "1月", "2月", "3月"],
+                "销售额": [130.0, 90.0, 96.0, 100.0, 120.0, 80.0],
+                "数量": [13.0, 9.0, 9.6, 10.0, 12.0, 8.0],
+            }),
+            value="销售额", label="对比 KPI", spark="销售额", spark_x="月",
+            compare={"年": ["2026年", "2025年"]}, title="对比 KPI"),
+        eazy_data_viz.bar(
+            __import__("pandas").DataFrame({
+                "月": ["1月", "2月", "3月"],
+                "销售额": [130.0, 90.0, 96.0],
+                "数量": [13.0, 9.0, 9.6],
+            }),
+            x="月", y=eazy_data_viz.switch(sale="销售额", qty="数量"),
+            title="指标切换"),
     ]
     for _c in charts[:3]:
         _c.spec["code"] = ('eazy_data_viz.%s(%s)' % (

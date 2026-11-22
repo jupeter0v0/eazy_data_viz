@@ -1,6 +1,6 @@
 {
  "name": "eazy_data_viz",
- "version": "1.5.7",
+ "version": "1.6.0",
  "summary": "pandas → 单文件 HTML 交互图表库（经营驾驶舱场景，Material Design 3，45 种图表，客户端下钻/联动，Streamlit 兼容）",
  "install": "pip install -e .   # 或构建 wheel: python -m pip wheel . --no-deps",
  "quickstart": [
@@ -164,7 +164,7 @@
    "charts": [
     {
      "name": "kpi",
-     "signature": "kpi(data: 'pd.DataFrame' = None, value: 'str | None' = None, *, agg: 'str' = 'sum', label: 'str | None' = None, fmt: 'str' = None, delta: 'float | None' = None, delta_label: 'str | None' = None, inverse: 'bool' = False, target: 'str | None' = None, target_label: 'str | None' = None, spark: 'bool' = None, spark_x: 'str | None' = None, hint: 'str | None' = None, unit: 'str | None' = None, prefix: 'str | None' = None, accent: 'int' = 0, height: 'int' = 150, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str | None' = None, subtitle: 'str | None' = None, link: 'str | tuple | dict | None' = None, section: 'str | None' = None) -> 'Chart'",
+     "signature": "kpi(data: 'pd.DataFrame' = None, value: 'str | None' = None, *, agg: 'str' = 'sum', label: 'str | None' = None, fmt: 'str' = None, delta: 'float | None' = None, delta_label: 'str | None' = None, inverse: 'bool' = False, target: 'str | None' = None, target_label: 'str | None' = None, spark: 'bool' = None, spark_x: 'str | None' = None, compare: 'dict | None' = None, metric: 'str | None' = None, hint: 'str | None' = None, unit: 'str | None' = None, prefix: 'str | None' = None, accent: 'int' = 0, height: 'int' = 150, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str | None' = None, subtitle: 'str | None' = None, link: 'str | tuple | dict | None' = None, section: 'str | None' = None) -> 'Chart'",
      "params": [
       {
        "name": "data",
@@ -239,6 +239,18 @@
        "required": false
       },
       {
+       "name": "compare",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
+       "name": "metric",
+       "kind": "keyword_only",
+       "default": null,
+       "required": false
+      },
+      {
        "name": "hint",
        "kind": "keyword_only",
        "default": null,
@@ -306,7 +318,7 @@
       }
      ],
      "summary": "KPI 数字卡片（驾驶舱指标头，可跟随联动筛选自动重算）。",
-     "doc": "KPI 数字卡片（驾驶舱指标头，可跟随联动筛选自动重算）。\n\n三种用法\n--------\n>>> eazy_data_viz.kpi(1630000, label=\"全年销售额\", delta=0.128)          # 直接给数值\n>>> eazy_data_viz.kpi(df, value=\"销售额\", label=\"全年销售额\", delta=0.128)  # 从 df 聚合\n>>> eazy_data_viz.kpi(df, value=\"销售额\", spark=\"销售额\", spark_x=\"月份\")   # 带迷你走势\n\n参数\n----\ndata : DataFrame | int | float\n    数据；也可以直接传一个数值。\nvalue : str\n    数值列（从 df 聚合时必填）。\nagg : str\n    聚合方式，sum / mean / count（计数）/ unique（去重计数）/ max / min / median。\nlabel : str\n    指标名（显示在数值上方）。\nfmt : str\n    数字格式：thousands（默认，4,112,275）/ compact（411万）/ raw / percent / currency（¥）。\n    卡片要和 pandas / SQL 的合计逐个数字对得上时用默认值；想紧凑用 compact。\ndelta : float\n    同比环比：0.128 显示 ▲12.8%；传 12.8 这类绝对值时按原样显示。\ndelta_label : str\n    涨跌幅口径说明，例如 \"同比\" / \"环比\" / \"较上月\"。\ninverse : bool\n    True 表示「越小越好」（成本、投诉率），下降显示为绿色。\ntarget : float\n    目标值，传入后卡片右上角显示达成率、底部显示进度条。\ntarget_label : str\n    目标标签，默认 \"目标\"。\nspark : str\n    迷你走势的数值列；配合 spark_x 使用。\nspark_x : str\n    迷你走势的横轴（时间/有序分类列，如 \"月份\"、\"日期\"）。\nhint : str\n    底部小字说明，例如 \"2024 全年 · 含税\"。\nunit : str\n    数值后缀，例如 \"%\"、\"人\"、\"单\"。\nprefix : str\n    数值前缀，例如 \"≈\"。\naccent : int\n    强调色在配色库中的序号（0 起），用于左下角走势线 / 进度条颜色。\nlink : str\n    联动组名；同一组的图被点击过滤时，这个 KPI 会跟着重算。\nsection : str\n    看板分区标题（dashboard 里自动分组）。\n\n示例\n----\n>>> eazy_data_viz.kpi(df, value=\"销售额\", label=\"全年销售额\", delta=0.128,\n...          delta_label=\"同比\", target=2000000, hint=\"2024 全年\")\n>>> eazy_data_viz.dashboard(\n...     eazy_data_viz.kpi(df, value=\"销售额\", label=\"销售额\", link=\"g1\"),\n...     eazy_data_viz.bar(df, x=\"大区\", y=\"销售额\", link=\"g1\"),\n...     cols=2)",
+     "doc": "KPI 数字卡片（驾驶舱指标头，可跟随联动筛选自动重算）。\n\n三种用法\n--------\n>>> eazy_data_viz.kpi(1630000, label=\"全年销售额\", delta=0.128)          # 直接给数值\n>>> eazy_data_viz.kpi(df, value=\"销售额\", label=\"全年销售额\", delta=0.128)  # 从 df 聚合\n>>> eazy_data_viz.kpi(df, value=\"销售额\", spark=\"销售额\", spark_x=\"月份\")   # 带迷你走势\n\n参数\n----\ndata : DataFrame | int | float\n    数据；也可以直接传一个数值。\nvalue : str\n    数值列（从 df 聚合时必填）。\nagg : str\n    聚合方式，sum / mean / count（计数）/ unique（去重计数）/ max / min / median。\nlabel : str\n    指标名（显示在数值上方）。\nfmt : str\n    数字格式：thousands（默认，4,112,275）/ compact（411万）/ raw / percent / currency（¥）。\n    卡片要和 pandas / SQL 的合计逐个数字对得上时用默认值；想紧凑用 compact。\ndelta : float\n    同比环比：0.128 显示 ▲12.8%；传 12.8 这类绝对值时按原样显示。\ndelta_label : str\n    涨跌幅口径说明，例如 \"同比\" / \"环比\" / \"较上月\"。\ninverse : bool\n    True 表示「越小越好」（成本、投诉率），下降显示为绿色。\ntarget : float\n    目标值，传入后卡片右上角显示达成率、底部显示进度条。\ntarget_label : str\n    目标标签，默认 \"目标\"。\nspark : str\n    迷你走势的数值列；配合 spark_x 使用。\nspark_x : str\n    迷你走势的横轴（时间/有序分类列，如 \"月份\"、\"日期\"）。\ncompare : dict\n    动态对比（1.6）：``{\"年\": [\"2026年\", \"2025年\"], \"show\": \"rate\"}``\n    第一个取值是本期、第二个是基期，卡片会自己从数据里算本期值 / 上期值 /\n    同比率，并且在联动过滤之后重新计算。``show`` 可选 ``\"value\"``（双数值）/\n    ``\"rate\"``（同比率）/ ``\"both\"``（默认，两者）；``mode=\"mom\"`` 改成环比\n    （最后一期 vs 上一期，需要 ``period`` 或 ``spark_x``）；有 period 列时\n    基期只取本期已有的那些期，做同期对齐。\nmetric : str\n    指标名（1.6）：``value=edv.switch(sale=\"金额\", qty=\"数量\")`` 时用\n    ``metric=\"sale\"`` 指定默认指标；点击这张卡片会把看板里所有用到同一个\n    switch 的图表切到对应列，不触发 Python 重算。\nhint : str\n    底部小字说明，例如 \"2024 全年 · 含税\"。\nunit : str\n    数值后缀，例如 \"%\"、\"人\"、\"单\"。\nprefix : str\n    数值前缀，例如 \"≈\"。\naccent : int\n    强调色在配色库中的序号（0 起），用于左下角走势线 / 进度条颜色。\nlink : str\n    联动组名；同一组的图被点击过滤时，这个 KPI 会跟着重算。\nsection : str\n    看板分区标题（dashboard 里自动分组）。\n\n示例\n----\n>>> eazy_data_viz.kpi(df, value=\"销售额\", label=\"全年销售额\", delta=0.128,\n...          delta_label=\"同比\", target=2000000, hint=\"2024 全年\")\n>>> eazy_data_viz.dashboard(\n...     eazy_data_viz.kpi(df, value=\"销售额\", label=\"销售额\", link=\"g1\"),\n...     eazy_data_viz.bar(df, x=\"大区\", y=\"销售额\", link=\"g1\"),\n...     cols=2)",
      "example": "eazy_data_viz.kpi(df, value=\"销售额\", label=\"全年销售额\", delta=0.128, target=2000000)"
     },
     {
@@ -6164,6 +6176,21 @@
      "example": "eazy_data_viz.clear_cache()"
     },
     {
+     "name": "switch",
+     "signature": "switch(**kwargs) -> 'Switch'",
+     "params": [
+      {
+       "name": "kwargs",
+       "kind": "var_keyword",
+       "default": null,
+       "required": false
+      }
+     ],
+     "summary": "声明「指标名 → 列名」的切换映射。",
+     "doc": "声明「指标名 → 列名」的切换映射。\n\n参数\n----\n**kwargs\n    指标名 = 列名，例如 ``switch(sale=\"金额\", qty=\"数量\")``。\n    至少一个；指标名不能为空；列名必须是字符串。\n\n返回\n----\nSwitch\n    有序映射，可传给 ``y`` / ``value`` / ``size`` / ``spark`` 等角色参数。\n\n报错\n----\n``ValueError: edv.switch 至少需要一个指标，例如 edv.switch(sale=\"金额\", qty=\"数量\")。``\n``ValueError: edv.switch 的指标名不能是空字符串。``\n``ValueError: edv.switch[%r] 需要是列名字符串，收到 %r。``",
+     "example": "eazy_data_viz.switch(sale=\"金额\", qty=\"数量\")"
+    },
+    {
      "name": "use_cache",
      "signature": "use_cache(enabled: 'bool' = True) -> 'bool'",
      "params": [
@@ -6319,7 +6346,7 @@
   },
   "Dashboard": {
    "name": "Dashboard",
-   "signature": "Dashboard(charts: 'list', cols: 'int' = 2, title: 'str | None' = None, desc: 'str | None' = None, theme: 'str | None' = None, inline: 'bool' = True, palette: 'str | None' = None, layout: 'list | None' = None, direction: 'str | None' = None, grid: 'tuple | int | str | None' = None, hints: 'bool' = None, card_style: 'str' = 'default') -> 'None'",
+   "signature": "Dashboard(charts: 'list', cols: 'int' = 2, title: 'str | None' = None, desc: 'str | None' = None, theme: 'str | None' = None, inline: 'bool' = True, palette: 'str | None' = None, layout: 'list | None' = None, direction: 'str | None' = None, grid: 'tuple | int | str | None' = None, hints: 'bool' = None, card_style: 'str' = 'plain') -> 'None'",
    "params": [
     {
      "name": "charts",
@@ -6390,7 +6417,7 @@
     {
      "name": "card_style",
      "kind": "positional_or_keyword",
-     "default": "default",
+     "default": "plain",
      "required": false
     }
    ],
@@ -6619,6 +6646,7 @@
   "slope",
   "sparkline",
   "sunburst",
+  "switch",
   "table",
   "target",
   "theme_river",

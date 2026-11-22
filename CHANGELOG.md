@@ -1,3 +1,46 @@
+## 1.6.0 — 2026-11-22
+
+### KPI 动态对比引擎：同比 / 环比现算
+
+`kpi(compare={...})` 让卡片自己从数据里算本期、基期、同比、环比，不再需要先把两年数据筛好再手填 `delta`：
+
+```python
+eazy_data_viz.kpi(df, value="金额", spark="金额", spark_x="月",
+                  compare={"年": ["2026年", "2025年"], "show": "rate"})
+```
+
+* 字典是「一列 + 两个取值」，第一个本期、第二个基期；`show` 可选 `value` / `rate` / `both`，`mode` 可选 `yoy` / `mom`；
+* **同期对齐**：本期只有 1–8 月就只比基期 1–8 月，不会半年对全年；
+* 基期为空 → 「新增」；基期为 0 → `—`；基期为负 → 分母取绝对值，方向不会反；
+* `agg="count"` / `"unique"` 也能对比；
+* 卡片上多了两枚年份 chip（切主数字）与一枚「同比 / 环比」切换；
+* **联动后四个数一起重算**（过滤 → 重算本期/基期/同比/环比），这是原来「先筛数据再画 KPI」做不到的。
+
+### 指标切换：一个看板看多种口径
+
+```python
+amount = eazy_data_viz.switch(sale="金额", qty="数量", balance="余额")
+eazy_data_viz.show(
+    eazy_data_viz.kpi(df, value=amount, label="销售额", metric="sale", spark="金额", spark_x="月"),
+    eazy_data_viz.bar(df, x="月", y=amount),
+)
+```
+
+任何接受列名的角色参数（`y` / `value` / `values` / `size` / `names` / `spark` …）都能接 `edv.switch(...)`。
+点 KPI 卡片上的指标 chip，看板里**所有**用到同一个 switch 的图表一起换列，纯前端完成，不触发 Python 重算；
+`kpi(metric="sale")` 指定这张卡默认看哪个指标。
+
+### 卡片外框：默认透明无框
+
+`show()` / `dashboard()` / `streamlit_dashboard()` 的 `card_style` 默认从 `card` 改成 **`plain`**：
+透明、无边框、无阴影，图表直接浮在页面底色上（此前实心白底会挡住页面背景）。想要旧样式传 `card_style="card"`，
+想要液态玻璃传 `card_style="glass"`。
+
+### 其它
+
+* 新增 `docs/api/switch.md`、`docs/api/kpi.md` 的 `compare` / `metric` 文档、新教程 17「KPI 对比与指标切换」；
+* 公开函数补全类型注解与 docstring（`compare` / `metric` / `switch` 都有 IDE 悬浮说明）。
+
 ## 1.5.7 — 2026-11-22
 
 ### 性能：prepare 向量化（10~12 倍）

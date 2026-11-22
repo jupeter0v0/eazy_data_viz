@@ -1022,8 +1022,11 @@ def t_card_style():
     """1.5.6：card_style 只接受 default / glass；页头无配色下拉、页脚只有主题+重置。"""
     from eazy_data_viz import render as _render
 
-    for value in (None, "", "default", "solid", "实心"):
-        assert _render.normalize_card_style(value) == "default", value
+    # 1.6 起默认是 plain（透明无框）；"default"/"solid" 等旧写法仍映射到实心卡片。
+    for value in (None, "", "plain", "transparent", "透明", "无框"):
+        assert _render.normalize_card_style(value) == "plain", value
+    for value in ("default", "solid", "card", "实心"):
+        assert _render.normalize_card_style(value) == "card", value
     for value in ("glass", "liquid", "液态玻璃", "玻璃", "liquid-glass", "GLASS"):
         assert _render.normalize_card_style(value) == "glass", value
     try:
@@ -1038,10 +1041,14 @@ def t_card_style():
     b = eazy_data_viz.line(df, x="月份", y="销售额", link="g1")
 
     html = eazy_data_viz.dashboard(a, b, cols=2, title="T").to_html()
-    assert '"cardStyle": "default"' in html, "page 里没有 cardStyle"
+    assert '"cardStyle": "plain"' in html, "page 里没有 cardStyle"
+    assert " is-plain" in html, "默认应该是透明无框（is-plain）"
     assert "eazy-footbar" in html and "data-eazy-reset" in html and "data-eazy-theme" in html
     assert "<select" not in html, "页头还留着配色下拉"
     assert "is-glass" not in _render.build_fragment([a, b], cols=2)["html"]
+    frag_card = _render.build_fragment([a, b], cols=2, card_style="card")
+    assert 'class="eazy-root"' in frag_card["html"] and " is-plain" not in frag_card["html"]
+    assert frag_card["page"]["cardStyle"] == "card"
 
     frag_glass = _render.build_fragment([a, b], cols=2, card_style="glass")
     assert 'class="eazy-root is-glass"' in frag_glass["html"]
@@ -1144,7 +1151,140 @@ def t_cached_helper():
     assert eazy_data_viz.use_cache(True) is True
 
 
+def t_kpi_compare():
+    """1.6：compare 动态同比 / 环比、基期空与负数、同期对齐。"""
+    import pandas as pd
+
+    df = pd.DataFrame({
+        "年": ["2026年"] * 3 + ["2025年"] * 3,
+        "月": ["1月", "2月", "3月", "1月", "2月", "3月"],
+        "金额": [100.0, 130.0, 90.0, 80.0, 100.0, 100.0],
+        "数量": [10, 13, 9, 8, 10, 10],
+    })
+    c = eazy_data_viz.kpi(df, value="金额", label="销售额", spark="金额", spark_x="月",
+                          compare={"年": ["2026年", "2025年"]})
+    cmp = c.spec["compare"]
+    assert cmp["dim"] == "年" and cmp["cur"] == "2026年" and cmp["base"] == "2025年"
+    assert cmp["show"] == "both" and cmp["mode"] == "yoy" and cmp["period"] == "月"
+    st = cmp["static"]
+    assert abs(st["cur"] - 320.0) < 1e-9 and abs(st["base"] - 280.0) < 1e-9
+    assert abs(st["rate"] - (40.0 / 280.0)) < 1e-9
+    assert abs(st["mom"]["rate"] - ((90.0 - 130.0) / 130.0)) < 1e-9
+    assert c.spec["delta"] is None and c.spec["compute"]["measure"] == "金额"
+
+    # 同期对齐：2026 只有 1–2 月 → 只比 2025 的 1–2 月
+    part = pd.DataFrame({
+        "年": ["2026年", "2026年", "2025年", "2025年", "2025年"],
+        "月": ["1月", "2月", "1月", "2月", "3月"],
+        "金额": [100.0, 130.0, 80.0, 100.0, 999.0],
+    })
+    c2 = eazy_data_viz.kpi(part, value="金额", spark="金额", spark_x="月",
+                           compare={"年": ["2026年", "2025年"]})
+    assert abs(c2.spec["compare"]["static"]["base"] - 180.0) < 1e-9, "基期没有按同期对齐"
+    assert abs(c2.spec["compare"]["static"]["cur"] - 230.0) < 1e-9
+
+    # 基期为 0 / 空 → rate None
+    z = pd.DataFrame({"年": ["2026年", "2025年"], "月": ["1月", "1月"], "金额": [10.0, 0.0]})
+    c3 = eazy_data_viz.kpi(z, value="金额", spark="金额", spark_x="月",
+                           compare={"年": ["2026年", "2025年"]})
+    assert c3.spec["compare"]["static"]["rate"] is None
+
+    # 基期为负：分母取绝对值，方向不反
+    n = pd.DataFrame({"年": ["2026年", "2025年"], "月": ["1月", "1月"], "金额": [-50.0, -100.0]})
+    c4 = eazy_data_viz.kpi(n, value="金额", spark="金额", spark_x="月",
+                           compare={"年": ["2026年", "2025年"]})
+    assert abs(c4.spec["compare"]["static"]["rate"] - 0.5) < 1e-9
+
+    # show / mode 别名
+    c5 = eazy_data_viz.kpi(df, value="金额", spark="金额", spark_x="月",
+                           compare={"年": ["2026年", "2025年"], "show": "rate", "mode": "环比"})
+    assert c5.spec["compare"]["show"] == "rate" and c5.spec["compare"]["mode"] == "mom"
+
+    # compare + delta 同时传：以 compare 为准并提示
+    c6 = eazy_data_viz.kpi(df, value="金额", spark="金额", spark_x="月",
+                           compare={"年": ["2026年", "2025年"]}, delta=0.1)
+    assert c6.spec["delta"] is None
+    assert any("compare" in w for w in c6.warnings["warnings"]), c6.warnings
+
+    # count / unique 也能对比
+    cu = pd.DataFrame({
+        "年": ["2026年", "2026年", "2025年"],
+        "月": ["1月", "1月", "1月"],
+        "客户名称": ["A", "B", "A"],
+    })
+    c7 = eazy_data_viz.kpi(cu, value="客户名称", agg="unique", spark="客户名称", spark_x="月",
+                           compare={"年": ["2026年", "2025年"]})
+    st7 = c7.spec["compare"]["static"]
+    assert abs(st7["cur"] - 2.0) < 1e-9 and abs(st7["base"] - 1.0) < 1e-9
+
+    # 报错
+    bad = [
+        (lambda: eazy_data_viz.kpi(df, value="金额", compare={"年": ["2026年"]}), "两个取值"),
+        (lambda: eazy_data_viz.kpi(df, value="金额", compare={"年": ["2026年", "2026年"]}), "不能相同"),
+        (lambda: eazy_data_viz.kpi(df, value="金额", compare={"年": ["2026年", "2024年"]}), "不存在"),
+        (lambda: eazy_data_viz.kpi(df, value="金额", compare={"年": ["2026年", "2025年"], "show": "x"}), "show"),
+        (lambda: eazy_data_viz.kpi(df, value="金额", compare={"年": ["2026年", "2025年"], "mode": "x"}), "mode"),
+        (lambda: eazy_data_viz.kpi(df, value="金额", compare={"年": ["2026年", "2025年"], "period": "季"}), "period"),
+        (lambda: eazy_data_viz.kpi(df, value="金额", compare=[1, 2]), "字典"),
+        (lambda: eazy_data_viz.kpi(123, compare={"年": ["2026年", "2025年"]}), "DataFrame"),
+        (lambda: eazy_data_viz.kpi(df, value="金额", compare={"年": ["2026年", "2025年"], "月": ["1月", "2月"]}), "只能对比一列"),
+    ]
+    for fn, word in bad:
+        try:
+            fn()
+        except ValueError as e:
+            assert word in str(e), (word, str(e))
+        else:
+            raise AssertionError("compare=%s 没有报错" % word)
+
+
+def t_metric_switch():
+    """1.6：edv.switch 指标切换 + kpi(metric=) + 图表角色接受 switch。"""
+    import pandas as pd
+
+    df = pd.DataFrame({
+        "月": ["1月", "2月", "3月"],
+        "金额": [100.0, 200.0, 300.0],
+        "数量": [10.0, 20.0, 30.0],
+        "余额": [1000.0, 2000.0, 3000.0],
+    })
+    sw = eazy_data_viz.switch(sale="金额", qty="数量")
+    assert isinstance(sw, eazy_data_viz.Switch)
+    assert sw.default_name == "sale" and sw.default_column == "金额"
+    assert sw.columns == ["金额", "数量"] and sw.names == ["sale", "qty"]
+
+    k = eazy_data_viz.kpi(df, value=sw, label="指标", metric="qty", spark="金额", spark_x="月")
+    assert k.spec["switch"] == {"value": {"sale": "金额", "qty": "数量"}}
+    assert k.spec["metric"] == "qty"
+    assert k.spec["roles"]["value"] == "金额", "Python 侧应该先用默认指标出图"
+    assert k.data["kinds"]["数量"] == "num", "switch 的其它列也要一起转数值"
+
+    b = eazy_data_viz.bar(df, x="月", y=sw)
+    assert b.spec["switch"] == {"y": {"sale": "金额", "qty": "数量"}}
+    assert b.spec["roles"]["y"] == "金额"
+
+    # 默认指标（不传 metric）取第一个
+    k2 = eazy_data_viz.kpi(df, value=sw, spark="金额", spark_x="月")
+    assert k2.spec["metric"] == "sale"
+
+    bad = [
+        (lambda: eazy_data_viz.switch(), "至少需要一个指标"),
+        (lambda: eazy_data_viz.switch(sale=""), "列名字符串"),
+        (lambda: eazy_data_viz.kpi(df, value=sw, metric="nope"), "不在 value 的 switch 里"),
+        (lambda: eazy_data_viz.kpi(df, value="金额", metric="sale"), "需要 value 是 edv.switch"),
+        (lambda: eazy_data_viz.bar(df, x="月", y=["a", sw]), "switch"),
+    ]
+    for fn, word in bad:
+        try:
+            fn()
+        except ValueError as e:
+            assert word in str(e), (word, str(e))
+        else:
+            raise AssertionError("switch=%s 没有报错" % word)
+
+
 for name, fn in sorted((k[2:], v) for k, v in list(globals().items()) if k.startswith("t_")):
+
     check(name, fn)
 
 print("PASS %d" % len(PASS))

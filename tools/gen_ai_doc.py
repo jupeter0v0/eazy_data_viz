@@ -86,6 +86,7 @@ EXAMPLES = {
     "treemap": 'treemap(df, path=["大区", "省份"], value="销售额")',
     "sunburst": 'sunburst(df, path=["大区", "省份"], value="销售额")',
     "sankey": 'sankey(df, path=["大区", "渠道", "产品"], value="销售额")',
+    "switch": 'switch(sale="金额", qty="数量")',
     "box": 'box(df, x="渠道", y="销售额")',
     "histogram": 'histogram(df, column="销售额", bins=24)',
     "area_pct": 'area_pct(df, x="月份", y="销售额", color="产品")',

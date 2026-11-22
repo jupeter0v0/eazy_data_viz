@@ -1,6 +1,6 @@
 # eazy_data_viz 组件库说明书（给 AI 用）
 
-> 版本 1.5.7 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
+> 版本 1.6.0 · 机器可读版：`docs/eazy_catalog.json` · 人读版：`README.md`
 
 ## 0. 一句话
 
@@ -58,13 +58,13 @@ eazy_data_viz.dashboard(c1, c2, palette="morandi").save("x.html")      # 整页�
 eazy_data_viz.set_palette("carbon")                                     # 改全局默认
 ```
 
-## 4. 图表函数（按场景分组，共 54 个）
+## 4. 图表函数（按场景分组，共 55 个）
 
 ### 核心指标
 
 | 函数 | 签名 | 说明 |
 |---|---|---|
-| `kpi` | `kpi(data: 'pd.DataFrame' = None, value: 'str \| None' = None, *, agg: 'str' = 'sum', label: 'str \| None' = None, fmt: 'str' = None, delta: 'float \| None' = None, delta_label: 'str \| None' = None, inverse: 'bool' = False, target: 'str \| None' = None, target_label: 'str \| None' = None, spark: 'bool' = None, spark_x: 'str \| None' = None, hint: 'str \| None' = None, unit: 'str \| None' = None, prefix: 'str \| None' = None, accent: 'int' = 0, height: 'int' = 150, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str \| None' = None, subtitle: 'str \| None' = None, link: 'str \| tuple \| dict \| None' = None, section: 'str \| None' = None) -> 'Chart'` | KPI 数字卡片（驾驶舱指标头，可跟随联动筛选自动重算）。 |
+| `kpi` | `kpi(data: 'pd.DataFrame' = None, value: 'str \| None' = None, *, agg: 'str' = 'sum', label: 'str \| None' = None, fmt: 'str' = None, delta: 'float \| None' = None, delta_label: 'str \| None' = None, inverse: 'bool' = False, target: 'str \| None' = None, target_label: 'str \| None' = None, spark: 'bool' = None, spark_x: 'str \| None' = None, compare: 'dict \| None' = None, metric: 'str \| None' = None, hint: 'str \| None' = None, unit: 'str \| None' = None, prefix: 'str \| None' = None, accent: 'int' = 0, height: 'int' = 150, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str \| None' = None, subtitle: 'str \| None' = None, link: 'str \| tuple \| dict \| None' = None, section: 'str \| None' = None) -> 'Chart'` | KPI 数字卡片（驾驶舱指标头，可跟随联动筛选自动重算）。 |
 | `group_kpi` | `group_kpi(data: 'pd.DataFrame' = None, names: 'str \| None' = None, values: 'str \| None' = None, *, items: 'list \| None' = None, agg: 'str' = 'sum', sort: 'str \| None' = 'desc', top_n: 'int \| None' = 6, unit: 'str \| None' = None, delta: 'float \| None' = None, fmt: 'str' = 'compact', title: 'str \| None' = None, subtitle: 'str \| None' = None, height: 'int' = 140, abs_height: 'bool' = False, theme: 'str' = 'light') -> 'Chart'` | KPI 卡片组（HTML 渲染）：一排指标卡片。 |
 | `gauge` | `gauge(value: 'str \| None', *, label: 'str \| None' = None, min: 'float \| None' = 0, max: 'float \| None' = 100, fmt: 'str' = 'raw', unit: 'str \| None' = None, height: 'int' = 260, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str \| None' = None, subtitle: 'str \| None' = None) -> 'Chart'` | 仪表盘（单个数值）。 |
 | `ring_progress` | `ring_progress(percent: 'float', *, label: 'str \| None' = None, max: 'float \| None' = 100, fmt: 'str' = None, height: 'int' = None, abs_height: 'bool' = False, theme: 'str' = 'light', title: 'str \| None' = None) -> 'Chart'` | 环形进度：一个百分比/完成值画成圆环，中心显示数值（不接 DataFrame）。 |
@@ -446,6 +446,7 @@ eazy_data_viz.wordcloud(df, names="城市", values="销售额", top_n=20)
 | `cache_info` | `cache_info() -> 'dict'` | 当前数据缓存占用（条目数 / 单元格数），调试用。 |
 | `cached` | `cached(func: 'object' = None, *, show_spinner: 'str \| bool' = '正在加载数据…', ttl: 'float \| None' = None, max_entries: 'int \| None' = None) -> 'object'` | 给「读数据」函数加 Streamlit 缓存（不在 Streamlit 里就退回 lru_cache）。 |
 | `clear_cache` | `clear_cache(all_caches: 'bool' = False) -> 'None'` | 清空图表数据缓存（默认只清 prepare 的列缓存）。 |
+| `switch` | `switch(**kwargs) -> 'Switch'` | 声明「指标名 → 列名」的切换映射。 |
 | `use_cache` | `use_cache(enabled: 'bool' = True) -> 'bool'` | 打开 / 关闭数据缓存（默认打开）。关闭后每张图都重新转换一遍。 |
 
 **`area`** — 面积图 = ``line(..., area=True)``。
@@ -470,6 +471,12 @@ eazy_data_viz.cached()
 
 ```python
 eazy_data_viz.clear_cache()
+```
+
+**`switch`** — 声明「指标名 → 列名」的切换映射。
+
+```python
+eazy_data_viz.switch(sale="金额", qty="数量")
 ```
 
 **`use_cache`** — 打开 / 关闭数据缓存（默认打开）。关闭后每张图都重新转换一遍。

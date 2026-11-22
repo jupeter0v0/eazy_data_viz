@@ -1552,12 +1552,170 @@
 
   // ---- KPI 卡片 ---------------------------------------------------------
   // 从（联动过滤后的）数据里现算 KPI 数值
-  function kpiValue(spec, data, state) {
-    if (spec.value !== null && spec.value !== undefined) return num(spec.value);
-    var rows = filteredRows(spec, data, state);
-    if (!rows.length) return null;
-    var g = groupBy(rows, [], spec.roles.value, spec.agg || 'sum');
+  // ------------------------------------------------------------------
+  // 1.6：动态对比（同比 / 环比）与指标切换
+  //
+  // 设计：spec 里只放「怎么算」的声明（compare / switch），真正的数字每次渲染都
+  // 从 filteredRows() 现算 —— 所以联动一过滤，本期值、上期值、同比率会一起重算。
+  // ------------------------------------------------------------------
+
+  // 增长率（小数）：(cur - base) / |base|。基期为空 / 0 → null；基期为负时用绝对值，
+  // 方向不会反（-100 → -50 是 +50%）。
+  function rateOf(cur, base) {
+    var c = num(cur), b = num(base);
+    if (c === null || b === null || b === 0) return null;
+    return (c - b) / Math.abs(b);
+  }
+
+  function aggValue(rows, measure, how) {
+    if (measure === null || measure === undefined) return null;
+    if (!rows || !rows.length) return null;
+    var g = groupBy(rows, [], measure, how || 'sum');
     return g.length ? g[0].value : null;
+  }
+
+  // 在联动过滤之后，再按 compare 的列切出「本期 / 基期」两组行。
+  function compareRows(spec, data, state, variant) {
+    var rows = filteredRows(spec, data, state);
+    var cmp = spec.compare;
+    if (!cmp || !cmp.dim) return rows;
+    var want = String(variant === 'base' ? cmp.base : cmp.cur);
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      if (String(catName(rows[i][cmp.dim])) === want) out.push(rows[i]);
+    }
+    return out;
+  }
+
+  // 同期对齐：基期只保留本期出现过的期（2026 只有 1–8 月，就只比 2025 的 1–8 月）。
+  function periodAligned(curRows, baseRows, period) {
+    if (!period) return baseRows;
+    var seen = {}, i;
+    for (i = 0; i < curRows.length; i++) {
+      seen['$' + String(catName(curRows[i][period]))] = 1;
+    }
+    var out = [];
+    for (i = 0; i < baseRows.length; i++) {
+      if (seen['$' + String(catName(baseRows[i][period]))]) out.push(baseRows[i]);
+    }
+    return out;
+  }
+
+  // 环比：本期最后一期 vs 上一期。
+  function kpiMom(rows, period, measure, how) {
+    if (!period || !rows || !rows.length) return null;
+    var buckets = {}, order = [], i;
+    for (i = 0; i < rows.length; i++) {
+      var k = String(catName(rows[i][period]));
+      if (!Object.prototype.hasOwnProperty.call(buckets, k)) {
+        buckets[k] = [];
+        order.push(k);
+      }
+      buckets[k].push(rows[i]);
+    }
+    if (order.length < 2) return null;
+    order.sort(compareCatX);
+    var last = order[order.length - 1], prev = order[order.length - 2];
+    var curV = aggValue(buckets[last], measure, how);
+    var baseV = aggValue(buckets[prev], measure, how);
+    return { cur: curV, base: baseV, rate: rateOf(curV, baseV), label: last, baseLabel: prev };
+  }
+
+  function computeKpi(spec, data, state) {
+    var measure = (spec.roles && spec.roles.value) ||
+      (spec.compute && spec.compute.measure) || null;
+    var how = spec.agg || 'sum';
+    var out = {
+      cur: null, base: null, rate: null, mom: null,
+      hasBase: false, hasMom: false,
+      curLabel: '', baseLabel: '', dim: null
+    };
+    if (spec.value !== null && spec.value !== undefined) {
+      out.cur = num(spec.value);
+      return out;
+    }
+    var cmp = spec.compare;
+    if (!cmp || !cmp.dim) {
+      out.cur = aggValue(filteredRows(spec, data, state), measure, how);
+      return out;
+    }
+    var curRows = compareRows(spec, data, state, 'cur');
+    var baseRows = periodAligned(curRows, compareRows(spec, data, state, 'base'), cmp.period);
+    out.cur = aggValue(curRows, measure, how);
+    out.base = aggValue(baseRows, measure, how);
+    out.hasBase = out.base !== null && out.base !== undefined;
+    out.rate = rateOf(out.cur, out.base);
+    out.mom = kpiMom(curRows, cmp.period, measure, how);
+    out.hasMom = !!(out.mom && out.mom.rate !== null);
+    out.dim = cmp.dim;
+    out.curLabel = String(cmp.cur);
+    out.baseLabel = String(cmp.baseLabel || cmp.base);
+    return out;
+  }
+
+  // 指标切换：spec.switch = {角色: {指标名: 列名}}；全局指针在 EazyViz.metric。
+  function metricNames(spec) {
+    var names = [], seen = {}, role, n;
+    var sw = spec && spec.switch;
+    if (!sw) return names;
+    for (role in sw) {
+      if (!Object.prototype.hasOwnProperty.call(sw, role)) continue;
+      var map = sw[role] || {};
+      for (n in map) {
+        if (!Object.prototype.hasOwnProperty.call(map, n)) continue;
+        if (!Object.prototype.hasOwnProperty.call(seen, n)) { seen[n] = 1; names.push(n); }
+      }
+    }
+    return names;
+  }
+
+  function applyMetric(spec) {
+    if (!spec || !spec.switch) return spec;
+    var cur = EazyViz.metric;
+    for (var role in spec.switch) {
+      if (!Object.prototype.hasOwnProperty.call(spec.switch, role)) continue;
+      var map = spec.switch[role] || {};
+      if (cur && Object.prototype.hasOwnProperty.call(map, cur)) {
+        spec.roles[role] = map[cur];
+      } else if (!cur) {
+        // 清空指标（重置）时回到 switch 的第一个指标，和 Python 侧默认值一致
+        var names = Object.keys(map);
+        if (names.length) spec.roles[role] = map[names[0]];
+      }
+    }
+    return spec;
+  }
+
+  function setMetric(name) {
+    EazyViz.metric = name || null;
+    for (var i = 0; i < EazyViz.charts.length; i++) {
+      var c = EazyViz.charts[i];
+      if (c && c.spec && (c.spec.switch || c.spec.metric)) renderChart(c);
+    }
+  }
+
+  function kpiSelection(spec) {
+    if (!EazyViz.kpiSel) EazyViz.kpiSel = {};
+    var sel = EazyViz.kpiSel[spec.id];
+    if (!sel) sel = { year: 'cur', rate: 'yoy' };
+    if (sel.year !== 'base') sel.year = 'cur';
+    if (sel.rate !== 'mom') sel.rate = 'yoy';
+    return sel;
+  }
+
+  function kpiChip(act, label, value, on, extraCls) {
+    return '<button type="button" class="eazy-kpi-chip' + (on ? ' is-on' : '') +
+      (extraCls ? ' ' + extraCls : '') + '" data-eazy-kpi-act="' + esc(act) + '">' +
+      esc(label) + (value ? '<b>' + esc(value) + '</b>' : '') + '</button>';
+  }
+
+  function pctText(v) {
+    if (v === null || v === undefined || !isFinite(v)) return '';
+    return (v >= 0 ? '+' : '') + (v * 100).toFixed(1) + '%';
+  }
+
+  function kpiValue(spec, data, state) {
+    return computeKpi(spec, data, state).cur;
   }
 
   // 迷你走势的点（按 x 排序）
@@ -1643,10 +1801,15 @@
     state = state || { filters: {}, drill: [] };
     var pal = theme.palette || PALETTES.google.colors;
     var accent = pal[Math.abs(Number(spec.accent) || 0) % pal.length];
-    var val = kpiValue(spec, data, state);
+    var kres = computeKpi(spec, data, state);
+    var sel = kpiSelection(spec);
+    var cmpOn = !!spec.compare;
+    var val = (cmpOn && sel.year === 'base') ? kres.base : kres.cur;
     // 换算单位（万 / 亿 / 百万）和文字后缀（ 单 / ℃ / %）都由 fmtValue 拼好
     var txt = fmtValue(val, spec.fmt, spec);
     if (spec.prefix) txt = spec.prefix + txt;
+    var metricList = metricNames(spec);
+    var metricOn = EazyViz.metric || spec.metric || (metricList.length ? metricList[0] : null);
 
     var html = '<div class="eazy-kpi" style="--eazy-accent:' + accent + '">';
     html += '<div class="eazy-kpi-head"><span class="eazy-kpi-label">' +
@@ -1661,7 +1824,19 @@
     html += '</div>';
 
     html += '<div class="eazy-kpi-main"><span class="eazy-kpi-value">' + esc(txt) + '</span>';
-    if (spec.delta !== null && spec.delta !== undefined) {
+    if (cmpOn) {
+      var rateUse = (sel.rate === 'mom' && kres.hasMom) ? (kres.mom ? kres.mom.rate : null) : kres.rate;
+      var rateName = (sel.rate === 'mom') ? '环比' : '同比';
+      if (rateUse !== null && rateUse !== undefined && isFinite(rateUse)) {
+        var rGood = (rateUse >= 0) !== !!spec.inverse;
+        html += '<span class="eazy-kpi-delta ' + (rGood ? 'eazy-up' : 'eazy-down') + '">' +
+          (rateUse >= 0 ? '▲' : '▼') + ' ' + pctText(rateUse) + '</span>';
+        html += '<span class="eazy-kpi-deltalabel">' + esc(rateName) + '</span>';
+      } else {
+        html += '<span class="eazy-kpi-deltalabel">' +
+          esc(kres.hasBase ? (rateName + ' —') : (rateName + ' 新增')) + '</span>';
+      }
+    } else if (spec.delta !== null && spec.delta !== undefined) {
       var dv = Number(spec.delta);
       if (isFinite(dv)) {
         var good = (dv >= 0) !== !!spec.inverse;
@@ -1673,6 +1848,27 @@
       }
     }
     html += '</div>';
+
+    if (cmpOn) {
+      html += '<div class="eazy-kpi-cmp">';
+      html += kpiChip('year:cur', kres.curLabel || '本期',
+        kres.cur === null ? '—' : fmtValue(kres.cur, spec.fmt, spec), sel.year === 'cur');
+      html += kpiChip('year:base', kres.baseLabel || '上期',
+        kres.hasBase ? fmtValue(kres.base, spec.fmt, spec) : '—', sel.year === 'base');
+      if (kres.hasMom) {
+        var momOn = sel.rate === 'mom';
+        html += kpiChip('rate:' + (momOn ? 'yoy' : 'mom'), momOn ? '同比' : '环比', '', false, 'eazy-kpi-toggle');
+      }
+      html += '</div>';
+    }
+    if (metricList.length > 1) {
+      html += '<div class="eazy-kpi-metrics">';
+      for (var mi = 0; mi < metricList.length; mi++) {
+        html += kpiChip('metric:' + metricList[mi], metricList[mi], '',
+          metricOn === metricList[mi], 'eazy-kpi-metric');
+      }
+      html += '</div>';
+    }
 
     var hint = spec.hint;
     if (!hint && spec.link && EazyViz.hints) hint = '联动组 ' + spec.link + ' · 点同组图表筛选';
@@ -1913,6 +2109,20 @@
   }
 
   // 按元素归属反查图表：明细表的单元格点击没有 chart index，只能靠 DOM 包含关系定位。
+  function handleKpiAct(el, act) {
+    var parts = String(act).split(':');
+    var kind = parts[0], value = parts[1];
+    if (kind === 'metric') { setMetric(value); return; }
+    var chart = chartOfEl(el);
+    if (!chart || !chart.spec) return;
+    var sel = kpiSelection(chart.spec);
+    if (kind === 'year') sel.year = (value === 'base') ? 'base' : 'cur';
+    else if (kind === 'rate') sel.rate = (value === 'mom') ? 'mom' : 'yoy';
+    else return;
+    EazyViz.kpiSel[chart.spec.id] = sel;
+    renderChart(chart);
+  }
+
   function chartOfEl(el) {
     for (var i = 0; i < EazyViz.charts.length; i++) {
       var c = EazyViz.charts[i];
@@ -2078,7 +2288,7 @@
   }
 
   function renderChart(c) {
-    var spec = c.spec;
+    var spec = applyMetric(c.spec);
     var htmlBuilder = HTML_BUILDERS[spec.type];
     // 先记下容器宽度，图例排版 / 字号收敛 / KPI 缩放都依赖它
     activeWidth = c.el.clientWidth || 0;
@@ -2524,6 +2734,8 @@
               Number(el.getAttribute('data-crumb')));
             return;
           }
+          var kpiAct = el.getAttribute('data-eazy-kpi-act');
+          if (kpiAct) { handleKpiAct(el, kpiAct); return; }
           var codeIdx = el.getAttribute('data-eazy-code');
           if (codeIdx !== null && codeIdx !== undefined) { toggleCode(Number(codeIdx)); return; }
           var copyIdx = el.getAttribute('data-eazy-copy');
@@ -2749,6 +2961,14 @@
     quantile: quantile,
     median: median,
     rowsOf: rowsOf,
+    rateOf: rateOf,
+    computeKpi: computeKpi,
+    compareRows: compareRows,
+    applyMetric: applyMetric,
+    setMetric: setMetric,
+    metricNames: metricNames,
+    kpiSelection: kpiSelection,
+    handleKpiAct: handleKpiAct,
     kpiHTML: kpiHTML,
     buildTreemapTree: buildTreemapTree,
     onChartClick: onChartClick,

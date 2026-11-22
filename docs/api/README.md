@@ -44,12 +44,13 @@ chart.palette("tableau").save("examples/output/api-chart.html")
 | `xtitle` / `ytitle` | 横轴 / 纵轴标题；不传取列名，传 `""` 隐藏 | `None` |
 | `xlim` / `ylim` | 轴范围 `(最小值, 最大值)`，list/tuple 皆可；`lo > hi` 自动交换；传 `None` 表示不限制 | `None` |
 | `fmt` | 数值格式：`compact`（1.2万）/ `thousands`（12,345）/ `raw`（12345）/ `percent`（12.3%，只加 % 不乘 100）/ `currency`（¥12,345.00） | `"compact"` |
-| `agg` | 聚合方式：`sum` / `mean` / `count` / `max` / `min` / `median` | `"sum"`（`radar` 为 `"mean"`） |
+| `agg` | 聚合方式：`sum` / `mean` / `count`（行数）/ `unique`（去重计数）/ `max` / `min` / `median` | `"sum"`（`radar` 为 `"mean"`） |
 | `sort` | 排序：`desc` / `asc` / `none` / `x`；不传时按图表类型自动（时间轴 `x`、`bar` 降序） | `None`（自动） |
 | `top_n` | 只保留前 N 项，其余合并为「其他」（「其他」不可点击下钻） | `None` |
 | `height` | 图表高度（像素），最小 120 | `380`（各图不同：KPI 150、gauge 260、calendar 300、pie/histogram 360、heatmap/combo/table 400、treemap 420、gantt/candlestick 420、sunburst/tree 460、地图 460） |
 | `abs_height` | `True` 时 `height` 变成**整个组件外框**的高度（含标题、副标题、联动工具条），正文自适应剩余空间——同一行里标题长短不一时框底能对齐 | `False`（`height` 只算正文） |
-| `abs_height` | `bool` | `False` | 否 | 绝对高度：`height` 当整个组件外框（含标题 / 工具条） |
+| `switch` | 指标切换映射：`edv.switch(sale="金额", qty="数量")`，任何列名参数（`y` / `value` / `values` / `size` / `names` / `spark` …）都能接；点 KPI 卡片上的指标 chip 一键换列，纯前端 | 见 [switch](switch.md) |
+| `compare` | 仅 `kpi`：动态对比 `{"年": ["2026年", "2025年"], "show": "rate"}`，本期/基期/同比/环比现算，联动后自动重算 | `None` |
 | `theme` | `light` / `dark`。看板内以第一张图的主题为准，页面右上角可运行时切换 | `"light"` |
 | `legend` | 是否显示图例；图例可点选过滤系列 | `True`（部分图为 `False`，如 `waterfall`、`bullet`） |
 | `labels` | 是否在图形上直接显示数值标签 | `False`（`pie`/`funnel`/`gantt`/`geo_map` 等默认 `True`） |

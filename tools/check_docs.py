@@ -29,6 +29,8 @@ NON_CHART = {
     "streamlit_dashboard", "streamlit_available",
     # 缓存与性能辅助，文档在 docs/api/README.md「缓存与性能辅助」与 guides/07、13
     "cached", "clear_cache", "cache_info", "use_cache",
+    # 指标切换类型，文档在 docs/api/switch.md 与 guides/17
+    "switch", "Switch",
 }
 
 

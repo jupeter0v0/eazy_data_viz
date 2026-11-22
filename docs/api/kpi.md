@@ -20,6 +20,8 @@ eazy_data_viz.kpi(
     target_label=None,
     spark=None,
     spark_x=None,
+    compare=None,
+    metric=None,
     hint=None,
     unit=None,
     prefix=None,
@@ -49,6 +51,8 @@ eazy_data_viz.kpi(
 | `target_label` | `str \| None` | `None` | 否 | 目标标签，默认“目标” |
 | `spark` | `str \| None` | `None` | 否 | 迷你走势数值列 |
 | `spark_x` | `str \| None` | `None` | 否 | 迷你走势横轴列 |
+| `compare` | `dict \| None` | `None` | 否 | 动态对比：`{"年": ["2026年", "2025年"], "show": "rate"}` |
+| `metric` | `str \| None` | `None` | 否 | 默认指标名（配合 `value=edv.switch(...)`） |
 | `hint` | `str \| None` | `None` | 否 | 底部说明小字 |
 | `unit` | `str` | `None` | 否 | 数值后缀 |
 | `prefix` | `str \| None` | `None` | 否 | 数值前缀 |
@@ -127,6 +131,52 @@ eazy_data_viz.kpi(
 - **作用**：目标徽标上的文字，例如「年度目标」「预算」。不传时前端显示「目标」。
 - **建议**：短词；与 target 一起使用。
 - **示例**：`target_label="年度目标"`
+
+### `compare` — 动态对比：同比 / 环比（`dict | None`，默认 `None`）
+
+**作用**：让卡片**自己从数据里算**本期值、上期值和增长率，而不是先把两年数据筛好再手填 `delta`。
+联动过滤之后四个数（本期 / 上期 / 同比 / 环比）会一起重算。
+
+```python
+eazy_data_viz.kpi(df, value="金额", spark="金额", spark_x="月",
+                  compare={"年": ["2026年", "2025年"], "show": "rate"})
+```
+
+字典里是「一列 + 两个取值」，第一个是**本期**、第二个是**基期**；其余键：
+
+| 键 | 取值 | 说明 |
+|---|---|---|
+| `show` | `"value"` / `"rate"` / `"both"`（默认） | 卡片主数字显示什么；`"value"` 双数值、`"rate"` 只显示同比率 |
+| `mode` | `"yoy"`（默认）/ `"mom"` | 同比（两个取值对比）/ 环比（最后一期 vs 上一期） |
+| `period` | 列名，默认取 `spark_x` | 同期对齐用的期列；环比也用它分期 |
+| `base_label` | 字符串 | 基期那枚 chip 上显示的名字（默认就是基期取值） |
+| `label` | 字符串 | 对比说明（预留） |
+
+规则（Python 静态快照与浏览器现算一致）：
+
+* **同期对齐**：基期只取本期已有的期。2026 只有 1–8 月，就只比 2025 的 1–8 月，不会拿半年对全年；
+* 基期为**空** → 显示「新增」；
+* 基期为 **0** → 比率显示 `—`；
+* 基期为**负** → 分母取绝对值，方向不会反（-100 → -50 是 +50%）；
+* `agg="count"` / `"unique"` 也能对比（数行数 / 去重计数）；
+* 与 `delta` 同时传时**以 compare 为准**，并在 `chart.warnings["warnings"]` 里提示；
+* 卡片上会出现两枚年份 chip（本期 / 基期，点一下切换主数字）和一枚「同比 / 环比」切换（有 `period` 时才出现）。
+
+**报错**：`compare 需要是字典…`、`compare["年"] 需要是 [本期值, 上期值] 两个取值…`、`compare["年"] 的两个取值不能相同…`、`compare["年"] 的上期取值 '2024年' 在数据里不存在…`（附「请改传未筛选的完整数据」提示）、`compare 只能对比一列…`、`compare 的 show 只支持 …`、`compare 的 mode 只支持 …`、`compare 的 period='季' 不在数据里…`。
+
+> 注意：**不要**再把数据筛到本期（`df[df["年"] == "2026年"]`）再传 compare —— 那样基期没有数据了。
+
+### `metric` — 默认指标名（`str | None`，默认 `None`）
+
+**作用**：配合 `value=edv.switch(...)` 指定这张卡片默认看哪个指标；点击卡片上的指标 chip 会把看板里**所有**用到同一个 switch 的图表切到对应列，不触发 Python 重算。
+
+```python
+amount = eazy_data_viz.switch(sale="金额", qty="数量", balance="余额")
+eazy_data_viz.kpi(df, value=amount, label="销售额", metric="sale", spark_x="月")
+eazy_data_viz.bar(df, x="月", y=amount)          # 会跟着切
+```
+
+**报错**：`kpi 的 metric='nope' 不在 value 的 switch 里（可选：sale、qty）。`、`kpi 的 metric='sale' 需要 value 是 edv.switch(...)…`。
 
 ### `spark` — 迷你走势数值列（`str | None`，默认 `None`）
 
@@ -210,6 +260,29 @@ eazy_data_viz.kpi(
 - **作用**：仅 dashboard 使用：把 KPI 归入某个分区，页面按 section 分组显示。 单独保存 HTML 时该字段只是写进 spec。
 - **建议**：与同页图表使用一致的分区名。
 - **示例**：`section="总览"`
+
+### 示例 7：动态同比 + 指标切换（1.6）
+
+```python
+import pandas as pd
+import eazy_data_viz
+
+df = pd.DataFrame({
+    "年": ["2026年", "2026年", "2026年", "2025年", "2025年", "2025年"],
+    "月": ["1月", "2月", "3月", "1月", "2月", "3月"],
+    "金额": [130, 90, 96, 100, 120, 80],
+    "数量": [13, 9, 9.6, 10, 12, 8],
+})
+amount = eazy_data_viz.switch(sale="金额", qty="数量")
+
+chart = eazy_data_viz.kpi(
+    df, value=amount, label="销售额", metric="sale",
+    spark="金额", spark_x="月", compare={"年": ["2026年", "2025年"], "show": "rate"})
+print(chart.spec["compare"]["static"])
+# {'cur': 316.0, 'base': 300.0, 'rate': 0.0533…, 'mom': {'cur': 96.0, 'base': 90.0, …}}
+```
+
+卡片显示 `316` + `▲ +5.3% 同比`，下面一排 chip：`2026年 316` / `2025年 300` / `环比` / `销售额` / `数量`。
 
 ## 返回值
 
